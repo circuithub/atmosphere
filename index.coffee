@@ -70,13 +70,32 @@ exports.submit = (type, data, cbSubmitted) =>
 		cbSubmitted "Connection to #{url} not ready yet!" 
 		return
 	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		conn.publish type, JSON.stringify(data), {contentType : "application/json"}
+		job = {
+			typeResponse: undefined
+			data: JSON.stringify(data)
+		}
+		conn.publish type, job, {contentType : "application/json"}
 		cbSubmitted undefined
 
 ###
-	Find existing pending jobs in the queue
+	Submit a job to the queue
+	-- type: type of job (name of job queue)
+	-- data: the job details (message body)
 ###
-exports.search = (searchTerms) =>
-	return jobs.search(searchTerms)
-
+exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
+	if not connectionReady 
+		cbSubmitted "Connection to #{url} not ready yet!" 
+		return
+	queueTX = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
+		queueRX = conn.queue typeResponse, {}, () ->	
+			#Submit outgoing job
+			job = {
+				typeResponse: typeResponse
+				data: JSON.stringify(data)
+			}
+			conn.publish type, job, {contentType : "application/json"}
+			#Listen for incoming job responses
+			@listenFor typeResponse, cbResponse, cbSubmitted
+			
+#Connect to Backing Queue (RabbitMQ)
 @connect () ->
