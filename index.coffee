@@ -19,12 +19,17 @@ exports.ready = () ->
 	-- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
 exports.connect = (cbConnected) ->
+	console.log "\n\n\n=-=-=[connect](1)", "", "\n\n\n" #xxx
 	conn = amqp.createConnection {url: url} # create the connection
+	console.log "\n\n\n=-=-=[connect](2)", "", "\n\n\n" #xxx
 	conn.on "ready", (err) ->
+		console.log "\n\n\n=-=-=[connect](3)", "", "\n\n\n" #xxx
 		if err?
+			console.log "\n\n\n=-=-=[connect](4)", "", "\n\n\n" #xxx
 			elma.error "Connection to RabbitMQ server at #{url} FAILED.", err
 			cbConnected err
 			return
+		console.log "\n\n\n=-=-=[connect](5)", "", "\n\n\n" #xxx
 		connectionReady = true
 		cbConnected undefined
 
@@ -74,4 +79,4 @@ exports.submit = (type, data, cbSubmitted) =>
 exports.search = (searchTerms) =>
 	return jobs.search(searchTerms)
 
-@connect()
+@connect () ->
