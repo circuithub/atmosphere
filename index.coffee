@@ -5,7 +5,12 @@ elma  = require("elma")(nconf)
 url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68sdRVU@tiger.cloudamqp.com/brkoacph" # default to circuithub-staging
 conn = undefined
 connectionReady = false
-@connect()
+
+###
+	Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
+###
+exports.ready = () ->
+	return connectionReady
 
 ###
 	Connect to specified RabbitMQ server, callback when done.
@@ -69,3 +74,4 @@ exports.submit = (type, data, cbSubmitted) =>
 exports.search = (searchTerms) =>
 	return jobs.search(searchTerms)
 
+@connect()
