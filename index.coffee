@@ -26,8 +26,8 @@ exports.connect = (cbConnected) ->
 ###
 	Subscribe to incoming jobs in the queue
 	-- type: type of jobs to listen for (name of job queue)
-	-- cbExecute: function to execute when a job is assigned
-	-- cbListening: callback function (err) after listening to queue has started
+	-- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+	-- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listenFor = (type, cbExecute, cbListening) =>
 	if not connectionReady 
@@ -36,6 +36,13 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
 		queue.subscribe {ack: true}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 		cbListening undefined
+
+exports.acknowledge = (type, cbAcknowledged) =>
+	if not connectionReady 
+		cbListening "Connection to #{url} not ready yet!" 
+		return
+	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
+		queue.shift()
 
 ###
 	submit a job to the queue
