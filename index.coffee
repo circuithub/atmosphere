@@ -86,13 +86,14 @@ exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
 	if not connectionReady 
 		cbSubmitted "Connection to #{url} not ready yet!" 
 		return
-	queueTX = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		queueRX = conn.queue typeResponse, {}, () ->	
+	queueTX = conn.queue type, {}, () => # create a queue (if not exist, sanity check otherwise)
+		queueRX = conn.queue typeResponse, {}, () =>	
 			#Submit outgoing job
 			job = {
 				typeResponse: typeResponse
 				data: JSON.stringify(data)
 			}
+			console.log "\n\n\n=-=-=[submitFor]", job, "\n\n\n" #xxx
 			conn.publish type, job, {contentType : "application/json"}
 			#Listen for incoming job responses
 			@listenFor typeResponse, cbResponse, cbSubmitted

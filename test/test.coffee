@@ -4,6 +4,12 @@ doJob = (message, headers, deliveryInfo) ->
   console.log "[r] ", message, headers, deliveryInfo
   atmosphere.acknowledge "testQ", (err) ->
     if err? then console.log "[e] ack:error", err 
+    console.log "[a] Acknowledge"
+    if message.typeResponse?
+      atmosphere.submit message.typeResponse, "Received!", (err) ->
+        if err? then console.log "[e] submitResp:error", err 
+        console.log "[t] Response submitted"
+        
     
 atmosphere.connect (err) ->
 
@@ -19,5 +25,10 @@ atmosphere.connect (err) ->
   atmosphere.submit "testQ", '{test: "Hello World!"}', (err) ->
     if err? then console.log "[e] submit:error", err
     console.log "[t] Job submitted"
+
+  atmosphere.submitFor "testQ", "respQ", {a:"hi",b:"mir"}, doJob, (err) ->
+    if err? then console.log "[e] submit:error", err
+    console.log "[t] Job submitted for response"
+
 
     
