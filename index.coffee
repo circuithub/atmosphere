@@ -37,15 +37,21 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 		queue.subscribe {ack: true}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 		cbListening undefined
 
+###
+	Acknowledge the last job received of the specified type
+	-- type: type of job you are ack'ing (you get only 1 job of any type at a time, but can subscribe to multiple types)
+	-- cbAcknowledged: callback after ack is sent successfully
+###
 exports.acknowledge = (type, cbAcknowledged) =>
 	if not connectionReady 
 		cbListening "Connection to #{url} not ready yet!" 
 		return
 	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
 		queue.shift()
+		cbAcknowledged undefined
 
 ###
-	submit a job to the queue
+	Submit a job to the queue
 	-- type: type of job (name of job queue)
 	-- data: the job details (message body)
 ###

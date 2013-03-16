@@ -1,4 +1,9 @@
 atmosphere
 ==========
 
-background tasking for CircuitHub
+Background tasking for CircuitHub (current RabbitMQ backed)
+
+# Usage
+
+## Submit a Job
+
