@@ -2,13 +2,13 @@ atmosphere = require "../index"
 
 doJob = (message, headers, deliveryInfo) ->
   console.log "[r] ", message, headers, deliveryInfo
-  atmosphere.acknowledge "testQ", (err) ->
+  atmosphere.acknowledge deliveryInfo.queue, (err) ->
     if err? then console.log "[e] ack:error", err 
-    console.log "[a] Acknowledge"
+    console.log "[a] Acknowledge #{deliveryInfo.queue}"
     if message.typeResponse?
       atmosphere.submit message.typeResponse, "Received!", (err) ->
         if err? then console.log "[e] submitResp:error", err 
-        console.log "[t] Response submitted"
+        console.log "[t] Response submitted to #{message.typeResponse}"
         
     
 atmosphere.connect (err) ->
