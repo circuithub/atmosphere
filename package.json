@@ -1,0 +1,17 @@
+{
+  "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
+  "name": "atmosphere",
+  "description": "Background jobs queue (currently uses RabbitMQ)",
+  "version": "0.1.0",
+  "homepage": "http://circuithub.com",
+  "engines": {
+    "node": ">=0.8"
+  },
+  "private": true,
+  "dependencies": {
+    "elma":                    "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/elma.git#master",
+    "nconf": "0.6.7",
+    "underscore": "1.4.3",
+    "amqp": "*"
+  }
+}
