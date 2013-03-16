@@ -70,7 +70,7 @@ exports.submit = (type, data, cbSubmitted) =>
 		cbSubmitted "Connection to #{url} not ready yet!" 
 		return
 	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		conn.publish type, data
+		conn.publish type, JSON.stringify(data), {contentType : "application/json"}
 		cbSubmitted undefined
 
 ###
