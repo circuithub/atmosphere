@@ -9,8 +9,8 @@ doJob = (message, headers, deliveryInfo) ->
     if deliveryInfo.queue = "respQ"
       atmosphere.doneWith deliveryInfo.queue, (err) ->
         if err? then console.log "[e] donewith:error", err
+        console.log "[x] Done with #{deliveryInfo.queue}"
         
-
     if message.typeResponse?
       atmosphere.submit message.typeResponse, "Received!"
       console.log "[t] Response submitted to #{message.typeResponse}"
