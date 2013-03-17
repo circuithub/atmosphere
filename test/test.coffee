@@ -6,7 +6,7 @@ doJob = (message, headers, deliveryInfo) ->
     if err? then console.log "[e] ack:error", err 
     console.log "[a] Acknowledge #{deliveryInfo.queue}"
 
-    if deliveryInfo.queue = "respQ"
+    if deliveryInfo.queue is "respQ"
       atmosphere.doneWith deliveryInfo.queue, (err) ->
         if err? then console.log "[e] donewith:error", err
         console.log "[x] Done with #{deliveryInfo.queue}"
@@ -33,5 +33,7 @@ atmosphere.connect (err) ->
     if err? then console.log "[e] submit:error", err
     console.log "[t] Job submitted for response"
 
-
+  atmosphere.submitFor "testQ", "respQ", {msg:"This should not get through"}, doJob, (err) ->
+    if err? then console.log "[e] submit:error", err
+    console.log "[t] Job submitted for response"
     
