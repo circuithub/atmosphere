@@ -8,6 +8,10 @@ connectionReady = false
 
 queues = {}
 
+########################################
+## SETUP / INITIALIZATION
+########################################
+
 ###
 	Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
 ###
@@ -21,64 +25,22 @@ exports.ready = () ->
 	-- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
 exports.connect = (cbConnected) ->
-	console.log "\n\n\n=-=-=[connect](1)", "", "\n\n\n" #xxx
+	elma.info "Connecting to RabbitMQ..."
 	conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
-	console.log "\n\n\n=-=-=[connect](2)", "", "\n\n\n" #xxx
 	conn.on "ready", (err) ->
-		console.log "\n\n\n=-=-=[connect](3)", "", "\n\n\n" #xxx
+		elma.info "Connected to RabbitMQ!"
 		if err?
-			console.log "\n\n\n=-=-=[connect](4)", "", "\n\n\n" #xxx
 			elma.error "Connection to RabbitMQ server at #{url} FAILED.", err
 			cbConnected err
 			return
-		console.log "\n\n\n=-=-=[connect](5)", "", "\n\n\n" #xxx
 		connectionReady = true
 		cbConnected undefined
 
-###
-	Subscribe to incoming jobs in the queue
-	-- type: type of jobs to listen for (name of job queue)
-	-- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-	-- cbListening: callback after listening to queue has started --> function (err) 
-###
-exports.listenFor = (type, cbExecute, cbListening) =>
-	if not connectionReady 
-		cbListening "Connection to #{url} not ready yet!" 
-		return
-	if not queues[type]?
-		queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-			queues[type] = queue #save reference so we can send acknowledgements to this queue
-			queue.subscribe {ack: true, prefetchCount: 1}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
-			cbListening undefined
-	else
-		queues[type].subscribe {ack: true, prefetchCount: 1}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
-		cbListening undefined
 
 
-###
-	Stop listening for jobs of the specified job response type
-	(force deletes the underlying backing queue, losing all remaining messages)
-###
-exports.doneWith = (typeResponse) =>
-	#Delete Queue
-	queues[type].destroy {ifEmpty: false, ifUnused: false}
-	#Update queues global
-	queues[type] = undefined
-
-###
-	Acknowledge the last job received of the specified type
-	-- type: type of job you are ack'ing (you get only 1 job of any type at a time, but can subscribe to multiple types)
-	-- cbAcknowledged: callback after ack is sent successfully
-###
-exports.acknowledge = (type, cbAcknowledged) =>
-	if not connectionReady 
-		cbAcknowledged "Connection to #{url} not ready yet!" 
-		return
-	if not queues[type]?
-		cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
-		return
-	queues[type].shift()
-	cbAcknowledged undefined
+########################################
+## ONE-WAY API (actions w/o response)
+########################################
 
 ###
 	Submit a job to the queue 
@@ -96,6 +58,36 @@ exports.submit = (type, data) =>
 					data: JSON.stringify(data)
 				}
 	conn.publish type, job, {contentType: "application/json"}	
+
+###
+	Subscribe to incoming jobs in the queue (non-exclusively)
+	-- type: type of jobs to listen for (name of job queue)
+	-- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+	-- cbListening: callback after listening to queue has started --> function (err) 
+###
+exports.listen = (type, cbExecute, cbListening) =>
+	_listen type, cbExecute, false, cbListening
+
+###
+	Acknowledge the last job received of the specified type
+	-- type: type of job you are ack'ing (you get only 1 job of any type at a time, but can subscribe to multiple types)
+	-- cbAcknowledged: callback after ack is sent successfully
+###
+exports.acknowledge = (type, cbAcknowledged) =>
+	if not connectionReady 
+		cbAcknowledged "Connection to #{url} not ready yet!" 
+		return
+	if not queues[type]?
+		cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
+		return
+	queues[type].shift()
+	cbAcknowledged undefined
+
+
+
+########################################
+## TWO-WAY API (anticipating a response)
+########################################
 
 ###
 	Submit a job to the queue, but anticipate a response
@@ -120,3 +112,44 @@ exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
 			conn.publish type, job, {contentType : "application/json"}
 			#Listen for incoming job responses
 			@listenFor typeResponse, cbResponse, cbSubmitted
+
+###
+	Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
+	-- type: type of jobs to listen for (name of job queue)
+	-- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+	-- cbListening: callback after listening to queue has started --> function (err) 
+###
+exports.listenFor = (type, cbExecute, cbListening) =>
+	_listen type, cbExecute, true, cbListening
+
+###
+	Stop listening for jobs of the specified job response type
+	(force deletes the underlying backing queue, losing all remaining messages)
+###
+exports.doneWith = (typeResponse) =>
+	#Delete Queue
+	queues[type].destroy {ifEmpty: false, ifUnused: false}
+	#Update queues global
+	queues[type] = undefined
+
+
+
+########################################
+## INTERNAL / UTILITY
+########################################
+
+###
+	Implements listening behavior.
+###
+_listen = (type, cbExecute, exclusive, cbListening) =>
+	if not connectionReady 
+		cbListening "Connection to #{url} not ready yet!" 
+		return
+	if not queues[type]?
+		queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
+			queues[type] = queue #save reference so we can send acknowledgements to this queue
+			queue.subscribe {ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+			cbListening undefined
+	else
+		queues[type].subscribe {ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+		cbListening undefined
