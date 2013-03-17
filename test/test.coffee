@@ -5,12 +5,12 @@ doJob = (message, headers, deliveryInfo) ->
   atmosphere.acknowledge deliveryInfo.queue, (err) ->
     if err? then console.log "[e] ack:error", err 
     console.log "[a] Acknowledge #{deliveryInfo.queue}"
-    atmosphere.doneWith deliveryInfo.queue
-    console.log "[X] Deleted #{deliveryInfo.queue}"    
-    if message.typeResponse?
-      atmosphere.submit message.typeResponse, "Received!"
-      console.log "[t] Response submitted to #{message.typeResponse}"
-        
+    atmosphere.doneWith deliveryInfo.queue, () ->
+      console.log "[X] Deleted #{deliveryInfo.queue}"    
+      if message.typeResponse?
+        atmosphere.submit message.typeResponse, "Received!"
+        console.log "[t] Response submitted to #{message.typeResponse}"
+          
     
 atmosphere.connect (err) ->
   if err? then console.log "[e] connect:error", err

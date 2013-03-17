@@ -62,6 +62,7 @@ exports.submit = (type, data) =>
 
 ###
 	Subscribe to incoming jobs in the queue (non-exclusively)
+	(Queue dies if no one listening)
 	-- type: type of jobs to listen for (name of job queue)
 	-- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
 	-- cbListening: callback after listening to queue has started --> function (err) 
@@ -133,20 +134,34 @@ exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
 exports.listenFor = (type, cbExecute, cbListening) =>
 	_listen type, cbExecute, true, true, cbListening
 
+exports.ignore = (type, cbDone) =>
+	if listeners[typeResponse]?
+		queues[typeResponse].unsubscribe(listeners[typeResponse]).addCallback (ok) ->
+			console.log "\n\n\n=-=-=[doneWith](2)", ok			
+			#Update global state			
+			listeners[typeResponse] = undefined
+			cbDone undefined
+	else
+		cbDone "Not currently subscribed to #{typeResponse}!"
+
 ###
 	Stop listening for jobs of the specified job response type
 	(force deletes the underlying backing queue, losing all remaining messages)
 	(NOTE: Synchronous function)
+	TODO: Exception is thrown if queue typeResponse doesn't exist
 ###
-exports.doneWith = (typeResponse) =>
+exports.doneWith = (typeResponse, cbDone) =>
 	console.log "\n\n\n=-=-=[doneWith]", listeners, "\n\n\n" #xxx	
 	#Unsubscribe any active listener
-	queues[typeResponse].unsubscribe listeners[typeResponse] if listeners[typeResponse]?
-	#Delete Queue
-	queues[typeResponse].destroy {ifEmpty: false, ifUnused: false}
-	#Update global state
-	queues[typeResponse] = undefined
-	listeners[typeResponse] = undefined
+	if queues[typeResponse]?	
+		#Delete Queue
+		queues[typeResponse].destroy {ifEmpty: false, ifUnused: false}
+		#Update global state
+		queues[typeResponse] = undefined
+		listeners[typeResponse] = undefined
+		cbDone undefined
+	else
+		cbDone "Not currently aware of #{typeResponse}! You can't blind delete."
 
 
 
@@ -156,6 +171,8 @@ exports.doneWith = (typeResponse) =>
 
 ###
 	Implements listening behavior.
+	-- Prevents subscribing to a queue multiple times
+	-- Records the consumer-tag so you can unsubscribe
 ###
 _listen = (type, cbExecute, exclusive, persist, cbListening) =>
 	if not connectionReady 
