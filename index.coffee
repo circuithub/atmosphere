@@ -20,7 +20,7 @@ exports.ready = () ->
 ###
 exports.connect = (cbConnected) ->
 	console.log "\n\n\n=-=-=[connect](1)", "", "\n\n\n" #xxx
-	conn = amqp.createConnection {url: url} # create the connection
+	conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
 	console.log "\n\n\n=-=-=[connect](2)", "", "\n\n\n" #xxx
 	conn.on "ready", (err) ->
 		console.log "\n\n\n=-=-=[connect](3)", "", "\n\n\n" #xxx
@@ -44,7 +44,7 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 		cbListening "Connection to #{url} not ready yet!" 
 		return
 	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		queue.subscribe {ack: true}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+		queue.subscribe {ack: true, prefetchCount: 1}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 		cbListening undefined
 
 ###
@@ -97,6 +97,3 @@ exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
 			conn.publish type, job, {contentType : "application/json"}
 			#Listen for incoming job responses
 			@listenFor typeResponse, cbResponse, cbSubmitted
-			
-#Connect to Backing Queue (RabbitMQ)
-@connect () ->
