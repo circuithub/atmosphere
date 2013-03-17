@@ -6,6 +6,8 @@ url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68
 conn = undefined
 connectionReady = false
 
+queues = {}
+
 ###
 	Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
 ###
@@ -43,9 +45,23 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 	if not connectionReady 
 		cbListening "Connection to #{url} not ready yet!" 
 		return
-	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		queue.subscribe {ack: true, prefetchCount: 1}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+	if not queues[type]?
+		queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
+			queues[type] = queue #save reference so we can send acknowledgements to this queue
+			queue.subscribe {ack: true, prefetchCount: 1}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+			cbListening undefined
+	else
+		queues[type].subscribe {ack: true, prefetchCount: 1}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 		cbListening undefined
+
+
+###
+	Stop listening for jobs of the specified type
+###
+exports.ignore = (type) =>
+	#Close Queue Connection
+	#Update queues global
+	queues[type] = undefined
 
 ###
 	Acknowledge the last job received of the specified type
@@ -54,11 +70,13 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 ###
 exports.acknowledge = (type, cbAcknowledged) =>
 	if not connectionReady 
-		cbListening "Connection to #{url} not ready yet!" 
+		cbAcknowledged "Connection to #{url} not ready yet!" 
 		return
-	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		queue.shift()
-		cbAcknowledged undefined
+	if not queues[type]?
+		cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
+		return
+	queue.shift()
+	cbAcknowledged undefined
 
 ###
 	Submit a job to the queue
@@ -69,12 +87,16 @@ exports.submit = (type, data, cbSubmitted) =>
 	if not connectionReady 
 		cbSubmitted "Connection to #{url} not ready yet!" 
 		return
-	queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-		job = {
-			typeResponse: undefined
-			data: JSON.stringify(data)
-		}
-		conn.publish type, job, {contentType : "application/json"}
+	job = {
+					typeResponse: undefined
+					data: JSON.stringify(data)
+				}
+	if not queues[type]?
+		queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
+			conn.publish type, job, {contentType: "application/json"}
+			cbSubmitted undefined
+	else
+		conn.publish type, job, {contentType: "application/json"}
 		cbSubmitted undefined
 
 ###

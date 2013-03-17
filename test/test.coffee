@@ -18,9 +18,9 @@ atmosphere.connect (err) ->
     if err? then console.log "[e] listenFor:error", err
     console.log "[L] Listening to testQ"
 
-  atmosphere.submit "testQ", {test: "Hello World!"}, (err) ->
-    if err? then console.log "[e] submit:error", err
-    console.log "[t] Job submitted"
+  # atmosphere.submit "testQ", {test: "Hello World!"}, (err) ->
+  #   if err? then console.log "[e] submit:error", err
+  #   console.log "[t] Job submitted"
 
   # atmosphere.submitFor "testQ", "respQ", {a:"hi",b:"mir"}, doJob, (err) ->
   #   if err? then console.log "[e] submit:error", err
