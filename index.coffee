@@ -7,6 +7,7 @@ conn = undefined
 connectionReady = false
 
 queues = {}
+listeners = {}
 
 ########################################
 ## SETUP / INITIALIZATION
@@ -135,12 +136,17 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 ###
 	Stop listening for jobs of the specified job response type
 	(force deletes the underlying backing queue, losing all remaining messages)
+	(NOTE: Synchronous function)
 ###
 exports.doneWith = (typeResponse) =>
+	console.log "\n\n\n=-=-=[doneWith]", listeners, "\n\n\n" #xxx	
+	#Unsubscribe any active listener
+	queues[typeResponse].unsubscribe listeners[typeResponse] if listeners[typeResponse]?
 	#Delete Queue
-	queues[type].destroy {ifEmpty: false, ifUnused: false}
-	#Update queues global
-	queues[type] = undefined
+	queues[typeResponse].destroy {ifEmpty: false, ifUnused: false}
+	#Update global state
+	queues[typeResponse] = undefined
+	listeners[typeResponse] = undefined
 
 
 
@@ -158,8 +164,9 @@ _listen = (type, cbExecute, exclusive, persist, cbListening) =>
 	if not queues[type]?
 		queue = conn.queue type, {autoDelete: persist}, () -> # create a queue (if not exist, sanity check otherwise)
 			queues[type] = queue #save reference so we can send acknowledgements to this queue
-			queue.subscribe {ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+			queue.subscribe({ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 			cbListening undefined
 	else
-		queues[type].subscribe {ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+		if not listeners[type]? #already listening?
+			queue.subscribe({ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 		cbListening undefined
