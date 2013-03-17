@@ -5,11 +5,15 @@ doJob = (message, headers, deliveryInfo) ->
   atmosphere.acknowledge deliveryInfo.queue, (err) ->
     if err? then console.log "[e] ack:error", err 
     console.log "[a] Acknowledge #{deliveryInfo.queue}"
-    atmosphere.doneWith deliveryInfo.queue, () ->
-      console.log "[X] Deleted #{deliveryInfo.queue}"    
-      if message.typeResponse?
-        atmosphere.submit message.typeResponse, "Received!"
-        console.log "[t] Response submitted to #{message.typeResponse}"
+
+    if deliveryInfo.queue = "respQ"
+      atmosphere.doneWith deliveryInfo.queue, (err) ->
+        if err? then console.log "[e] donewith:error", err
+        
+
+    if message.typeResponse?
+      atmosphere.submit message.typeResponse, "Received!"
+      console.log "[t] Response submitted to #{message.typeResponse}"
           
     
 atmosphere.connect (err) ->
@@ -25,9 +29,9 @@ atmosphere.connect (err) ->
     catch e
       console.log "[e] Failure during submit ", e
 
-  # atmosphere.submitFor "testQ", "respQ", {a:"hi",b:"mir"}, doJob, (err) ->
-  #   if err? then console.log "[e] submit:error", err
-  #   console.log "[t] Job submitted for response"
+  atmosphere.submitFor "testQ", "respQ", {a:"hi",b:"mir"}, doJob, (err) ->
+    if err? then console.log "[e] submit:error", err
+    console.log "[t] Job submitted for response"
 
 
     

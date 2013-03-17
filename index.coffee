@@ -135,22 +135,36 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 	_listen type, cbExecute, true, true, cbListening
 
 exports.ignore = (type, cbDone) =>
-	if listeners[typeResponse]?
-		queues[typeResponse].unsubscribe(listeners[typeResponse]).addCallback (ok) ->
-			console.log "\n\n\n=-=-=[doneWith](2)", ok			
-			#Update global state			
-			listeners[typeResponse] = undefined
-			cbDone undefined
-	else
-		cbDone "Not currently subscribed to #{typeResponse}!"
+	
 
 ###
 	Stop listening for jobs of the specified job response type
-	(force deletes the underlying backing queue, losing all remaining messages)
-	(NOTE: Synchronous function)
-	TODO: Exception is thrown if queue typeResponse doesn't exist
 ###
 exports.doneWith = (typeResponse, cbDone) =>
+	console.log "\n\n\n=-=-=[doneWith]", listeners, "\n\n\n" #xxx	
+	if queues[typeResponse]?	
+		if listeners[typeResponse]?
+			queues[typeResponse].unsubscribe(listeners[typeResponse]).addCallback (ok) ->
+				console.log "\n\n\n=-=-=[doneWith](2)", ok			
+				#Update global state			
+				queues[typeResponse] = undefined #auto-delete will kill this exclusive queue on unsubscribe
+				listeners[typeResponse] = undefined
+				cbDone undefined
+		else
+			cbDone "Not currently subscribed to #{typeResponse}!"
+	else
+		cbDone "Not currently aware of #{typeResponse} so there is no way you are subscribed."
+
+
+
+########################################
+## INTERNAL / UTILITY
+########################################
+
+###
+	Force delete of a queue
+###
+_delete = () =>
 	console.log "\n\n\n=-=-=[doneWith]", listeners, "\n\n\n" #xxx	
 	#Unsubscribe any active listener
 	if queues[typeResponse]?	
@@ -162,12 +176,6 @@ exports.doneWith = (typeResponse, cbDone) =>
 		cbDone undefined
 	else
 		cbDone "Not currently aware of #{typeResponse}! You can't blind delete."
-
-
-
-########################################
-## INTERNAL / UTILITY
-########################################
 
 ###
 	Implements listening behavior.
