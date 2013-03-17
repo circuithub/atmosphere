@@ -66,7 +66,17 @@ exports.submit = (type, data) =>
 	-- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listen = (type, cbExecute, cbListening) =>
-	_listen type, cbExecute, false, cbListening
+	_listen type, cbExecute, false, true, cbListening
+
+###
+	Subscribe to persistent incoming jobs in the queue (non-exclusively)
+	(Queue will continue to exist even if no-one is listening)
+	-- type: type of jobs to listen for (name of job queue)
+	-- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+	-- cbListening: callback after listening to queue has started --> function (err) 	
+###
+exports.listenTo = (type, cbExecute, cbListening) =>
+	_listen type, cbExecute, false, false, cbListening
 
 ###
 	Acknowledge the last job received of the specified type
@@ -120,7 +130,7 @@ exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
 	-- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listenFor = (type, cbExecute, cbListening) =>
-	_listen type, cbExecute, true, cbListening
+	_listen type, cbExecute, true, true, cbListening
 
 ###
 	Stop listening for jobs of the specified job response type
@@ -141,12 +151,12 @@ exports.doneWith = (typeResponse) =>
 ###
 	Implements listening behavior.
 ###
-_listen = (type, cbExecute, exclusive, cbListening) =>
+_listen = (type, cbExecute, exclusive, persist, cbListening) =>
 	if not connectionReady 
 		cbListening "Connection to #{url} not ready yet!" 
 		return
 	if not queues[type]?
-		queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
+		queue = conn.queue type, {autoDelete: persist}, () -> # create a queue (if not exist, sanity check otherwise)
 			queues[type] = queue #save reference so we can send acknowledgements to this queue
 			queue.subscribe {ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
 			cbListening undefined
