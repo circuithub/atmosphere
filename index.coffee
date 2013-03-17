@@ -56,10 +56,12 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 
 
 ###
-	Stop listening for jobs of the specified type
+	Stop listening for jobs of the specified job response type
+	(force deletes the underlying backing queue, losing all remaining messages)
 ###
-exports.ignore = (type) =>
-	#Close Queue Connection
+exports.doneWith = (typeResponse) =>
+	#Delete Queue
+	queues[type].destroy {ifEmpty: false, ifUnused: false}
 	#Update queues global
 	queues[type] = undefined
 
@@ -75,15 +77,17 @@ exports.acknowledge = (type, cbAcknowledged) =>
 	if not queues[type]?
 		cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
 		return
-	queue.shift()
+	queues[type].shift()
 	cbAcknowledged undefined
 
 ###
-	Submit a job to the queue
+	Submit a job to the queue 
+	(if the queue doesn't exist the job is lost silently)
+	(Note: Synchronous Function)
 	-- type: type of job (name of job queue)
 	-- data: the job details (message body)
 ###
-exports.submit = (type, data, cbSubmitted) =>
+exports.submit = (type, data) =>
 	if not connectionReady 
 		cbSubmitted "Connection to #{url} not ready yet!" 
 		return
@@ -91,18 +95,15 @@ exports.submit = (type, data, cbSubmitted) =>
 					typeResponse: undefined
 					data: JSON.stringify(data)
 				}
-	if not queues[type]?
-		queue = conn.queue type, {}, () -> # create a queue (if not exist, sanity check otherwise)
-			conn.publish type, job, {contentType: "application/json"}
-			cbSubmitted undefined
-	else
-		conn.publish type, job, {contentType: "application/json"}
-		cbSubmitted undefined
+	conn.publish type, job, {contentType: "application/json"}	
 
 ###
-	Submit a job to the queue
+	Submit a job to the queue, but anticipate a response
 	-- type: type of job (name of job queue)
+	-- type: type of the job's response (name of the response queue)
 	-- data: the job details (message body)
+	-- cbResponse: callback when response received
+	-- cbSubmitted: callback when submition complete
 ###
 exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
 	if not connectionReady 
