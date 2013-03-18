@@ -115,6 +115,15 @@ exports.submitFor = (type, job, cbJobDone) =>
                             }
                           }
 
+###
+  Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
+  -- type: type of jobs to listen for (name of job queue)
+  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+  -- cbListening: callback after listening to queue has started --> function (err) 
+###
+exports.listenFor = (type, cbExecute, cbListening) =>
+  _listen type, cbExecute, true, true, cbListening
+
 
 
 ########################################
@@ -128,7 +137,7 @@ exports.submitFor = (type, job, cbJobDone) =>
 ###
 exports.acknowledge = (type, cbAcknowledged) =>
   if not connectionReady 
-    cbAcknowledged "Connection to #{url} not ready yet!" 
+    cbAcknowledged elma.error "noRabbitError", "Not connected to #{url} yet!" 
     return
   if not queues[type]?
     cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
@@ -136,14 +145,16 @@ exports.acknowledge = (type, cbAcknowledged) =>
   queues[type].shift()
   cbAcknowledged undefined
 
-
-
-
-
-########################################
-## LOW-LEVEL API (actions w/o response)
-########################################
-
+###
+  Subscribe to persistent incoming jobs in the queue (non-exclusively)
+  (Queue will continue to exist even if no-one is listening)
+  -- type: type of jobs to listen for (name of job queue)
+  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+  -- cbListening: callback after listening to queue has started --> function (err)  
+###
+exports.listenTo = (type, cbExecute, cbListening) =>
+  _listen type, cbExecute, false, false, cbListening
+  
 ###
   Submit a job to the queue 
   (if the queue doesn't exist the job is lost silently)
@@ -161,62 +172,6 @@ exports.submit = (type, data) =>
         }
   conn.publish type, job, {contentType: "application/json", headers:{job: "job name", returnQueue: "testing1234"}} 
 
-###
-  Subscribe to incoming jobs in the queue (non-exclusively)
-  (Queue dies if no one listening)
-  -- type: type of jobs to listen for (name of job queue)
-  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-  -- cbListening: callback after listening to queue has started --> function (err) 
-###
-exports.listen = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, false, true, cbListening
-
-###
-  Subscribe to persistent incoming jobs in the queue (non-exclusively)
-  (Queue will continue to exist even if no-one is listening)
-  -- type: type of jobs to listen for (name of job queue)
-  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-  -- cbListening: callback after listening to queue has started --> function (err)  
-###
-exports.listenTo = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, false, false, cbListening
-
-
-
-
-
-
-
-###
-  Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
-  -- type: type of jobs to listen for (name of job queue)
-  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-  -- cbListening: callback after listening to queue has started --> function (err) 
-###
-exports.listenFor = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, true, true, cbListening
-
-exports.ignore = (type, cbDone) =>
-  
-
-###
-  Stop listening for jobs of the specified job response type
-###
-exports.doneWith = (typeResponse, cbDone) =>
-  console.log "\n\n\n=-=-=[doneWith]", listeners, "\n\n\n" #xxx 
-  if queues[typeResponse]?  
-    if listeners[typeResponse]?
-      queues[typeResponse].unsubscribe(listeners[typeResponse]).addCallback (ok) ->
-        console.log "\n\n\n=-=-=[doneWith](2)", ok      
-        #Update global state      
-        queues[typeResponse] = undefined #auto-delete will kill this exclusive queue on unsubscribe
-        listeners[typeResponse] = undefined
-        cbDone undefined
-    else
-      cbDone "Not currently subscribed to #{typeResponse}!"
-  else
-    cbDone "Not currently aware of #{typeResponse} so there is no way you are subscribed."
-
 
 
 ########################################
@@ -224,10 +179,9 @@ exports.doneWith = (typeResponse, cbDone) =>
 ########################################
 
 ###
-  Force delete of a queue
+  Force delete of a queue (for maintainence/dev future use)
 ###
 _delete = () =>
-  console.log "\n\n\n=-=-=[doneWith]", listeners, "\n\n\n" #xxx 
   #Unsubscribe any active listener
   if queues[typeResponse]?  
     #Delete Queue
@@ -240,13 +194,23 @@ _delete = () =>
     cbDone "Not currently aware of #{typeResponse}! You can't blind delete."
 
 ###
+  Subscribe to incoming jobs in the queue (non-exclusively)
+  (Queue dies if no one listening)
+  -- type: type of jobs to listen for (name of job queue)
+  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
+  -- cbListening: callback after listening to queue has started --> function (err) 
+###
+exports.listen = (type, cbExecute, cbListening) =>
+  _listen type, cbExecute, false, true, cbListening
+
+###
   Implements listening behavior.
   -- Prevents subscribing to a queue multiple times
   -- Records the consumer-tag so you can unsubscribe
 ###
 _listen = (type, cbExecute, exclusive, persist, cbListening) =>
   if not connectionReady 
-    cbListening "Connection to #{url} not ready yet!" 
+    cbListening elma.error "noRabbitError", "Not connected to #{url} yet!" 
     return
   if not queues[type]?
     queue = conn.queue type, {autoDelete: persist}, () -> # create a queue (if not exist, sanity check otherwise)
@@ -255,7 +219,6 @@ _listen = (type, cbExecute, exclusive, persist, cbListening) =>
       # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
       subscribeDomain = domain.create()
       subscribeDomain.on "error", (err) -> 
-        console.log "\n\n\n---domainError:", err
         cbListening err
       subscribeDomain.run () ->
         queue.subscribe({ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
