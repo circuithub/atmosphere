@@ -13,15 +13,73 @@ listeners = {}
 jobs = {}
 rainID = uuid.v4()
 
+
+
+
+
+########################################
+## SETUP / INITIALIZATION
+########################################
+
+###
+  Jobs system initialization
+###
+rainmaker = (cbDone) =>
+  @connect (err) =>
+    if err?
+      cbDone err
+      return
+    @listenFor rainID, mailman, cbDone 
+
+cloud = (cbDone) =>
+  @connect cbDone # Up to dev to listenTo work queues that this cloud can handle
+
+exports.init = {rainmaker: rainmaker, cloud: cloud}
+
+###
+  Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
+###
+exports.ready = () ->
+  return connectionReady
+
+###
+  Connect to specified RabbitMQ server, callback when done.
+  -- This is done automatically at the first module loading
+  -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
+  -- Connection is enforced, so if connection doesn't exist, nothing else will work.
+###
+exports.connect = (cbConnected) ->
+  elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
+  conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
+  conn.on "error", (err) ->
+    elma.error "rabbitConnectedError", "RabbitMQ server at #{url} reports ERROR.", err
+  conn.on "ready", (err) ->
+    elma.info "rabbitConnected", "Connected to RabbitMQ!"
+    if err?
+      elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{url} FAILED.", err
+      cbConnected err
+      return
+    connectionReady = true
+    cbConnected undefined
+
+
+
+########################################
+## RAINMAKER JOBS API (submit jobs)
+########################################
+
 ###
   Assigns incoming messages to jobs awaiting a response
 ###
 mailman = (message, headers, deliveryInfo) ->
   if not jobs[headers.job]?
-    elma.warning "Message received for job #{}, but job doesn't exist."
+    elma.warning "noSuchJobError","Message received for job #{}, but job doesn't exist."
     return
   jobs[headers.job].data = message
 
+###
+  Manages jobs-in-progress
+###
 foreman = () ->
   toDelete = []
   toRun = []
@@ -44,7 +102,7 @@ foreman = () ->
 ###
 exports.submitFor = (type, job, cbJobDone) =>
   if not connectionReady 
-    cbJobDone "Not connected to #{url} yet!" 
+    cbJobDone elma.error "noRabbitError", "Not connected to #{url} yet!" 
     return
   #[1.] Inform Foreman Job Expected
   if jobs[job.name]?
@@ -62,47 +120,27 @@ exports.submitFor = (type, job, cbJobDone) =>
   #[2.] Wait for Response
   process.nextTick()
 
-rainmaker = (cbDone) =>
-  @connect (err) =>
-    if err?
-      cbDone err
-      return
-    @listenFor rainID, mailman, cbDone 
 
-cloud = (cbDone) =>
-  @connect cbDone # Up to dev to listenTo work queues that this cloud can handle
-
-exports.init = {rainmaker: rainmaker, cloud: cloud}
 
 ########################################
-## SETUP / INITIALIZATION
+## CLOUD JOBS API (receive and do jobs)
 ########################################
 
 ###
-  Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
+  Acknowledge the last job received of the specified type
+  -- type: type of job you are ack'ing (you get only 1 job of any type at a time, but can subscribe to multiple types)
+  -- cbAcknowledged: callback after ack is sent successfully
 ###
-exports.ready = () ->
-  return connectionReady
+exports.acknowledge = (type, cbAcknowledged) =>
+  if not connectionReady 
+    cbAcknowledged "Connection to #{url} not ready yet!" 
+    return
+  if not queues[type]?
+    cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
+    return
+  queues[type].shift()
+  cbAcknowledged undefined
 
-###
-  Connect to specified RabbitMQ server, callback when done.
-  -- This is done automatically at the first module loading
-  -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
-  -- Connection is enforced, so if connection doesn't exist, nothing else will work.
-###
-exports.connect = (cbConnected) ->
-  elma.info "Connecting to RabbitMQ..."
-  conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
-  conn.on "error", (err) ->
-    console.log "\n\n===here be errors!==="
-  conn.on "ready", (err) ->
-    elma.info "Connected to RabbitMQ!"
-    if err?
-      elma.error "Connection to RabbitMQ server at #{url} FAILED.", err
-      cbConnected err
-      return
-    connectionReady = true
-    cbConnected undefined
 
 
 
@@ -148,26 +186,9 @@ exports.listen = (type, cbExecute, cbListening) =>
 exports.listenTo = (type, cbExecute, cbListening) =>
   _listen type, cbExecute, false, false, cbListening
 
-###
-  Acknowledge the last job received of the specified type
-  -- type: type of job you are ack'ing (you get only 1 job of any type at a time, but can subscribe to multiple types)
-  -- cbAcknowledged: callback after ack is sent successfully
-###
-exports.acknowledge = (type, cbAcknowledged) =>
-  if not connectionReady 
-    cbAcknowledged "Connection to #{url} not ready yet!" 
-    return
-  if not queues[type]?
-    cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
-    return
-  queues[type].shift()
-  cbAcknowledged undefined
 
 
 
-########################################
-## JOBS API (anticipating a response)
-########################################
 
 
 
