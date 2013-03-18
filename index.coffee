@@ -24,12 +24,15 @@ mailman = (message, headers, deliveryInfo) ->
 
 foreman = () ->
   toDelete = []
+  toRun = []
   for job of jobs
     if jobs[job].data?
       toDelete.push job
-      jobs[job].cb(undefined, jobs[job].data)
+      toRun.push jobs[job]
   for job in toDelete
     jobs[job] = undefined
+  for job in toRun
+    job.cb undefined, job.data
 
 ###
   Submit a job to the queue, but anticipate a response
