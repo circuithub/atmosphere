@@ -2,6 +2,7 @@ amqp = require "amqp"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 domain = require "domain"
+uuid = require "node-uuid"
 
 url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68sdRVU@tiger.cloudamqp.com/brkoacph" # default to circuithub-staging
 conn = undefined
@@ -9,6 +10,60 @@ connectionReady = false
 
 queues = {}
 listeners = {}
+jobs = {}
+rainID = uuid.v4()
+
+###
+  Assigns incoming messages to jobs awaiting a response
+###
+mailman = (message, headers, deliveryInfo) ->
+  if not jobs[headers.job]?
+    elma.warning "Message received for job #{}, but job doesn't exist."
+    return
+  jobs[headers.job].data = message
+
+foreman = () ->
+  for each job
+
+###
+  Submit a job to the queue, but anticipate a response
+  -- type: type of job (name of job queue)
+  -- type: type of the job's response (name of the response queue)
+  -- job: must be in this format {name: "jobName", data: {} } the job details (message body)
+  -- cbResponse: callback when response received
+  -- cbSubmitted: callback when submition complete
+###
+exports.submitFor = (type, job, cbJobDone) =>
+  if not connectionReady 
+    cbJobDone "Not connected to #{url} yet!" 
+    return
+  #[1.] Inform Foreman Job Expected
+  if jobs[job.name]?
+    cbJobDone "Job Already Pending"
+    return
+  jobs[job.name] = {cb: cbJobDone}
+  #[2.] Submit Job
+  conn.publish type, job, {
+                            contentType: "application/json", 
+                            headers: {
+                              job: job.name, 
+                              returnQueue: rainID
+                            }
+                          }
+  #[2.] Wait for Response
+  process.nextTick()
+
+rainmaker = (cbDone) =>
+  @connect (err) =>
+    if err?
+      cbDone err
+      return
+    @listenFor rainID, mailman, cbDone 
+
+cloud = (cbDone) =>
+  @connect cbDone # Up to dev to listenTo work queues that this cloud can handle
+
+exports.init = {rainmaker: rainmaker, cloud: cloud}
 
 ########################################
 ## SETUP / INITIALIZATION
@@ -29,6 +84,8 @@ exports.ready = () ->
 exports.connect = (cbConnected) ->
   elma.info "Connecting to RabbitMQ..."
   conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
+  conn.on "error", (err) ->
+    console.log "\n\n===here be errors!==="
   conn.on "ready", (err) ->
     elma.info "Connected to RabbitMQ!"
     if err?
@@ -40,8 +97,9 @@ exports.connect = (cbConnected) ->
 
 
 
+
 ########################################
-## ONE-WAY API (actions w/o response)
+## LOW-LEVEL API (actions w/o response)
 ########################################
 
 ###
@@ -59,7 +117,7 @@ exports.submit = (type, data) =>
           typeResponse: undefined
           data: JSON.stringify(data)
         }
-  conn.publish type, job, {contentType: "application/json"} 
+  conn.publish type, job, {contentType: "application/json", headers:{job: "job name", returnQueue: "testing1234"}} 
 
 ###
   Subscribe to incoming jobs in the queue (non-exclusively)
@@ -99,32 +157,10 @@ exports.acknowledge = (type, cbAcknowledged) =>
 
 
 ########################################
-## TWO-WAY API (anticipating a response)
+## JOBS API (anticipating a response)
 ########################################
 
-###
-  Submit a job to the queue, but anticipate a response
-  -- type: type of job (name of job queue)
-  -- type: type of the job's response (name of the response queue)
-  -- data: the job details (message body)
-  -- cbResponse: callback when response received
-  -- cbSubmitted: callback when submition complete
-###
-exports.submitFor = (type, typeResponse, data, cbResponse, cbSubmitted) =>
-  if not connectionReady 
-    cbSubmitted "Connection to #{url} not ready yet!" 
-    return
-  queueTX = conn.queue type, {}, () => # create a queue (if not exist, sanity check otherwise)
-    queueRX = conn.queue typeResponse, {}, () =>  
-      #Submit outgoing job
-      job = {
-        typeResponse: typeResponse
-        data: JSON.stringify(data)
-      }
-      console.log "\n\n\n=-=-=[submitFor]", job, "\n\n\n" #xxx
-      conn.publish type, job, {contentType : "application/json"}
-      #Listen for incoming job responses
-      @listenFor typeResponse, cbResponse, cbSubmitted
+
 
 ###
   Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
