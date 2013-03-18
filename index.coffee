@@ -25,14 +25,15 @@ rainID = uuid.v4()
   Jobs system initialization
 ###
 rainmaker = (cbDone) =>
-  @connect (err) =>
+  @_connect (err) =>
     if err?
       cbDone err
       return
+    foreman() #start job supervisor (runs asynchronously at 1sec intervals)
     @listenFor rainID, mailman, cbDone 
 
 cloud = (cbDone) =>
-  @connect cbDone # Up to dev to listenTo work queues that this cloud can handle
+  @_connect cbDone # Up to dev to listenTo work queues that this cloud can handle
 
 exports.init = {rainmaker: rainmaker, cloud: cloud}
 
@@ -48,7 +49,7 @@ exports.ready = () ->
   -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-exports.connect = (cbConnected) ->
+exports._connect = (cbConnected) ->
   elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
   conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
   conn.on "error", (err) ->
@@ -74,31 +75,26 @@ exports.connect = (cbConnected) ->
 mailman = (message, headers, deliveryInfo) ->
   if not jobs[headers.job]?
     elma.warning "noSuchJobError","Message received for job #{}, but job doesn't exist."
-    return
-  jobs[headers.job].data = message
+    return  
+  jobs[headers.job].cb undefined, message
+  delete jobs[headers.job]
 
 ###
-  Manages jobs-in-progress
+  Implements timeouts for jobs-in-progress
 ###
 foreman = () ->
-  toDelete = []
-  toRun = []
-  for job of jobs
-    if jobs[job].data?
-      toDelete.push job
-      toRun.push jobs[job]
-  for job in toDelete
-    jobs[job] = undefined
-  for job in toRun
-    job.cb undefined, job.data
+  for job of jobs    
+    jobs[job].timeout = jobs[job].timeout - 1
+    if jobs[job].timeout <= 0
+      jobs[job].cb elma.error "jobTimeout", "A response to job #{job} was not received in time."
+      delete jobs[job]
+  process.setTimeout(foreman, 1000)
 
 ###
   Submit a job to the queue, but anticipate a response
   -- type: type of job (name of job queue)
-  -- type: type of the job's response (name of the response queue)
-  -- job: must be in this format {name: "jobName", data: {} } the job details (message body)
-  -- cbResponse: callback when response received
-  -- cbSubmitted: callback when submition complete
+  -- job: must be in this format {name: "jobName", data: {}, timeout: 30 } the job details (message body) <-- timeout (in seconds) is optional defaults to 30 seconds
+  -- cbJobDone: callback when response received (error, data) format
 ###
 exports.submitFor = (type, job, cbJobDone) =>
   if not connectionReady 
@@ -106,9 +102,10 @@ exports.submitFor = (type, job, cbJobDone) =>
     return
   #[1.] Inform Foreman Job Expected
   if jobs[job.name]?
-    cbJobDone "Job Already Pending"
+    cbJobDone elma.error "jobAlreadyExistsError", "Job #{job.name} Already Pending"
     return
-  jobs[job.name] = {cb: cbJobDone}
+  job.timeout ?= 60
+  jobs[job.name] = {cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
   conn.publish type, job, {
                             contentType: "application/json", 
@@ -117,8 +114,6 @@ exports.submitFor = (type, job, cbJobDone) =>
                               returnQueue: rainID
                             }
                           }
-  #[2.] Wait for Response
-  process.nextTick()
 
 
 
