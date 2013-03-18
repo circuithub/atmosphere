@@ -3,6 +3,7 @@ nconf = require "nconf"
 elma  = require("elma")(nconf)
 domain = require "domain"
 uuid = require "node-uuid"
+bsync = require "bsync"
 
 url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68sdRVU@tiger.cloudamqp.com/brkoacph" # default to circuithub-staging
 conn = undefined
@@ -32,8 +33,24 @@ rainmaker = (cbDone) =>
     foreman() #start job supervisor (runs asynchronously at 1sec intervals)
     @listenFor rainID, mailman, cbDone 
 
-cloud = (cbDone) =>
-  @_connect cbDone # Up to dev to listenTo work queues that this cloud can handle
+###
+  jobTypes -- array of jobType; [{name:"conversion", worker: callback}, {..}]
+###
+cloud = (jobTypes, cbDone) =>
+  #[1.] Connect to message server
+  @_connect (err) =>
+    if err?
+      cbDone err
+      return
+    #[2.] Publish all jobs we can handle (listen to all queues for these jobs)
+    workerFunctions = []
+    for jobType in jobTypes
+      workerFunctions.push bsync.parallel.apply listenTo jobType.name, jobType.worker
+    bsync.parallel workerFunctions, (allErrors, allResults) =>
+      if allErrors?
+        cbDone allErrors
+        return
+      cbDone()
 
 exports.init = {rainmaker: rainmaker, cloud: cloud}
 
