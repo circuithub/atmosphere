@@ -19,10 +19,16 @@ rainID = uuid.v4()
 rainCloudID = nconf.get("CLOUD_ID")
 rainCloudID ?= uuid.v4()
 
-currentJob = undefined
+currentJob = {}
 
 #Set ENV var CLOUD_ID on atmosphere.raincloud servers
 
+###
+1. worker functions in rain cloud apps get called like this:
+  your_function(ticket, jobData)
+2. When done, call thunder and give the ticket back along with any response data (must serialize to JSON)...
+  atmosphere.thunder ticket, responseData
+###
 
 ########################################
 ## SETUP / INITIALIZATION
@@ -168,20 +174,37 @@ lightning = (message, headers, deliveryInfo) ->
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
     elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
-  currentJob = {
+  currentJob[deliveryInfo.queue] = {
     type: deliveryInfo.queue
     name: headers.job
     data: message
     returnQueue: headers.returnQueue
   }
   console.log "\n\n\n=-=-=[lightning]", deliveryInfo.queue, jobWorkers, headers.job, currentJob.data, "\n\n\n" #xxx  
-  jobWorkers[deliveryInfo.queue](currentJob.data)
+  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, name: headers.job}, currentJob.data)
 
 ###
   Reports completed job on a Rain Cloud
+  -- data: the job response data (message body)
 ###
-exports.thunder = (message) =>
-  doneWith message
+exports.thunder = (ticket, message) =>
+  if not connectionReady 
+    #TODO: HANDLE THIS BETTER
+    elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
+    return
+  if not currentJob[ticket.type]?
+    #TODO: HANDLE THIS BETTER
+    elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
+    return
+  header = {job: currentJob[ticket.type].name, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
+  console.log "\n\n\n=-=-=[doneWith](1)", header, "\n\n\n" #xxx  
+  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers: header} 
+  @acknowledge currentJob.type, (err) ->
+    if err?
+      #TODO: HANDLE THIS BETTER
+      elma.error "cantAckError", "Could not send ACK", currentJob, err 
+      return
+    currentJob = undefined #done with current job, update state
 
 ###
   Acknowledge the last job received of the specified type
@@ -209,24 +232,7 @@ exports.listenTo = (type, cbExecute, cbListening) =>
   console.log "\n\n\n=-=-=[listenTo]", type, "\n\n\n" #xxx  
   _listen type, cbExecute, false, true, cbListening
   
-###
-  Done with the current Job
-  -- data: the job response data (message body)
-###
-doneWith = (data) =>
-  if not connectionReady 
-    #TODO: HANDLE THIS BETTER
-    elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
-    return
-  header = {job: currentJob.name, type: currentJob.type, rainCloudID: rainCloudID}
-  console.log "\n\n\n=-=-=[doneWith](1)", header, "\n\n\n" #xxx  
-  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers: header} 
-  @acknowledge currentJob.type, (err) ->
-    if err?
-      #TODO: HANDLE THIS BETTER
-      elma.error "cantAckError", "Could not send ACK", currentJob, err 
-      return
-    currentJob = undefined #done with current job, update state
+
 
 
 ########################################
