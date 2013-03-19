@@ -23,3 +23,6 @@ jobTypes = {
   convertOrCAD: workerDoOrCAD
 }
 
+#Submit Altium Conversion Job
+atmosphere.submitFor "convertAltium", {name: "altium-job1", data: {a:"hi",b:"world"}, timeout: 15}, (err, data) ->
+  console.log "[D] Job Done", err, data

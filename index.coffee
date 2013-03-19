@@ -1,7 +1,6 @@
 amqp = require "amqp"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
-domain = require "domain"
 uuid = require "node-uuid"
 bsync = require "bsync"
 
@@ -159,10 +158,10 @@ lightning = (message, headers, deliveryInfo) ->
     elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
   currentJob = {
-    type = deliveryInfo.queue
-    name = headers.job
-    data = message
-    returnQueue = headers.returnQueue
+    type: deliveryInfo.queue
+    name: headers.job
+    data: message
+    returnQueue: headers.returnQueue
   }
   jobWorkers[headers.job](currentJob.data)
 
@@ -207,7 +206,7 @@ doneWith = (data) =>
     elma.error "noRabbitError", "Not connected to #{url} yet!" 
     return
   conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, cloudID: nconf.get("CLOUD_ID")}} 
-  @acknowledge jobType.name, (err) ->
+  @acknowledge currentJob.type, (err) ->
     if err?
       #TODO: HANDLE THIS BETTER
       elma.error "cantAckError", "Could not send ACK", currentJob, err 
