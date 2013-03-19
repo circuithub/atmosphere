@@ -190,7 +190,7 @@ lightning = (message, headers, deliveryInfo) =>
   Reports completed job on a Rain Cloud
   -- data: the job response data (message body)
 ###
-exports.thunder = (ticket, message) =>
+exports.doneWith = (ticket, message) =>
   if not connectionReady 
     #TODO: HANDLE THIS BETTER
     elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
