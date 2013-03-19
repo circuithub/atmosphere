@@ -14,7 +14,10 @@ queues = {}
 listeners = {}
 jobs = {}
 jobWorkers = {}
+
 rainID = uuid.v4()
+rainCloudID = nconf.get("CLOUD_ID")
+rainCloudID ?= uuid.v4()
 
 currentJob = undefined
 
@@ -175,10 +178,10 @@ lightning = (message, headers, deliveryInfo) ->
   jobWorkers[deliveryInfo.queue](currentJob.data)
 
 ###
-  Reports completed job on cloud
+  Reports completed job on a Rain Cloud
 ###
 exports.thunder = (message) =>
-  @doneWith message
+  doneWith message
 
 ###
   Acknowledge the last job received of the specified type
@@ -215,7 +218,9 @@ doneWith = (data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
-  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, cloudID: nconf.get("CLOUD_ID")}} 
+  console.log "\n\n\n=-=-=[doneWith](1)", data, "\n\n\n" #xxx  
+  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, rainCloudID: rainCloudID}} 
+  console.log "\n\n\n=-=-=[doneWith](2)", "\n\n\n" #xxx  
   @acknowledge currentJob.type, (err) ->
     if err?
       #TODO: HANDLE THIS BETTER
