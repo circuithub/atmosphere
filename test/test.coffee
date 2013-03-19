@@ -37,7 +37,7 @@ atmosphere.init.rainCloud jobTypes, (err) ->
       console.log "[D] Job Done", err, data
 
     #Submit Altium Conversion Job
-    atmosphere.submitFor "convertconvertOrCAD", {name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 15}, (err, data) ->
+    atmosphere.submitFor "convertOrCAD", {name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 15}, (err, data) ->
       console.log "[D] Job Done", err, data
 
 console.log "EOF"
