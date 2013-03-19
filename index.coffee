@@ -12,6 +12,7 @@ connectionReady = false
 queues = {}
 listeners = {}
 jobs = {}
+jobWorkers = {}
 rainID = uuid.v4()
 
 currentJob = undefined
@@ -44,9 +45,10 @@ rainCloud = (jobTypes, cbDone) =>
       cbDone err
       return
     #[2.] Publish all jobs we can handle (listen to all queues for these jobs)
+    jobWorkers = jobTypes
     workerFunctions = []
     for jobType in jobTypes
-      workerFunctions.push bsync.parallel.apply listenTo jobType.name, jobType.worker
+      workerFunctions.push bsync.parallel.apply listenTo jobType.name, lightning
     bsync.parallel workerFunctions, (allErrors, allResults) =>
       if allErrors?
         cbDone allErrors
@@ -125,7 +127,7 @@ exports.submitFor = (type, job, cbJobDone) =>
   job.timeout ?= 60
   jobs[job.name] = {cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
-  conn.publish type, JSON.stringify(job), {
+  conn.publish type, JSON.stringify(job.data), {
                             contentType: "application/json", 
                             headers: {
                               job: job.name, 
@@ -157,10 +159,12 @@ lightning = (message, headers, deliveryInfo) ->
     elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
   currentJob = {
-    jobType = deliveryInfo.queue
-    jobName = headers.job
+    type = deliveryInfo.queue
+    name = headers.job
+    data = message
     returnQueue = headers.returnQueue
   }
+  jobWorkers[headers.job](currentJob.data)
 
 ###
   Reports completed job on cloud
