@@ -11,12 +11,12 @@ workerDoOrCAD = (data) ->
   atmosphere.thunder "Done with ORCAD job"
 
 #Init Rainmaker (App Server)
-atmosphere.init.rainMaker () ->
-  console.log "[I] Initialized RAINMAKER"
+atmosphere.init.rainMaker (err) ->
+  console.log "[I] Initialized RAINMAKER", err
 
 #Init Cloud (Worker Server -- ex. EDA Server)
-atmosphere.init.rainCloud () ->
-  console.log "[I] Initialized RAINCLOUD"
+atmosphere.init.rainCloud (err) ->
+  console.log "[I] Initialized RAINCLOUD", err
 
 jobTypes = {
   convertAltium: workerDoAltium

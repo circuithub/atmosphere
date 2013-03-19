@@ -5,6 +5,7 @@ uuid = require "node-uuid"
 bsync = require "bsync"
 
 url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68sdRVU@tiger.cloudamqp.com/brkoacph" # default to circuithub-staging
+urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
 conn = undefined
 connectionReady = false
 
@@ -72,11 +73,11 @@ exports._connect = (cbConnected) ->
   elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
   conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
   conn.on "error", (err) ->
-    elma.error "rabbitConnectedError", "RabbitMQ server at #{url} reports ERROR.", err
+    elma.error "rabbitConnectedError", "RabbitMQ server at #{urlLogSafe} reports ERROR.", err
   conn.on "ready", (err) ->
     elma.info "rabbitConnected", "Connected to RabbitMQ!"
     if err?
-      elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{url} FAILED.", err
+      elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{urlLogSafe} FAILED.", err
       cbConnected err
       return
     connectionReady = true
@@ -93,7 +94,7 @@ exports._connect = (cbConnected) ->
 ###
 mailman = (message, headers, deliveryInfo) ->
   if not jobs[headers.job]?
-    elma.warning "noSuchJobError","Message received for job #{}, but job doesn't exist."
+    elma.warning "noSuchJobError","Message received for job #{headers.job}, but job doesn't exist."
     return  
   jobs[headers.job].cb undefined, message
   delete jobs[headers.job]
@@ -107,7 +108,7 @@ foreman = () ->
     if jobs[job].timeout <= 0
       jobs[job].cb elma.error "jobTimeout", "A response to job #{job} was not received in time."
       delete jobs[job]
-  process.setTimeout(foreman, 1000)
+  setTimeout(foreman, 1000)
 
 ###
   Submit a job to the queue, but anticipate a response
@@ -117,7 +118,7 @@ foreman = () ->
 ###
 exports.submitFor = (type, job, cbJobDone) =>
   if not connectionReady 
-    cbJobDone elma.error "noRabbitError", "Not connected to #{url} yet!" 
+    cbJobDone elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   #[1.] Inform Foreman Job Expected
   if jobs[job.name]?
@@ -178,7 +179,7 @@ exports.thunder = (message) =>
 ###
 exports.acknowledge = (type, cbAcknowledged) =>
   if not connectionReady 
-    cbAcknowledged elma.error "noRabbitError", "Not connected to #{url} yet!" 
+    cbAcknowledged elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   if not queues[type]?
     cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
@@ -203,7 +204,7 @@ exports.listenTo = (type, cbExecute, cbListening) =>
 doneWith = (data) =>
   if not connectionReady 
     #TODO: HANDLE THIS BETTER
-    elma.error "noRabbitError", "Not connected to #{url} yet!" 
+    elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, cloudID: nconf.get("CLOUD_ID")}} 
   @acknowledge currentJob.type, (err) ->
@@ -250,7 +251,7 @@ exports.listen = (type, cbExecute, cbListening) =>
 ###
 _listen = (type, cbExecute, exclusive, persist, cbListening) =>
   if not connectionReady 
-    cbListening elma.error "noRabbitError", "Not connected to #{url} yet!" 
+    cbListening elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   if not queues[type]?
     queue = conn.queue type, {autoDelete: persist}, () -> # create a queue (if not exist, sanity check otherwise)
