@@ -56,31 +56,6 @@ rainCloud = (jobTypes, cbDone) =>
 exports.init = {rainMaker: rainMaker, rainCloud: rainCloud}
 
 ###
-  Receives work to do messages on cloud and dispatches
-###
-lightning = (message, headers, deliveryInfo) ->
-  if currentJob?
-    #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
-    return
-  currentJob = {
-    jobType = deliveryInfo.queue
-    jobName = headers.job
-    returnQueue = headers.returnQueue
-  }
-
-###
-  Reports completed job on cloud
-###
-exports.thunder = (message) =>
-  currentJob = undefined #done with current job, update state
-  @submit currentJob.returnQueue, message,  
-  @acknowledge jobType.name, (err) ->
-
-
-
-
-###
   Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
 ###
 exports.ready = () ->
@@ -150,7 +125,7 @@ exports.submitFor = (type, job, cbJobDone) =>
   job.timeout ?= 60
   jobs[job.name] = {cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
-  conn.publish type, job, {
+  conn.publish type, JSON.stringify(job), {
                             contentType: "application/json", 
                             headers: {
                               job: job.name, 
@@ -172,6 +147,26 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 ########################################
 ## CLOUD JOBS API (receive and do jobs)
 ########################################
+
+###
+  Receives work to do messages on cloud and dispatches
+###
+lightning = (message, headers, deliveryInfo) ->
+  if currentJob?
+    #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
+    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+    return
+  currentJob = {
+    jobType = deliveryInfo.queue
+    jobName = headers.job
+    returnQueue = headers.returnQueue
+  }
+
+###
+  Reports completed job on cloud
+###
+exports.thunder = (message) =>
+  @doneWith message
 
 ###
   Acknowledge the last job received of the specified type
@@ -199,22 +194,21 @@ exports.listenTo = (type, cbExecute, cbListening) =>
   _listen type, cbExecute, false, false, cbListening
   
 ###
-  Submit a job to the queue 
-  (if the queue doesn't exist the job is lost silently)
-  (Note: Synchronous Function)
-  -- type: type of job (name of job queue)
-  -- data: the job details (message body)
+  Done with the current Job
+  -- data: the job response data (message body)
 ###
-exports.submit = (type, data) =>
+doneWith = (data) =>
   if not connectionReady 
-    cbSubmitted "Connection to #{url} not ready yet!" 
+    #TODO: HANDLE THIS BETTER
+    elma.error "noRabbitError", "Not connected to #{url} yet!" 
     return
-  job = {
-          typeResponse: undefined
-          data: JSON.stringify(data)
-        }
-  conn.publish type, job, {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, cloudID: nconf.get("CLOUD_ID")}} 
-
+  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, cloudID: nconf.get("CLOUD_ID")}} 
+  @acknowledge jobType.name, (err) ->
+    if err?
+      #TODO: HANDLE THIS BETTER
+      elma.error "cantAckError", "Could not send ACK", currentJob, err 
+      return
+    currentJob = undefined #done with current job, update state
 
 
 ########################################
