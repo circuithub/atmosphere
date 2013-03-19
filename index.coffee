@@ -218,9 +218,9 @@ doneWith = (data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
-  console.log "\n\n\n=-=-=[doneWith](1)", data, "\n\n\n" #xxx  
-  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, rainCloudID: rainCloudID}} 
-  console.log "\n\n\n=-=-=[doneWith](2)", "\n\n\n" #xxx  
+  header = {job: currentJob.name, type: currentJob.type, rainCloudID: rainCloudID}
+  console.log "\n\n\n=-=-=[doneWith](1)", header, "\n\n\n" #xxx  
+  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers: header} 
   @acknowledge currentJob.type, (err) ->
     if err?
       #TODO: HANDLE THIS BETTER
