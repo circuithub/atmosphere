@@ -1,5 +1,19 @@
 atmosphere = require "../index"
 
+#Init Rainmaker (App Server)
+atmosphere.init.rainmaker () ->
+  console.log "[I] Initialized RAINMAKER"
+
+#Init Cloud (Worker Server -- ex. EDA Server)
+atmosphere.init.cloud () ->
+  console.log "[I] Initialized CLOUD"
+
+
+
+
+
+
+
 doJob = (message, headers, deliveryInfo) ->
   console.log "[r] ", message, headers, deliveryInfo
   atmosphere.acknowledge deliveryInfo.queue, (err) ->

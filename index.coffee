@@ -14,8 +14,9 @@ listeners = {}
 jobs = {}
 rainID = uuid.v4()
 
+currentJob = undefined
 
-
+#Set ENV var CLOUD_ID on atmosphere.raincloud servers
 
 
 ########################################
@@ -25,7 +26,7 @@ rainID = uuid.v4()
 ###
   Jobs system initialization
 ###
-rainmaker = (cbDone) =>
+rainMaker = (cbDone) =>
   @_connect (err) =>
     if err?
       cbDone err
@@ -36,7 +37,7 @@ rainmaker = (cbDone) =>
 ###
   jobTypes -- array of jobType; [{name:"conversion", worker: callback}, {..}]
 ###
-cloud = (jobTypes, cbDone) =>
+rainCloud = (jobTypes, cbDone) =>
   #[1.] Connect to message server
   @_connect (err) =>
     if err?
@@ -52,7 +53,32 @@ cloud = (jobTypes, cbDone) =>
         return
       cbDone()
 
-exports.init = {rainmaker: rainmaker, cloud: cloud}
+exports.init = {rainMaker: rainMaker, rainCloud: rainCloud}
+
+###
+  Receives work to do messages on cloud and dispatches
+###
+lightning = (message, headers, deliveryInfo) ->
+  if currentJob?
+    #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
+    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+    return
+  currentJob = {
+    jobType = deliveryInfo.queue
+    jobName = headers.job
+    returnQueue = headers.returnQueue
+  }
+
+###
+  Reports completed job on cloud
+###
+exports.thunder = (message) =>
+  currentJob = undefined #done with current job, update state
+  @submit currentJob.returnQueue, message,  
+  @acknowledge jobType.name, (err) ->
+
+
+
 
 ###
   Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
@@ -187,7 +213,7 @@ exports.submit = (type, data) =>
           typeResponse: undefined
           data: JSON.stringify(data)
         }
-  conn.publish type, job, {contentType: "application/json", headers:{job: "job name", returnQueue: "testing1234"}} 
+  conn.publish type, job, {contentType: "application/json", headers:{job: currentJob.jobName, type: currentJob.jobType, cloudID: nconf.get("CLOUD_ID")}} 
 
 
 
