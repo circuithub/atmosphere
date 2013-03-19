@@ -3,6 +3,7 @@ nconf = require "nconf"
 elma  = require("elma")(nconf)
 uuid = require "node-uuid"
 bsync = require "bsync"
+domain = require "domain"
 
 url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68sdRVU@tiger.cloudamqp.com/brkoacph" # default to circuithub-staging
 urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
@@ -28,7 +29,9 @@ currentJob = undefined
   Jobs system initialization
 ###
 rainMaker = (cbDone) =>
+  console.log "\n\n\n=-=-=[init.rainMaker](1)", "\n\n\n" #xxx  
   @_connect (err) =>
+    console.log "\n\n\n=-=-=[init.rainMaker](2)", err, "\n\n\n" #xxx  
     if err?
       cbDone err
       return
@@ -39,6 +42,7 @@ rainMaker = (cbDone) =>
   jobTypes -- array of jobType; [{name:"conversion", worker: callback}, {..}]
 ###
 rainCloud = (jobTypes, cbDone) =>
+  console.log "\n\n\n=-=-=[init.rainCloud](1)", "\n\n\n" #xxx  
   #[1.] Connect to message server
   @_connect (err) =>
     if err?
@@ -46,9 +50,10 @@ rainCloud = (jobTypes, cbDone) =>
       return
     #[2.] Publish all jobs we can handle (listen to all queues for these jobs)
     jobWorkers = jobTypes
+    console.log "\n\n\n=-=-=[init.rainCloud](2)", jobWorkers, "\n\n\n" #xxx  
     workerFunctions = []
-    for jobType in jobTypes
-      workerFunctions.push bsync.parallel.apply listenTo jobType.name, lightning
+    for jobType of jobTypes
+      workerFunctions.push bsync.apply @listenTo jobType, lightning
     bsync.parallel workerFunctions, (allErrors, allResults) =>
       if allErrors?
         cbDone allErrors
@@ -70,19 +75,21 @@ exports.ready = () ->
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
 exports._connect = (cbConnected) ->
-  elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
-  conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
-  conn.on "error", (err) ->
-    elma.error "rabbitConnectedError", "RabbitMQ server at #{urlLogSafe} reports ERROR.", err
-  conn.on "ready", (err) ->
-    elma.info "rabbitConnected", "Connected to RabbitMQ!"
-    if err?
-      elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{urlLogSafe} FAILED.", err
-      cbConnected err
-      return
-    connectionReady = true
+  if not conn?
+    elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
+    conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
+    conn.on "error", (err) ->
+      elma.error "rabbitConnectedError", "RabbitMQ server at #{urlLogSafe} reports ERROR.", err
+    conn.on "ready", (err) ->
+      elma.info "rabbitConnected", "Connected to RabbitMQ!"
+      if err?
+        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{urlLogSafe} FAILED.", err
+        cbConnected err
+        return
+      connectionReady = true
+      cbConnected undefined
+  else
     cbConnected undefined
-
 
 
 ########################################
@@ -142,7 +149,7 @@ exports.submitFor = (type, job, cbJobDone) =>
   -- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listenFor = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, true, true, cbListening
+  _listen type, cbExecute, true, false, cbListening
 
 
 
@@ -195,7 +202,8 @@ exports.acknowledge = (type, cbAcknowledged) =>
   -- cbListening: callback after listening to queue has started --> function (err)  
 ###
 exports.listenTo = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, false, false, cbListening
+  console.log "\n\n\n=-=-=[listenTo]", type, "\n\n\n" #xxx  
+  _listen type, cbExecute, false, true, cbListening
   
 ###
   Done with the current Job
@@ -242,7 +250,7 @@ _delete = () =>
   -- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listen = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, false, true, cbListening
+  _listen type, cbExecute, false, false, cbListening
 
 ###
   Implements listening behavior.
@@ -254,7 +262,7 @@ _listen = (type, cbExecute, exclusive, persist, cbListening) =>
     cbListening elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   if not queues[type]?
-    queue = conn.queue type, {autoDelete: persist}, () -> # create a queue (if not exist, sanity check otherwise)
+    queue = conn.queue type, {autoDelete: not persist}, () -> # create a queue (if not exist, sanity check otherwise)
       #save reference so we can send acknowledgements to this queue
       queues[type] = queue 
       # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
