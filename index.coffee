@@ -112,6 +112,9 @@ mailman = (message, headers, deliveryInfo) ->
   if not jobs["#{headers.type}-#{headers.job}"]?
     elma.warning "noSuchJobError","Message received for job #{deliveryInfo.queue}-#{headers.job}, but job doesn't exist."
     return  
+
+  console.log "\n\n\n=-=-=[mailman]", "#{headers.type}-#{headers.job}", "\n\n\n" #xxx
+    
   jobs["#{headers.type}-#{headers.job}"].cb undefined, message
   delete jobs["#{headers.type}-#{headers.job}"]
 
@@ -158,7 +161,7 @@ exports.submitFor = (type, job, cbJobDone) =>
   -- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listenFor = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, true, false, cbListening
+  _listen type, cbExecute, true, false, false, cbListening
 
 
 
@@ -169,7 +172,7 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 ###
   Receives work to do messages on cloud and dispatches
 ###
-lightning = (message, headers, deliveryInfo) ->
+lightning = (message, headers, deliveryInfo) =>
   if currentJob[deliveryInfo.queue]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
     elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
@@ -197,14 +200,16 @@ exports.thunder = (ticket, message) =>
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
   header = {job: currentJob[ticket.type].name, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
-  console.log "\n\n\n=-=-=[doneWith](1)", header, "\n\n\n" #xxx  
-  conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
+  console.log "\n\n\n=-=-=[thunder](1)", header, "\n\n\n" #xxx  
+  p = conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
+  console.log "\n\n\n=-=-=[thunder](2)", p, "\n\n\n" #xxx  
   @acknowledge currentJob[ticket.type].type, (err) ->
     if err?
       #TODO: HANDLE THIS BETTER
       elma.error "cantAckError", "Could not send ACK", currentJob[ticket.type], err 
       return
     currentJob[ticket.type] = undefined #done with current job, update state
+    console.log "\n\n\n=-=-=[thunder](3)", ticket.type, "\n\n\n" #xxx  
 
 ###
   Acknowledge the last job received of the specified type
@@ -230,7 +235,7 @@ exports.acknowledge = (type, cbAcknowledged) =>
 ###
 exports.listenTo = (type, cbExecute, cbListening) =>
   console.log "\n\n\n=-=-=[listenTo]", type, "\n\n\n" #xxx  
-  _listen type, cbExecute, false, true, cbListening
+  _listen type, cbExecute, false, true, true, cbListening
   
 
 
@@ -262,14 +267,14 @@ _delete = () =>
   -- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listen = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, false, false, cbListening
+  _listen type, cbExecute, false, false, true, cbListening
 
 ###
   Implements listening behavior.
   -- Prevents subscribing to a queue multiple times
   -- Records the consumer-tag so you can unsubscribe
 ###
-_listen = (type, cbExecute, exclusive, persist, cbListening) =>
+_listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) =>
   if not connectionReady 
     cbListening elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
@@ -282,9 +287,9 @@ _listen = (type, cbExecute, exclusive, persist, cbListening) =>
       subscribeDomain.on "error", (err) -> 
         cbListening err
       subscribeDomain.run () ->
-        queue.subscribe({ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
+        queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
       cbListening undefined
   else
     if not listeners[type]? #already listening?
-      queue.subscribe({ack: true, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+      queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
     cbListening undefined
