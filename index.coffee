@@ -53,7 +53,7 @@ rainCloud = (jobTypes, cbDone) =>
     console.log "\n\n\n=-=-=[init.rainCloud](2)", jobWorkers, "\n\n\n" #xxx  
     workerFunctions = []
     for jobType of jobTypes
-      workerFunctions.push bsync.apply @listenTo jobType, lightning
+      workerFunctions.push bsync.apply @listenTo, jobType, lightning
     bsync.parallel workerFunctions, (allErrors, allResults) =>
       if allErrors?
         cbDone allErrors
@@ -171,7 +171,8 @@ lightning = (message, headers, deliveryInfo) ->
     data: message
     returnQueue: headers.returnQueue
   }
-  jobWorkers[headers.job](currentJob.data)
+  console.log "\n\n\n=-=-=[lightning]", deliveryInfo.queue, jobWorkers, headers.job, currentJob.data, "\n\n\n" #xxx  
+  jobWorkers[deliveryInfo.queue](currentJob.data)
 
 ###
   Reports completed job on cloud

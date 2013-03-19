@@ -32,7 +32,7 @@ atmosphere.init.rainCloud jobTypes, (err) ->
     console.log "[I] Initialized RAINMAKER", err
 
     #Submit Altium Conversion Job
-    atmosphere.submitFor "convertAltium", {name: "altium-job1", data: {a:"hi",b:"world"}, timeout: 15}, (err, data) ->
+    atmosphere.submitFor "convertAltium", {name: "convertAltium", data: {jobID: "1" a:"hi",b:"world"}, timeout: 15}, (err, data) ->
       console.log "[D] Job Done", err, data
 
 console.log "EOF"
