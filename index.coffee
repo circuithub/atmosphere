@@ -137,11 +137,11 @@ exports.submitFor = (type, job, cbJobDone) =>
     cbJobDone elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   #[1.] Inform Foreman Job Expected
-  if jobs[job.name]?
-    cbJobDone elma.error "jobAlreadyExistsError", "Job #{job.name} Already Pending"
+  if jobs["#{type}-#{job.name}"]?
+    cbJobDone elma.error "jobAlreadyExistsError", "Job #{type}-#{job.name} Already Pending"
     return
   job.timeout ?= 60
-  jobs[job.name] = {cb: cbJobDone, timeout: job.timeout}
+  jobs["#{type}-#{job.name}"] = {cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
   conn.publish type, JSON.stringify(job.data), {
                             contentType: "application/json", 
