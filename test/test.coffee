@@ -5,14 +5,14 @@ atmosphere = require "../index"
 
 altiumCounter = 0
 
-workerDoAltium = (data) ->
-  console.log "[W] ALTIUM", data 
+workerDoAltium = (ticket, data) ->
+  console.log "[W] ALTIUM", ticket, data 
   altiumCounter++
-  atmosphere.thunder {result:"Done with Altium", count: altiumCounter}
+  atmosphere.thunder ticket, {result:"Done with Altium", count: altiumCounter}
 
-workerDoOrCAD = (data) ->
-  console.log "[W] ORCAD", data
-  atmosphere.thunder "Done with ORCAD job"
+workerDoOrCAD = (ticket, data) ->
+  console.log "[W] ORCAD", ticket, data
+  atmosphere.thunder ticket, "Done with ORCAD job"
 
 jobTypes = {
   convertAltium: workerDoAltium

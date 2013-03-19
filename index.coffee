@@ -170,7 +170,7 @@ exports.listenFor = (type, cbExecute, cbListening) =>
   Receives work to do messages on cloud and dispatches
 ###
 lightning = (message, headers, deliveryInfo) ->
-  if currentJob?
+  if currentJob[deliveryInfo.queue]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
     elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
@@ -198,13 +198,13 @@ exports.thunder = (ticket, message) =>
     return
   header = {job: currentJob[ticket.type].name, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
   console.log "\n\n\n=-=-=[doneWith](1)", header, "\n\n\n" #xxx  
-  conn.publish currentJob.returnQueue, JSON.stringify(data), {contentType: "application/json", headers: header} 
-  @acknowledge currentJob.type, (err) ->
+  conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
+  @acknowledge currentJob[ticket.type].type, (err) ->
     if err?
       #TODO: HANDLE THIS BETTER
-      elma.error "cantAckError", "Could not send ACK", currentJob, err 
+      elma.error "cantAckError", "Could not send ACK", currentJob[ticket.type], err 
       return
-    currentJob = undefined #done with current job, update state
+    currentJob[ticket.type] = undefined #done with current job, update state
 
 ###
   Acknowledge the last job received of the specified type
