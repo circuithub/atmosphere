@@ -48,7 +48,8 @@ rainMaker = (cbDone) =>
     @listenFor rainID, mailman, cbDone 
 
 ###
-  jobTypes -- array of jobType; [{name:"conversion", worker: callback}, {..}]
+  jobTypes -- object with jobType values and worker function callbacks as keys; { jobType1: cbDoJobType1, jobType2: .. }
+  -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
 ###
 rainCloud = (jobTypes, cbDone) =>
   console.log "\n\n\n=-=-=[init.rainCloud](1)", "\n\n\n" #xxx  
@@ -58,11 +59,12 @@ rainCloud = (jobTypes, cbDone) =>
       cbDone err
       return
     #[2.] Publish all jobs we can handle (listen to all queues for these jobs)
-    jobWorkers = jobTypes
-    console.log "\n\n\n=-=-=[init.rainCloud](2)", jobWorkers, "\n\n\n" #xxx  
-    workerFunctions = []
+    workerFunctions = []    
     for jobType of jobTypes
-      workerFunctions.push bsync.apply @listenTo, jobType, lightning
+      if not jobWorkers[jobType]?
+        jobWorkers[jobType] = jobTypes[jobType]
+        workerFunctions.push bsync.apply @listenTo, jobType, lightning
+    console.log "\n\n\n=-=-=[init.rainCloud](2)", jobWorkers, "\n\n\n" #xxx  
     bsync.parallel workerFunctions, (allErrors, allResults) =>
       if allErrors?
         cbDone allErrors
@@ -102,7 +104,7 @@ exports._connect = (cbConnected) ->
 
 
 ########################################
-## RAINMAKER JOBS API (submit jobs)
+## RAINMAKER JOBS (submit jobs)
 ########################################
 
 ###
@@ -146,6 +148,7 @@ exports.submitFor = (type, job, cbJobDone) =>
   job.timeout ?= 60
   jobs["#{type}-#{job.name}"] = {cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
+  job.data ?= {} #default value if unspecified
   conn.publish type, JSON.stringify(job.data), {
                             contentType: "application/json", 
                             headers: {
@@ -166,7 +169,7 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 
 
 ########################################
-## CLOUD JOBS API (receive and do jobs)
+## CLOUD JOBS (receive and do jobs)
 ########################################
 
 ###

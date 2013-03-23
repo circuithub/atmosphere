@@ -5,6 +5,18 @@ Background tasking for CircuitHub (current RabbitMQ backed)
 
 # Usage
 
+## Initialize (Connect to Server)
+
+```coffeescript
+#Init Cloud (Worker Server -- ex. EDA Server)
+atmosphere.init.rainCloud jobTypes, (err) ->
+```
+  
+```coffeescript
+#Init Rainmaker (App Server)
+atmosphere.init.rainMaker (err) ->
+```
+
 ## Submit a Job
 
 ### Example Response
