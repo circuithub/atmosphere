@@ -114,6 +114,9 @@ mailman = (message, headers, deliveryInfo) ->
   if not jobs["#{headers.type}-#{headers.job}"]?
     elma.warning "noSuchJobError","Message received for job #{deliveryInfo.queue}-#{headers.job}, but job doesn't exist."
     return  
+  if not jobs["#{headers.type}-#{headers.job}"].id is headers.job.id
+    elma.warning "expiredJobError", "Received response for expired job #{deliveryInfo.queue}-#{headers.job} #{headers.job.id}."
+    return
 
   console.log "\n\n\n=-=-=[mailman]", "#{headers.type}-#{headers.job}", "\n\n\n" #xxx
     
@@ -146,13 +149,14 @@ exports.submitFor = (type, job, cbJobDone) =>
     cbJobDone elma.error "jobAlreadyExistsError", "Job #{type}-#{job.name} Already Pending"
     return
   job.timeout ?= 60
-  jobs["#{type}-#{job.name}"] = {cb: cbJobDone, timeout: job.timeout}
+  job.id = uuid.v4()
+  jobs["#{type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
   job.data ?= {} #default value if unspecified
   conn.publish type, JSON.stringify(job.data), {
                             contentType: "application/json", 
                             headers: {
-                              job: job.name, 
+                              job: {name: job.name, id: job.id}
                               returnQueue: rainID
                             }
                           }
@@ -182,12 +186,13 @@ lightning = (message, headers, deliveryInfo) =>
     return
   currentJob[deliveryInfo.queue] = {
     type: deliveryInfo.queue
-    name: headers.job
+    name: headers.job.name
+    id: headers.job.id
     data: message
     returnQueue: headers.returnQueue
   }
   console.log "\n\n\n=-=-=[lightning]", deliveryInfo.queue, jobWorkers, headers.job, currentJob.data, "\n\n\n" #xxx  
-  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, name: headers.job}, currentJob.data)
+  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob.data)
 
 ###
   Reports completed job on a Rain Cloud
@@ -202,7 +207,7 @@ exports.doneWith = (ticket, message) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
-  header = {job: currentJob[ticket.type].name, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
+  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
   console.log "\n\n\n=-=-=[thunder](1)", header, "\n\n\n" #xxx  
   p = conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
   console.log "\n\n\n=-=-=[thunder](2)", p, "\n\n\n" #xxx  
