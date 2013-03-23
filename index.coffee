@@ -211,6 +211,7 @@ exports.doneWith = (ticket, message) =>
     return
   header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
   console.log "\n\n\n=-=-=[thunder](1)", header, "\n\n\n" #xxx  
+  message ?= "" #default message
   p = conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
   console.log "\n\n\n=-=-=[thunder](2)", p, "\n\n\n" #xxx  
   @acknowledge currentJob[ticket.type].type, (err) ->
