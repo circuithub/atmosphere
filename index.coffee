@@ -178,6 +178,8 @@ exports.listenFor = (type, cbExecute, cbListening) =>
 
 ###
   Receives work to do messages on cloud and dispatches
+  Messages are dispatched to the callback function this way:
+    function(ticket, data) ->
 ###
 lightning = (message, headers, deliveryInfo) =>
   if currentJob[deliveryInfo.queue]?
