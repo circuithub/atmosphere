@@ -14,6 +14,5 @@
     "node-uuid": "*",
     "bsync": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/bsync.git#master",
     "amqp": "*"
-
   }
 }
