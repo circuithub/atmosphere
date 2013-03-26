@@ -280,7 +280,6 @@ exports.acknowledge = (type, cbAcknowledged) =>
 exports.listenTo = (type, cbExecute, cbListening) =>
   console.log "\n\n\n=-=-=[listenTo]", type, "\n\n\n" #xxx  
   _listen type, cbExecute, false, true, true, cbListening
-  
 
 
 
