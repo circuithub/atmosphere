@@ -107,14 +107,14 @@ exports._connect = (cbConnected) ->
   Assigns incoming messages to jobs awaiting a response
 ###
 mailman = (message, headers, deliveryInfo) ->
-  if not jobs["#{headers.type}-#{headers.job}"]?
-    elma.warning "noSuchJobError","Message received for job #{deliveryInfo.queue}-#{headers.job}, but job doesn't exist."
+  if not jobs["#{headers.type}-#{headers.job.name}"]?
+    elma.warning "noSuchJobError","Message received for job #{deliveryInfo.queue}-#{headers.job.name}, but job doesn't exist."
     return  
-  if not jobs["#{headers.type}-#{headers.job}"].id is headers.job.id
-    elma.warning "expiredJobError", "Received response for expired job #{deliveryInfo.queue}-#{headers.job} #{headers.job.id}."
+  if not jobs["#{headers.type}-#{headers.job.name}"].id is headers.job.id
+    elma.warning "expiredJobError", "Received response for expired job #{deliveryInfo.queue}-#{headers.job.name} #{headers.job.id}."
     return    
-  jobs["#{headers.type}-#{headers.job}"].cb undefined, message
-  delete jobs["#{headers.type}-#{headers.job}"]
+  jobs["#{headers.type}-#{headers.job.name}"].cb undefined, message
+  delete jobs["#{headers.type}-#{headers.job.name}"]
 
 ###
   Implements timeouts for jobs-in-progress
