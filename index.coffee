@@ -226,7 +226,7 @@ lightning = (message, headers, deliveryInfo) =>
     data: message
     returnQueue: headers.returnQueue
   }
-  console.log "\n\n\n=-=-=[lightning]", deliveryInfo.queue, jobWorkers, headers.job, currentJob.data, "\n\n\n" #xxx  
+  console.log "\n\n\n=-=-=[lightning]", deliveryInfo.queue, jobWorkers[deliveryInfo.queue], headers.job, currentJob.data, "\n\n\n" #xxx  
   jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob.data)
 
 ###
