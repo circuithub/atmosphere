@@ -38,9 +38,7 @@ currentJob = {}
   Jobs system initialization
 ###
 rainMaker = (cbDone) =>
-  console.log "\n\n\n=-=-=[init.rainMaker](1)", "\n\n\n" #xxx  
   @_connect (err) =>
-    console.log "\n\n\n=-=-=[init.rainMaker](2)", err, "\n\n\n" #xxx  
     if err?
       cbDone err
       return
@@ -52,7 +50,6 @@ rainMaker = (cbDone) =>
   -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
 ###
 rainCloud = (jobTypes, cbDone) =>
-  console.log "\n\n\n=-=-=[init.rainCloud](1)", "\n\n\n" #xxx  
   #[1.] Connect to message server
   @_connect (err) =>
     if err?
@@ -64,7 +61,6 @@ rainCloud = (jobTypes, cbDone) =>
       if not jobWorkers[jobType]?
         jobWorkers[jobType] = jobTypes[jobType]
         workerFunctions.push bsync.apply @listenTo, jobType, lightning
-    console.log "\n\n\n=-=-=[init.rainCloud](2)", jobWorkers, "\n\n\n" #xxx  
     bsync.parallel workerFunctions, (allErrors, allResults) =>
       if allErrors?
         cbDone allErrors
@@ -116,10 +112,7 @@ mailman = (message, headers, deliveryInfo) ->
     return  
   if not jobs["#{headers.type}-#{headers.job}"].id is headers.job.id
     elma.warning "expiredJobError", "Received response for expired job #{deliveryInfo.queue}-#{headers.job} #{headers.job.id}."
-    return
-
-  console.log "\n\n\n=-=-=[mailman]", "#{headers.type}-#{headers.job}", "\n\n\n" #xxx
-    
+    return    
   jobs["#{headers.type}-#{headers.job}"].cb undefined, message
   delete jobs["#{headers.type}-#{headers.job}"]
 
@@ -225,7 +218,6 @@ lightning = (message, headers, deliveryInfo) =>
     data: message
     returnQueue: headers.returnQueue
   }
-  console.log "\n\n\n=-=-=[lightning]", currentJob[deliveryInfo.queue], "\n", jobWorkers[deliveryInfo.queue], "\n", headers.job, "\n", currentJob.data, "\n\n\n" #xxx  
   jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob.data)
 
 ###
@@ -243,17 +235,14 @@ exports.doneWith = (ticket, message) =>
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
   header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
-  console.log "\n\n\n=-=-=[thunder](1)", header, "\n\n\n" #xxx  
   message ?= "" #default message
-  p = conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
-  console.log "\n\n\n=-=-=[thunder](2)", p, "\n\n\n" #xxx  
+  conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
   @acknowledge currentJob[ticket.type].type, (err) ->
     if err?
       #TODO: HANDLE THIS BETTER
       elma.error "cantAckError", "Could not send ACK", currentJob[ticket.type], err 
       return
     currentJob[ticket.type] = undefined #done with current job, update state
-    console.log "\n\n\n=-=-=[thunder](3)", ticket.type, "\n\n\n" #xxx  
 
 ###
   Acknowledge the last job received of the specified type
@@ -278,7 +267,6 @@ exports.acknowledge = (type, cbAcknowledged) =>
   -- cbListening: callback after listening to queue has started --> function (err)  
 ###
 exports.listenTo = (type, cbExecute, cbListening) =>
-  console.log "\n\n\n=-=-=[listenTo]", type, "\n\n\n" #xxx  
   _listen type, cbExecute, false, true, true, cbListening
 
 
