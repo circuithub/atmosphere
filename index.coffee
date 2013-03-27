@@ -221,17 +221,17 @@ lightning = (message, headers, deliveryInfo) =>
     return
   currentJob[deliveryInfo.queue] = {
     type: deliveryInfo.queue
-    name: headers.job.name
-    id: headers.job.id
+    job: headers.job # job = {name:, id:}
     data: message
     returnQueue: headers.returnQueue
   }
-  console.log "\n\n\n=-=-=[lightning]", deliveryInfo.queue, jobWorkers[deliveryInfo.queue], headers.job, currentJob.data, "\n\n\n" #xxx  
+  console.log "\n\n\n=-=-=[lightning]", currentJob[deliveryInfo.queue], "\n", jobWorkers[deliveryInfo.queue], "\n", headers.job, "\n", currentJob.data, "\n\n\n" #xxx  
   jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob.data)
 
 ###
   Reports completed job on a Rain Cloud
-  -- data: the job response data (message body)
+  -- ticket: {type: "", job: {name: "", id: "uuid"} }
+  -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, message) =>
   if not connectionReady 
