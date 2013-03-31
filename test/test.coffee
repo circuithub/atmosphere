@@ -19,7 +19,8 @@ jobTypes = {
   convertOrCAD: workerDoOrCAD
 }
 
-
+withTester = (ticket, data) ->
+  console.log "[Ww] Listen/Submit With Tester", ticket, data
 
 ###############################
 ## RUN ME! Yay! Tests!
@@ -44,5 +45,10 @@ atmosphere.init.rainCloud jobTypes, (err) ->
       #Submit Altium Conversion Job
       atmosphere.submitFor "convertAltium", {name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}, (err, data) ->
         console.log "[D] Job Done", err, data
+
+    #Test ...With functions
+    atmosphere.listenWith "testSubmitWith", withTester, (err) ->
+      atmosphere.submitWith "testSubmitWith", {type: "testSubmitWith", job: {name: "first-test", id: 42}}, "DATA!", (err) ->
+        console.log "[Sw] Submitted.", err
 
 console.log "EOF"

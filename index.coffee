@@ -180,7 +180,7 @@ exports.listenWith = (type, cbExecute, cbListening) =>
 ###
   Submit a task (status message) to the queue (no response)
   -- type: type of task (name of task queue)
-  -- ticket: Job Ticket. Must be in this format {job: "taskName", type: "taskQueueName"} 
+  -- ticket: Job Ticket. Must be in this format {job: {name: "taskName", id:"uuid"}, type: "taskQueueName"} 
   -- task: Message and data. Format: {message: "", level: "warning", data: {} }
   -- cbSubmitted: callback when submission complete (err, data) format
 ###
