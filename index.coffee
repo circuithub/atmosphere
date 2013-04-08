@@ -156,6 +156,7 @@ exports.submitFor = (type, job, cbJobDone) =>
 
 ###
   Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
+  >> Used for private response queues (responses to submitted jobs)
   -- type: type of jobs to listen for (name of job queue)
   -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
   -- cbListening: callback after listening to queue has started --> function (err) 
