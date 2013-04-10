@@ -190,13 +190,11 @@ exports.submitWith = (type, ticket, task, cbSubmitted) =>
     cbSubmitted [elma.error("noRabbitError", "Not connected to #{urlLogSafe} yet!")]
     return
   #[1.] Submit Task Message
-  console.log "[atm.submitWith](1)", type #xxx
   conn.publish type, JSON.stringify(task), {
                             contentType: "application/json"
                             headers: 
                               task: ticket
                             }
-  console.log "[atm.submitWith](2)", type #xxx
   cbSubmitted()
 
 
