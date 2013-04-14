@@ -5,7 +5,7 @@ uuid = require "node-uuid"
 bsync = require "bsync"
 domain = require "domain"
 
-url = nconf.get("CLOUDAMQP_URL") or "amqp://brkoacph:UNIBQBLE1E-_t-6fFapavZaMN68sdRVU@tiger.cloudamqp.com/brkoacph" # default to circuithub-staging
+url = nconf.get("CLOUDAMQP_URL") or "amqp://guest:guest@localhost:5672//" #default to localhost if no environment variable is set
 urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
 conn = undefined
 connectionReady = false
