@@ -108,10 +108,10 @@ exports._connect = (cbConnected) ->
 ###
 mailman = (message, headers, deliveryInfo) ->
   if not jobs["#{headers.type}-#{headers.job.name}"]?
-    elma.warning "noSuchJobError","Message received for job #{deliveryInfo.queue}-#{headers.job.name}, but job doesn't exist."
+    elma.warning "noSuchJobError","Message received for job #{headers.type}-#{headers.job.name}, but job doesn't exist."
     return  
   if not jobs["#{headers.type}-#{headers.job.name}"].id is headers.job.id
-    elma.warning "expiredJobError", "Received response for expired job #{deliveryInfo.queue}-#{headers.job.name} #{headers.job.id}."
+    elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
     return    
   jobs["#{headers.type}-#{headers.job.name}"].cb message.errors, message.data
   delete jobs["#{headers.type}-#{headers.job.name}"]
