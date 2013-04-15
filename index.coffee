@@ -113,7 +113,7 @@ mailman = (message, headers, deliveryInfo) ->
   if not jobs["#{headers.type}-#{headers.job.name}"].id is headers.job.id
     elma.warning "expiredJobError", "Received response for expired job #{deliveryInfo.queue}-#{headers.job.name} #{headers.job.id}."
     return    
-  jobs["#{headers.type}-#{headers.job.name}"].cb undefined, message
+  jobs["#{headers.type}-#{headers.job.name}"].cb message.errors, message.data
   delete jobs["#{headers.type}-#{headers.job.name}"]
 
 ###
@@ -146,6 +146,7 @@ exports.submitFor = (type, job, cbJobDone) =>
   jobs["#{type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
   job.data ?= {} #default value if unspecified
+  console.log "\n\n\n=-=-=[atm.submitFor]", JSON.stringify(job.data), "\n\n\n" #xxx  
   conn.publish type, JSON.stringify(job.data), {
                             contentType: "application/json", 
                             headers: {
@@ -226,7 +227,7 @@ lightning = (message, headers, deliveryInfo) =>
   -- ticket: {type: "", job: {name: "", id: "uuid"} }
   -- message: the job response data (message body)
 ###
-exports.doneWith = (ticket, message) =>
+exports.doneWith = (ticket, errors, data) =>
   if not connectionReady 
     #TODO: HANDLE THIS BETTER
     elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
@@ -236,7 +237,9 @@ exports.doneWith = (ticket, message) =>
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
   header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
-  message ?= "" #default message
+  message = 
+    errors: errors
+    data: data
   conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
   @acknowledge currentJob[ticket.type].type, (err) ->
     if err?
