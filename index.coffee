@@ -146,7 +146,6 @@ exports.submitFor = (type, job, cbJobDone) =>
   jobs["#{type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
   job.data ?= {} #default value if unspecified
-  console.log "\n\n\n=-=-=[atm.submitFor]", JSON.stringify(job.data), "\n\n\n" #xxx  
   conn.publish type, JSON.stringify(job.data), {
                             contentType: "application/json", 
                             headers: {
