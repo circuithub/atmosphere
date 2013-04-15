@@ -220,7 +220,7 @@ lightning = (message, headers, deliveryInfo) =>
     data: message
     returnQueue: headers.returnQueue
   }
-  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob.data)
+  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob[deliveryInfo.queue].data)
 
 ###
   Reports completed job on a Rain Cloud
