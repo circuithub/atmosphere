@@ -113,8 +113,10 @@ mailman = (message, headers, deliveryInfo) ->
   if not jobs["#{headers.type}-#{headers.job.name}"].id is headers.job.id
     elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
     return    
-  jobs["#{headers.type}-#{headers.job.name}"].cb message.errors, message.data
-  delete jobs["#{headers.type}-#{headers.job.name}"]
+  callback = jobs["#{headers.type}-#{headers.job.name}"].cb #cache function pointer
+  delete jobs["#{headers.type}-#{headers.job.name}"] #mark job as completed
+  process.nextTick () -> #release stack frames/memory
+    callback message.errors, message.data
 
 ###
   Implements timeouts for jobs-in-progress
@@ -123,8 +125,10 @@ foreman = () ->
   for job of jobs    
     jobs[job].timeout = jobs[job].timeout - 1
     if jobs[job].timeout <= 0
-      jobs[job].cb elma.error "jobTimeout", "A response to job #{job} was not received in time."
-      delete jobs[job]
+      callback = jobs[job].cb #necessary to prevent loss of function pointer
+      delete jobs[job] #mark job as completed
+      process.nextTick () -> #release stack frames/memory
+        callback elma.error "jobTimeout", "A response to job #{job} was not received in time."
   setTimeout(foreman, 1000)
 
 ###
@@ -163,6 +167,12 @@ exports.submitFor = (type, job, cbJobDone) =>
 ###
 exports.listenFor = (type, cbExecute, cbListening) =>
   _listen type, cbExecute, true, false, false, cbListening
+
+###
+  The number of active jobs (submitted, but not timed-out or returned yet)
+###
+exports.countFor = () ->
+  return Object.keys(jobs).length
 
 
 ########################################
@@ -240,12 +250,18 @@ exports.doneWith = (ticket, errors, data) =>
     errors: errors
     data: data
   conn.publish currentJob[ticket.type].returnQueue, JSON.stringify(message), {contentType: "application/json", headers: header} 
-  @acknowledge currentJob[ticket.type].type, (err) ->
-    if err?
-      #TODO: HANDLE THIS BETTER
-      elma.error "cantAckError", "Could not send ACK", currentJob[ticket.type], err 
-      return
-    currentJob[ticket.type] = undefined #done with current job, update state
+  theJob = currentJob[ticket.type]
+  delete currentJob[ticket.type] #done with current job, update state
+  process.nextTick () ->
+    exports.acknowledge theJob.type, (err) ->
+      if err?
+        #TODO: HANDLE THIS BETTER
+        elma.error "cantAckError", "Could not send ACK", theJob, err 
+        return
+
+exports.count = () ->
+  return Object.keys(currentJob).length
+
 
 ###
   Acknowledge the last job received of the specified type

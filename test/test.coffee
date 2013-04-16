@@ -7,6 +7,7 @@ altiumCounter = 0
 
 workerDoAltium = (ticket, data) ->
   console.log "[W] ALTIUM", ticket, data 
+  count()
   altiumCounter++
   atmosphere.doneWith ticket, {result:"Done with Altium", count: altiumCounter}
 
@@ -22,6 +23,11 @@ jobTypes = {
 withTester = (ticket, data) ->
   console.log "[Ww] Listen/Submit With Tester", ticket, data
 
+count = () ->
+  console.log "[#] Maker: #{atmosphere.countFor()}; Cloud: #{atmosphere.count()}."
+
+
+
 ###############################
 ## RUN ME! Yay! Tests!
 
@@ -32,23 +38,36 @@ atmosphere.init.rainCloud jobTypes, (err) ->
   #Init Rainmaker (App Server)
   atmosphere.init.rainMaker (err) ->
     console.log "[I] Initialized RAINMAKER", err
+    count()
 
     #Submit Altium Conversion Job
     atmosphere.submitFor "convertAltium", {name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
       console.log "[D] Job Done", err, data
+      count()
 
     #Submit Altium Conversion Job
     atmosphere.submitFor "convertOrCAD", {name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
       console.log "[D] Job Done", err, data
+      count()
 
     for i in [0...10]
       #Submit Altium Conversion Job
       atmosphere.submitFor "convertAltium", {name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}, (err, data) ->
         console.log "[D] Job Done", err, data
+        count()
+
+    atmosphere.submitFor "convertAltium", {name: "job-collision", data: {}, timeout:2}, (error, data) ->
+    atmosphere.submitFor "convertAltium", {name: "job-collision", data: {}, timeout:2}, (error, data) ->  
+    atmosphere.submitFor "convertAltium", {name: "job-collision", data: {}, timeout:2}, (error, data) ->
 
     #Test ...With functions
     atmosphere.listenWith "testSubmitWith", withTester, (err) ->
       atmosphere.submitWith "testSubmitWith", {type: "testSubmitWith", job: {name: "first-test", id: 42}}, "DATA!", (err) ->
         console.log "[Sw] Submitted.", err
 
+setTimeout () ->
+  count()
+, 1000
+
+count()
 console.log "EOF"
