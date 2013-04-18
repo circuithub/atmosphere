@@ -1,3 +1,4 @@
+_s = require "underscore.string"
 amqp = require "amqp"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
@@ -33,9 +34,20 @@ currentJob = {}
 ########################################
 
 ###
-  Jobs system initialization
+  Format machine prefix
 ###
-rainMaker = (cbDone) =>
+getRole = (role) ->
+  role = _s.humanize role
+  role = role.replace " ", "_"
+  role = _s.truncate role, 8
+  role = _s.truncate role, 7 if role[7] is "_"
+  return role
+
+###
+  Jobs system initialization
+  --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
+###
+rainMaker = (role, cbDone) =>
   @_connect (err) =>
     if err?
       cbDone err
@@ -46,8 +58,11 @@ rainMaker = (cbDone) =>
 ###
   jobTypes -- object with jobType values and worker function callbacks as keys; { jobType1: cbDoJobType1, jobType2: .. }
   -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
+  --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
 ###
-rainCloud = (jobTypes, cbDone) =>
+rainCloud = (role, jobTypes, cbDone) =>
+  #[0.] Initialize
+  rainID = "#{role}-#{rainID}"
   #[1.] Connect to message server
   @_connect (err) =>
     if err?
@@ -63,7 +78,9 @@ rainCloud = (jobTypes, cbDone) =>
       if allErrors?
         cbDone allErrors
         return
-      cbDone()
+      #Allow clouds to issue jobs to other clouds
+      foreman() #start job supervisor (runs asynchronously at 1sec intervals)
+      @listenFor rainID, mailman, cbDone        
 
 exports.init = {rainMaker: rainMaker, rainCloud: rainCloud}
 
