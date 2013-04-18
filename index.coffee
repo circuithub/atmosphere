@@ -41,6 +41,7 @@ getRole = (role) ->
   role = role.replace " ", "_"
   role = _s.truncate role, 8
   role = _s.truncate role, 7 if role[7] is "_"
+  role = role + "-"
   return role
 
 ###
