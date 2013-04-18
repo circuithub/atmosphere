@@ -15,9 +15,7 @@ listeners = {}
 jobs = {}
 jobWorkers = {}
 
-rainID = uuid.v4()
-rainCloudID = nconf.get("CLOUD_ID")
-rainCloudID ?= uuid.v4()
+rainID = uuid.v4() #Unique ID of this process/machine
 
 currentJob = {}
 
@@ -115,7 +113,9 @@ mailman = (message, headers, deliveryInfo) ->
     return    
   callback = jobs["#{headers.type}-#{headers.job.name}"].cb #cache function pointer
   delete jobs["#{headers.type}-#{headers.job.name}"] #mark job as completed
+  console.log "\n\n\n=-=-=[atm.mailman](before)", message, "\n\n\n" #xxx  
   process.nextTick () -> #release stack frames/memory
+    console.log "\n\n\n=-=-=[atm.mailman](after)", message, "\n\n\n" #xxx  
     callback message.errors, message.data
 
 ###
@@ -204,6 +204,7 @@ exports.submitWith = (type, ticket, task, cbSubmitted) =>
                             contentType: "application/json"
                             headers: 
                               task: ticket
+                              fromID: rainID
                             }
   cbSubmitted()
 
@@ -245,7 +246,7 @@ exports.doneWith = (ticket, errors, data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
-  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: rainCloudID}
+  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: rainID}
   message = 
     errors: errors
     data: data
