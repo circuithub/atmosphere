@@ -48,6 +48,7 @@ getRole = (role) ->
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
 rainMaker = (role, cbDone) =>
+  rainID = getRole(role) + rainID
   @_connect (err) =>
     if err?
       cbDone err
@@ -62,7 +63,7 @@ rainMaker = (role, cbDone) =>
 ###
 rainCloud = (role, jobTypes, cbDone) =>
   #[0.] Initialize
-  rainID = "#{role}-#{rainID}"
+  rainID = getRole(role) + rainID
   #[1.] Connect to message server
   @_connect (err) =>
     if err?
