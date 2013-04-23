@@ -24,7 +24,8 @@ currentJob = {}
 perfMon =
   complete: 0
   running: 0
-  startTime: undefined
+  startTime: undefined #time stamp exited initialization
+  idleAt: undefined #last job completed at (timestamp)
 
 
 #Set ENV var CLOUD_ID on atmosphere.raincloud servers
@@ -287,6 +288,7 @@ exports.doneWith = (ticket, errors, data) =>
         elma.error "cantAckError", "Could not send ACK", theJob, err 
         return
       perfMon.complete++
+      perfMon.idleAt = new Date().getTime()
 
 ###
   report RainCloud performance statistics
@@ -296,6 +298,7 @@ exports.count = () ->
     running: Object.keys(currentJob).length
     complete: perfMon.complete
     uptime: new Date().getTime() - perfMon.startTime #in milliseconds
+    idleTime: new Date().getTime() - perfMon.idleAt #milliseconds since last job completed
   return stats
 
 ###
