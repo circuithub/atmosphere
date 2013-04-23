@@ -21,6 +21,12 @@ rainID = uuid.v4() #Unique ID of this process/machine
 
 currentJob = {}
 
+perfMon =
+  complete: 0
+  running: 0
+  startTime: undefined
+
+
 #Set ENV var CLOUD_ID on atmosphere.raincloud servers
 
 ###
@@ -83,6 +89,7 @@ rainCloud = (role, jobTypes, cbDone) =>
         return
       #Allow clouds to issue jobs to other clouds
       foreman() #start job supervisor (runs asynchronously at 1sec intervals)
+      perfMon.startTime = new Date().getTime() #log boot time
       @listenFor rainID, mailman, cbDone        
 
 exports.init = {rainMaker: rainMaker, rainCloud: rainCloud}
@@ -279,9 +286,17 @@ exports.doneWith = (ticket, errors, data) =>
         #TODO: HANDLE THIS BETTER
         elma.error "cantAckError", "Could not send ACK", theJob, err 
         return
+      perfMon.complete++
 
+###
+  report RainCloud performance statistics
+###
 exports.count = () ->
-  return Object.keys(currentJob).length
+  stats = 
+    running: Object.keys(currentJob).length
+    complete: perfMon.complete
+    uptime: new Date().getTime() - perfMon.startTime #in milliseconds
+  return stats
 
 ###
   Simple direct jobs router. Fastest/easiest way to get RPC running in your app.
