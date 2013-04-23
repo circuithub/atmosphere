@@ -297,7 +297,7 @@ exports.count = () ->
   stats = 
     running: Object.keys(currentJob).length
     complete: perfMon.complete
-    uptime: new Date().getTime() - perfMon.startTime #in milliseconds
+    uptime: ((new Date().getTime() - perfMon.startTime)/1000/60).toFixed(2) #in minutes
     idleTime: new Date().getTime() - perfMon.idleAt #milliseconds since last job completed
   return stats
 
