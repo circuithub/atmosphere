@@ -141,9 +141,7 @@ mailman = (message, headers, deliveryInfo) ->
     return    
   callback = jobs["#{headers.type}-#{headers.job.name}"].cb #cache function pointer
   delete jobs["#{headers.type}-#{headers.job.name}"] #mark job as completed
-  console.log "\n\n\n=-=-=[atm.mailman](before)", message, "\n\n\n" #xxx  
   process.nextTick () -> #release stack frames/memory
-    console.log "\n\n\n=-=-=[atm.mailman](after)", message, "\n\n\n" #xxx  
     callback message.errors, message.data
 
 ###
@@ -310,7 +308,7 @@ exports.router = (taskName, functionName) ->
   return _router
 
 _router = (ticket, data) ->
-  elma.info "===[Atmosphere][Router][NEW JOB] #{ticket.type}-#{ticket.job.name}-#{ticket.step}", data
+  elma.info "[JOB] #{ticket.type}-#{ticket.job.name}-#{ticket.step}"
   ticket.data = data if data? #add job data to ticket
   #Execute (invoke work function)
   rpcWorkers[ticket.type] ticket, (errors, results) ->
