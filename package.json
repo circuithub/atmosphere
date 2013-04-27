@@ -2,7 +2,7 @@
   "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
   "name": "atmosphere",
   "description": "Background jobs queue (currently uses RabbitMQ)",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "homepage": "http://circuithub.com",
   "engines": {
     "node": ">=0.10"
@@ -13,6 +13,6 @@
     "nconf": "0.6.7",
     "node-uuid": "*",
     "bsync": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/bsync.git#master",
-    "amqp": "*"
+    "amqp": "git://github.com/postwait/node-amqp.git#master"
   }
 }
