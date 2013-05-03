@@ -300,6 +300,13 @@ exports.count = () ->
   return stats
 
 ###
+  Array of current jobs (queue names currently being processed by this worker)
+###
+exports.currentJobs = () ->
+  return Object.keys currentJob
+
+
+###
   Simple direct jobs router. Fastest/easiest way to get RPC running in your app.
   --Takes in job list and wraps your function in (ticket, data) -> doneWith(..) behavior
 ###
