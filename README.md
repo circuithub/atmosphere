@@ -25,7 +25,14 @@ Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
 
 
+# Stuff
 
+From original code file:
+1. worker functions in rain cloud apps get called like this:
+  your_function(ticket, jobData)
+2. When done, call doneWith(..) and give the ticket back along with any response data (must serialize to JSON)...
+  atmosphere.thunder ticket, responseData
+  
 ## Initialize (Connect to Server)
 
 ```coffeescript
