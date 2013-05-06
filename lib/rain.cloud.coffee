@@ -18,11 +18,13 @@ currentJob = {}
   -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
   --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
 ###
-exports.init = (role, jobTypes, cbDone) =>
+exports.init = (role, jobTypes, cbDone) ->    
   #[0.] Initialize
   core.setRole role
-  #[1.] Connect to message server
-  core.connect (err) =>
+  #[1.] Connect to message server    
+  core.connect (err) ->
+    console.log "\n\n\n=-=-=[rc.init]", 1, "\n\n\n" #xxx
+      
     if err?
       cbDone err
       return
@@ -31,13 +33,15 @@ exports.init = (role, jobTypes, cbDone) =>
     for jobType of jobTypes
       if not jobWorkers[jobType]?
         jobWorkers[jobType] = jobTypes[jobType]
-        workerFunctions.push bsync.apply @listen, jobType, lightning
-    bsync.parallel workerFunctions, (allErrors, allResults) =>
+        workerFunctions.push bsync.apply exports.listen, jobType, lightning
+    console.log "\n\n\n=-=-=[rc.init]", 2, "\n\n\n" #xxx
+    bsync.parallel workerFunctions, (allErrors, allResults) ->
+      console.log "\n\n\n=-=-=[rc.init]", 3, allErrors, allResults, "\n\n\n" #xxx
       if allErrors?
         cbDone allErrors
         return
       monitor.boot() #log boot time
-
+      cbDone undefined
 
 
 ########################################
@@ -58,7 +62,7 @@ exports.doneWith = (ticket, errors, data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
-  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: core.rainID}
+  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: core.rainID()}
   message = 
     errors: errors
     data: data

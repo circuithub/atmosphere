@@ -6,7 +6,25 @@
 ```
 Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
-# Usage
+# Features
+
+* Robust: timeouts, retries, error-handling, etc
+* Flexible: Supports multiple job queueing models
+* Efficient: thin, early release of resources
+* Scales: RPC and Task sub-division allows jobs to be spread across mulitple CPUs
+* "Fixes" Heroku Routing: You control how and when Atmosphere distributes work
+* Proven: Backed by RabbitMQ, used in production
+
+# Usage Models
+
+## RPC
+
+## Sub-Dividing Complex Jobs
+
+## Logging/Monitoring
+
+
+
 
 ## Initialize (Connect to Server)
 

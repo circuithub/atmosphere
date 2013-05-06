@@ -17,14 +17,14 @@ jobs = {}
   Jobs system initialization
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
-exports.init = (role, cbDone) =>
+exports.init = (role, cbDone) ->
   core.setRole(role)
-  core.connect (err) =>
+  core.connect (err) ->
     if err?
       cbDone err
       return
     foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-    @listen core.rainID, mailman, cbDone 
+    exports.listen core.rainID(), mailman, cbDone 
     monitor.boot()
 
 
@@ -54,7 +54,7 @@ exports.submit = (type, job, cbJobDone) =>
   job.data ?= {} #default value if unspecified
   core.publish type, job.data, {
                               job: {name: job.name, id: job.id}
-                              returnQueue: rainID
+                              returnQueue: core.rainID()
                           }
 
 ###

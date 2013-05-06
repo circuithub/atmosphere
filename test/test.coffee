@@ -24,7 +24,7 @@ withTester = (ticket, data) ->
   console.log "[Ww] Listen/Submit With Tester", ticket, data
 
 count = () ->
-  console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{atmosphere.rainCloud.count()}."
+  console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{JSON.stringify atmosphere.rainCloud.count()}."
 
 
 
