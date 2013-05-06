@@ -9,11 +9,11 @@ workerDoAltium = (ticket, data) ->
   console.log "[W] ALTIUM", ticket, data 
   count()
   altiumCounter++
-  atmosphere.doneWith ticket, {result:"Done with Altium", count: altiumCounter}
+  atmosphere.rainCloud.doneWith ticket, {result:"Done with Altium", count: altiumCounter}
 
 workerDoOrCAD = (ticket, data) ->
   console.log "[W] ORCAD", ticket, data
-  atmosphere.doneWith ticket, "Done with ORCAD job"
+  atmosphere.rainCloud.doneWith ticket, "Done with ORCAD job"
 
 jobTypes = {
   convertAltium: workerDoAltium

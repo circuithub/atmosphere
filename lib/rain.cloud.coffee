@@ -22,9 +22,7 @@ exports.init = (role, jobTypes, cbDone) ->
   #[0.] Initialize
   core.setRole role
   #[1.] Connect to message server    
-  core.connect (err) ->
-    console.log "\n\n\n=-=-=[rc.init]", 1, "\n\n\n" #xxx
-      
+  core.connect (err) ->      
     if err?
       cbDone err
       return
@@ -34,9 +32,7 @@ exports.init = (role, jobTypes, cbDone) ->
       if not jobWorkers[jobType]?
         jobWorkers[jobType] = jobTypes[jobType]
         workerFunctions.push bsync.apply exports.listen, jobType, lightning
-    console.log "\n\n\n=-=-=[rc.init]", 2, "\n\n\n" #xxx
     bsync.parallel workerFunctions, (allErrors, allResults) ->
-      console.log "\n\n\n=-=-=[rc.init]", 3, allErrors, allResults, "\n\n\n" #xxx
       if allErrors?
         cbDone allErrors
         return
