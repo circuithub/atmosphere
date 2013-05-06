@@ -50,9 +50,9 @@ exports.init = (role, jobTypes, cbDone) =>
   -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, errors, data) =>
-  if not connectionReady 
+  if not core.ready() 
     #TODO: HANDLE THIS BETTER
-    elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
+    elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
     return
   if not currentJob[ticket.type]?
     #TODO: HANDLE THIS BETTER
@@ -87,7 +87,7 @@ exports.listen = (type, cbExecute, cbListening) =>
   report RainCloud performance statistics
 ###
 exports.count = () ->
-  return monitor.stats
+  return monitor.stats()
 
 ###
   Array of current jobs (queue names currently being processed by this worker)

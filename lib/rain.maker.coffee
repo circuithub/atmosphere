@@ -5,7 +5,7 @@ uuid = require "node-uuid"
 core = require "./core"
 monitor = require "./monitor"
 
-exports.jobs = {}
+jobs = {}
 
 
 
@@ -41,7 +41,7 @@ exports.init = (role, cbDone) =>
 ###
 exports.submit = (type, job, cbJobDone) =>
   if not core.ready() 
-    cbJobDone elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
+    cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
     return
   #[1.] Inform Foreman Job Expected
   if jobs["#{type}-#{job.name}"]?

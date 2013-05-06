@@ -12,14 +12,15 @@ domain = require "domain"
 ## STATE MANAGEMENT
 ########################################
 
-exports.url = nconf.get("CLOUDAMQP_URL") or "amqp://guest:guest@localhost:5672//" #default to localhost if no environment variable is set
-exports.urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
+url = nconf.get("CLOUDAMQP_URL") or "amqp://guest:guest@localhost:5672//" #default to localhost if no environment variable is set
+_urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
+exports.urlLogSafe = _urlLogSafe
 
 conn = undefined
 connectionReady = false
 
-exports.queues = {}
-exports.listeners = {}
+queues = {}
+listeners = {}
 
 
 
@@ -66,11 +67,11 @@ exports.connect = (cbConnected) ->
     elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
     conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
     conn.on "error", (err) ->
-      elma.error "rabbitConnectedError", "RabbitMQ server at #{urlLogSafe} reports ERROR.", err
+      elma.error "rabbitConnectedError", "RabbitMQ server at #{_urlLogSafe} reports ERROR.", err
     conn.on "ready", (err) ->
       elma.info "rabbitConnected", "Connected to RabbitMQ!"
       if err?
-        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{urlLogSafe} FAILED.", err
+        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{_urlLogSafe} FAILED.", err
         cbConnected err
         return
       connectionReady = true
@@ -125,7 +126,7 @@ exports.publish = (queueName, messageObject, headerObject) ->
 ###
 exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
   if not connectionReady 
-    cbListening elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
+    cbListening elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
     return
   if not queues[type]?
     queue = conn.queue type, {autoDelete: not persist}, () -> # create a queue (if not exist, sanity check otherwise)
@@ -156,7 +157,7 @@ exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
 ###
 exports.acknowledge = (type, cbAcknowledged) =>
   if not connectionReady 
-    cbAcknowledged elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
+    cbAcknowledged elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
     return
   if not queues[type]?
     cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"

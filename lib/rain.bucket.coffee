@@ -24,10 +24,9 @@ exports.listen = (type, cbExecute, cbListening) =>
   -- cbSubmitted: callback when submission complete (err, data) format
 ###
 exports.submit = (type, ticket, task, cbSubmitted) =>
-  if not connectionReady 
-    cbSubmitted [elma.error("noRabbitError", "Not connected to #{urlLogSafe} yet!")]
+  if not core.ready() 
+    cbSubmitted [elma.error("noRabbitError", "Not connected to #{core.urlLogSafe} yet!")]
     return
   #[1.] Submit Task Message
   core.publish type, task, {task: ticket, fromID: rainID}
   cbSubmitted()
-  

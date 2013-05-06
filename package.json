@@ -12,6 +12,7 @@
     "elma":  "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/elma.git#master",
     "nconf": "0.6.7",
     "node-uuid": "*",
+    "underscore.string": "*",
     "bsync": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/bsync.git#master",
     "amqp": "git://github.com/postwait/node-amqp.git#master"
   }
