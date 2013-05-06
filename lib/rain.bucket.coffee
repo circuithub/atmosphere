@@ -30,8 +30,4 @@ exports.submit = (type, ticket, task, cbSubmitted) =>
   #[1.] Submit Task Message
   core.publish type, task, {task: ticket, fromID: rainID}
   cbSubmitted()
-
-
-
-
-
+  

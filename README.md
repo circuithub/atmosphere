@@ -1,7 +1,10 @@
-atmosphere
-==========
+```
+ _______ _______ _______  _____  _______  _____  _     _ _______  ______ _______
+ |_____|    |    |  |  | |     | |______ |_____] |_____| |______ |_____/ |______
+ |     |    |    |  |  | |_____| ______| |       |     | |______ |    \_ |______
 
-Background tasking for CircuitHub (current RabbitMQ backed)
+```
+Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
 # Usage
 

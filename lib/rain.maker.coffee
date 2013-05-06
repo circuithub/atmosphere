@@ -1,10 +1,9 @@
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 uuid = require "node-uuid"
-bsync = require "bsync"
-domain = require "domain"
 
 core = require "./core"
+monitor = require "./monitor"
 
 exports.jobs = {}
 
@@ -19,13 +18,14 @@ exports.jobs = {}
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
 exports.init = (role, cbDone) =>
-  rainID = getRole(role) + rainID
-  @_connect (err) =>
+  core.setRole(role)
+  core.connect (err) =>
     if err?
       cbDone err
       return
     foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-    @listenFor rainID, mailman, cbDone 
+    @listen core.rainID, mailman, cbDone 
+    monitor.boot()
 
 
 
@@ -40,7 +40,7 @@ exports.init = (role, cbDone) =>
   -- cbJobDone: callback when response received (error, data) format
 ###
 exports.submit = (type, job, cbJobDone) =>
-  if not connectionReady 
+  if not core.ready() 
     cbJobDone elma.error "noRabbitError", "Not connected to #{urlLogSafe} yet!" 
     return
   #[1.] Inform Foreman Job Expected
@@ -52,12 +52,9 @@ exports.submit = (type, job, cbJobDone) =>
   jobs["#{type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
   #[2.] Submit Job
   job.data ?= {} #default value if unspecified
-  conn.publish type, JSON.stringify(job.data), {
-                            contentType: "application/json", 
-                            headers: {
+  core.publish type, job.data, {
                               job: {name: job.name, id: job.id}
                               returnQueue: rainID
-                            }
                           }
 
 ###
@@ -68,7 +65,7 @@ exports.submit = (type, job, cbJobDone) =>
   -- cbListening: callback after listening to queue has started --> function (err) 
 ###
 exports.listen = (type, cbExecute, cbListening) =>
-  _listen type, cbExecute, true, false, false, cbListening
+  core.listen type, cbExecute, true, false, false, cbListening
 
 ###
   The number of active jobs (submitted, but not timed-out or returned yet)
