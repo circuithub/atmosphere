@@ -98,7 +98,7 @@ mailman = (message, headers, deliveryInfo) ->
   Implements timeouts for jobs-in-progress
 ###
 foreman = () ->
-  for job of jobs    
+  for job of jobs then do (job) ->    
     jobs[job].timeout = jobs[job].timeout - 1
     if jobs[job].timeout <= 0
       callback = jobs[job].cb #necessary to prevent loss of function pointer
