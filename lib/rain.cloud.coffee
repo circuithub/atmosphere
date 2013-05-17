@@ -91,14 +91,10 @@ exports.count = () ->
 
 ###
   Object of current jobs (queue names currently being processed by this worker)
-  Object.jobType = {id:"", name:""}
+  Returns an array of queue names (job types) with active jobs in it
 ###
 exports.currentJobs = () ->
-  currentReport = {}
-  for jobName, job of currentJob
-    currentReport.jobName = job # {id: "", name: ""}
-  return currentReport
-
+  return Object.keys currentJob
 
 
 ########################################
