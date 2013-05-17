@@ -90,12 +90,13 @@ exports.count = () ->
   return monitor.stats()
 
 ###
-  Array of current jobs (queue names currently being processed by this worker)
+  Object of current jobs (queue names currently being processed by this worker)
+  Object.jobType = {id:"", name:""}
 ###
 exports.currentJobs = () ->
   currentReport = {}
   for jobName, job of currentJob
-    currentReport.jobName = job.job # {name: "", id: "", step: ""}
+    currentReport.jobName = job # {id: "", name: ""}
   return currentReport
 
 
