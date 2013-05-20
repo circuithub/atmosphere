@@ -21,7 +21,10 @@ Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
 ### Local (makes request)
 ```coffeescript
+#Include Module
 atmosphere = require("atmosphere").rainMaker
+
+#Connect to Atmosphere
 atmosphere.init "requester", (err) ->
 	# Check for errors
 	if err?
@@ -29,10 +32,11 @@ atmosphere.init "requester", (err) ->
 		return
 	# Submit job (make the remote procedure call)
 	job = 
+		type: "remoteFunction" #the job type/queue name
 		name: "special job" #name for this work request (passed to remote router)
-		data: {} #arbitrary serializable object to pass to remote function
+		data: {msg: "useful"} #arbitrary serializable object to pass to remote function
 		timeout: 30 #seconds
-	atmosphere.submit "theSpecificRPCQueue", job, (error, data) ->
+	atmosphere.submit job, (error, data) ->
 		if error?
 			console.log "Error occurred executing function.", error
 			return
@@ -41,7 +45,27 @@ atmosphere.init "requester", (err) ->
 
 ### Remote (fulfills request)
 ```coffeescript
+#Include Module
+atmosphere = require("atmosphere").rainCloud
 
+#Local Function to Execute (called remotely)
+# -- ticket = {type, name, id}
+# -- data = copy of data object passed to submit
+localFunction = (ticket, data) ->
+	console.log "Doing #{data.msg} work here!"
+	atmosphere.doneWith()
+
+#Which possible jobs should this server register to handle
+handleJobs = 
+	remoteFunction: localFunction #object key must match job.type
+
+#Connect to Atmosphere
+atmosphere.init "responder", (err) ->
+	# Check for errors
+	if err?
+		console.log "Could not initialize.", err
+		return
+	#All set now we're waiting for jobs to arrive
 ```
 
 ## Sub-Dividing Complex Jobs

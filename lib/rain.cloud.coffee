@@ -145,4 +145,8 @@ lightning = (message, headers, deliveryInfo) =>
     data: message
     returnQueue: headers.returnQueue
   }
-  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob[deliveryInfo.queue].data)
+  jobWorkers[deliveryInfo.queue]
+    type: deliveryInfo.queue
+    name: headers.job.name
+    id: headers.job.id
+  , currentJob[deliveryInfo.queue].data
