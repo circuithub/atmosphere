@@ -36,26 +36,29 @@ exports.init = (role, cbDone) ->
 ###
   Submit a job to the queue, but anticipate a response
   -- type: type of job (name of job queue)
-  -- job: must be in this format {name: "jobName", data: {}, timeout: 30 } the job details (message body) <-- timeout (in seconds) is optional defaults to 30 seconds
+  -- job: must be in this format {type: "typeOfJob/queueName", name: "jobName", data: {}, timeout: 30 } the job details (message body) <-- timeout (in seconds) is optional defaults to 30 seconds
   -- cbJobDone: callback when response received (error, data) format
 ###
-exports.submit = (type, job, cbJobDone) =>
-  if not core.ready() 
-    cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
-    return
-  #[1.] Inform Foreman Job Expected
-  if jobs["#{type}-#{job.name}"]?
-    cbJobDone elma.error "jobAlreadyExistsError", "Job #{type}-#{job.name} Already Pending"
-    return
-  job.timeout ?= 60
-  job.id = uuid.v4()
-  jobs["#{type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
-  #[2.] Submit Job
-  job.data ?= {} #default value if unspecified
-  core.publish type, job.data, {
-                              job: {name: job.name, id: job.id}
-                              returnQueue: core.rainID()
-                          }
+exports.submit = types.cfn (-> [ 
+  @Object {type: @String(), name: @String()}
+  @Function() ]),  
+  (type, job, cbJobDone) =>
+    if not core.ready() 
+      cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      return
+    #[1.] Inform Foreman Job Expected
+    if jobs["#{type}-#{job.name}"]?
+      cbJobDone elma.error "jobAlreadyExistsError", "Job #{type}-#{job.name} Already Pending"
+      return
+    job.timeout ?= 60
+    job.id = uuid.v4()
+    jobs["#{type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
+    #[2.] Submit Job
+    job.data ?= {} #default value if unspecified
+    core.publish type, job.data, {
+                                job: {name: job.name, id: job.id}
+                                returnQueue: core.rainID()
+                            }
 
 ###
   Subscribe to incoming jobs in the queue (exclusively -- block others from listening)

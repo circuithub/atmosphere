@@ -8,7 +8,7 @@ Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
 # Features
 
-* Robust: timeouts, retries, error-handling, etc
+* Robust: timeouts, retries, error-handling, auto-reconnect, etc
 * Flexible: Supports multiple job queueing models
 * Efficient: thin, early release of resources
 * Scales: RPC and Task sub-division allows jobs to be spread across mulitple CPUs
@@ -18,6 +18,31 @@ Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 # Usage Models
 
 ## RPC
+
+### Local (makes request)
+```coffeescript
+atmosphere = require("atmosphere").rainMaker
+atmosphere.init "requester", (err) ->
+	# Check for errors
+	if err?
+		console.log "Could not initialize.", err
+		return
+	# Submit job (make the remote procedure call)
+	job = 
+		name: "special job" #name for this work request (passed to remote router)
+		data: {} #arbitrary serializable object to pass to remote function
+		timeout: 30 #seconds
+	atmosphere.submit "theSpecificRPCQueue", job, (error, data) ->
+		if error?
+			console.log "Error occurred executing function.", error
+			return
+		console.log "RPC completed and returned:", data
+```
+
+### Remote (fulfills request)
+```coffeescript
+
+```
 
 ## Sub-Dividing Complex Jobs
 
