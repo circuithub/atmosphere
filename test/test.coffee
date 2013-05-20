@@ -41,24 +41,24 @@ atmosphere.rainCloud.init "test", jobTypes, (err) ->
     count()
 
     #Submit Altium Conversion Job
-    atmosphere.rainMaker.submit "convertAltium", {name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
+    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
       console.log "[D] Job Done", err, data
       count()
 
     #Submit Altium Conversion Job
-    atmosphere.rainMaker.submit "convertOrCAD", {name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
+    atmosphere.rainMaker.submit {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
       console.log "[D] Job Done", err, data
       count()
 
     for i in [0...10]
       #Submit Altium Conversion Job
-      atmosphere.rainMaker.submit "convertAltium", {name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}, (err, data) ->
+      atmosphere.rainMaker.submit {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}, (err, data) ->
         console.log "[D] Job Done", err, data
         count()
 
-    atmosphere.rainMaker.submit "convertAltium", {name: "job-collision", data: {}, timeout:2}, (error, data) ->
-    atmosphere.rainMaker.submit "convertAltium", {name: "job-collision", data: {}, timeout:2}, (error, data) ->  
-    atmosphere.rainMaker.submit "convertAltium", {name: "job-collision", data: {}, timeout:2}, (error, data) ->
+    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-collision", data: {}, timeout:2}, (error, data) ->
+    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-collision", data: {}, timeout:2}, (error, data) ->  
+    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-collision", data: {}, timeout:2}, (error, data) ->
 
     #Test ...With functions
     atmosphere.rainBucket.listen "testSubmitWith", withTester, (err) ->
