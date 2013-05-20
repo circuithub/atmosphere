@@ -85,7 +85,7 @@ atmosphere.init "responder", (err) ->
 * Callback can be forced on success, but chain execution will continue
 * Only one callback per chain
 
-First, you must connect to atmosphere to submit jobs this way:
+First, you must connect to atmosphere to submit jobs:
 
 ```coffeescript
 #Include Module
@@ -101,6 +101,12 @@ atmosphere.init "requester", (err) ->
 ```
 
 ### Submit a Job --> Job --> Callback
+
+* Jobs are daisy chained -- one job is run after the other completes
+* If the first jobs returns an error, the second is not processed
+* Results from the first job are merged with the second jobs data parameter before execution so that data cascades between jobs
+* Unlimited jobs many be chained in this fashion.
+
 ```coffeescript
 	job1 = 
 		type: "remoteFunction" #the job type/queue name
@@ -121,7 +127,7 @@ atmosphere.init "requester", (err) ->
 
 ### Submit a Job --> Callback --> Job
 
-The callback is returned after job1 completes, but execution will continue to job2 if no error occurred. The callback from job2 will be ignored.
+The callback is returned after job1 completes, but execution will continue to job2 if no error occurred. The callback from job2 (and subsequent) will be ignored.
 
 ```coffeescript
 	job1 = 
@@ -167,9 +173,40 @@ atmosphere.init.rainCloud jobTypes, (err) ->
 atmosphere.init.rainMaker (err) ->
 ```
 
-## Submit a Job
 
-### Example Response
+
+# Architecture
+```coffeescript
+rainMaker.submit(job, callback)
+	--> RabbitMQ -->
+		rainCloud.lightning(..)
+			envelope
+				external.function(ticket, data)
+			envelope
+		rainCloud.doneWith(..)
+	<-- RabbitMQ <--
+callback(errors, data)
+```
+
+
+# Data Structures & Formats
+
+## Current Job State
+
+```coffeescript
+    next: headers.next = [job2, job3, job4, ...]
+```
+
+## Job Ticket
+
+```coffeescript
+ticket = 
+    type: deliveryInfo.queue
+    name: headers.job.name
+    id: headers.job.id
+```
+
+## Received from RabbitMQ
 
 Message:
 ```json
