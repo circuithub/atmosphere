@@ -1,6 +1,6 @@
 should       = require "should"
 atmosphere = require "../index"
-
+bsync = require "bsync"
 
 
 ###############################
@@ -78,38 +78,46 @@ count = () ->
 ###############################
 ## RUN ME! Yay! Tests!
 
-describe "tree.service", ->
+describe "atmosphere", ->
     
   before (done) ->
 
-#Init Cloud (Worker Server -- ex. EDA Server)
-atmosphere.rainCloud.init "test", jobTypes, (err) ->
-  console.log "[I] Initialized RAINCLOUD", err
-  
-  #Init Rainmaker (App Server)
-  atmosphere.rainMaker.init "test", (err) ->
-    console.log "[I] Initialized RAINMAKER", err
-    count()
+    #Init Cloud (Worker Server -- ex. EDA Server)
+    atmosphere.rainCloud.init "test", jobTypes, (err) ->
+      shouldNotHaveErrors err
+      console.log "[I] Initialized RAINCLOUD", err
+      
+      #Init Rainmaker (App Server)
+      atmosphere.rainMaker.init "test", (err) ->
+        shouldNotHaveErrors err
+        console.log "[I] Initialized RAINMAKER", err
+        done()
 
-    #Submit Altium Conversion Job
-    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
-      console.log "[D] Job Done", err, data
-      count()
+  it "should process two different job types simultaneously", (done) ->
+    testFunctions = 
+      job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+      job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+    bsync.parallel testFunctions, (allErrors, allResults) ->
+      shouldNotHaveErrors allErrors
+      console.log "[D] Jobs Done", allResults      
+      done()
 
-    #Submit Altium Conversion Job
-    atmosphere.rainMaker.submit {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}, (err, data) ->
-      console.log "[D] Job Done", err, data
-      count()
-
+  it "should process only one job of a type at a time", (done) ->
+    testFunctions = []
     for i in [0...10]
       #Submit Altium Conversion Job
-      atmosphere.rainMaker.submit {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}, (err, data) ->
-        console.log "[D] Job Done", err, data
-        count()
+      testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        shouldNotHaveErrors allErrors
+        console.log "[D] Job Done", allResults
+        done()
 
-    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-collision", data: {}, timeout:2}, (error, data) ->
-    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-collision", data: {}, timeout:2}, (error, data) ->  
-    atmosphere.rainMaker.submit {type: "convertAltium", name: "job-collision", data: {}, timeout:2}, (error, data) ->
+  #-- NOTE: Support for this isn't rigorous. Jobs must be safe to run on top of itself, but this makes it more efficient since if the same job is routed to the same cloud it will be dropped.
+  it "should handle a job collision (same job submitted simultaneously)", (done) ->
+    testFunctions = 
+      job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
+      job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}  
+      job3: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
 
     #Test ...With functions
     atmosphere.rainBucket.listen "testSubmitWith", withTester, (err) ->
