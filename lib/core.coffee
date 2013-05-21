@@ -121,7 +121,7 @@ exports.publish = (queueName, messageObject, headerObject) ->
 exports.submit = types.fn (-> [ 
   @String()
   @Object {data: @Object(), next: @Array()}
-  @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String()}
+  @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String(), callback: @Boolean()}
   ]),  
   (type, payload, headers) => 
     return exports.publish type, payload, headers

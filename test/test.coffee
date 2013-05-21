@@ -8,6 +8,7 @@ bsync = require "bsync"
 
 shouldNotHaveErrors = (errors) ->
   if errors?
+    console.log "\n\n\n=-=-=[shouldNotHaveErrors]", errors, "\n\n\n" #xxx
     if Array.isArray errors
       errorsString = (for e in errors then "#{e.code}: #{e.message}").join "\n"
       should.fail errorsString, ""
@@ -53,10 +54,10 @@ shouldHaveError = (errors, errorCode) ->
 altiumCounter = 0
 
 workerDoAltium = (ticket, data) ->
-  console.log "[W] ALTIUM", ticket, undefined, data 
+  console.log "[W] ALTIUM", ticket, data 
   count()
   altiumCounter++
-  atmosphere.rainCloud.doneWith ticket, {result:"Done with Altium", count: altiumCounter}
+  atmosphere.rainCloud.doneWith ticket, undefined, {result:"Done with Altium", count: altiumCounter}
 
 workerDoOrCAD = (ticket, data) ->
   console.log "[W] ORCAD", ticket, data

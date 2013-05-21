@@ -53,13 +53,14 @@ exports.submit =
     #--Clarify callback flow (only first callback=true remains)
     foundCB = false
     for eachJob in jobChain
-      if foundCB or (not eachJob.callback?) or not eachJob.callback
+      if foundCB or (not eachJob.callback?) or (not eachJob.callback)
         eachJob.callback = false
       else
         foundCB = true if eachJob.callback? and eachJob.callback   
     jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
     #--Look at first job
     job = jobChain.shift()
+    console.log "\n\n\n=-=-=[maker.submit]", job, "\n\n\n" #xxx
 
     #[2.] Inform Foreman Job Expected
     if jobs["#{job.type}-#{job.name}"]?
@@ -73,6 +74,7 @@ exports.submit =
     #[3.] Submit Job
     payload = {data: job.data ?= {}, next: jobChain}
     core.submit job.type, payload, {
+                                callback: job.callback
                                 job: {name: job.name, id: job.id}
                                 returnQueue: core.rainID()
                             }
