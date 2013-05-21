@@ -45,16 +45,16 @@ It has...
 
 # Routing Model
 
-Atmosphere consists of two entities: ```rainMaker```'s and ```rainCloud```'s
+Atmosphere consists of two entities: ```rainMaker``` and ```rainCloud```
 
-* ```rainMaker```'s dance to make it rain -- they submit jobs because they want work done.
-* ```rainCloud```'s actually release water -- they perform the work because a job was received.
+* ```rainMakers``` dance to make it rain -- they submit jobs because they want work done.
+* ```rainClouds``` actually release water -- they perform the work because a job was received.
 
 You can control how work is distributed in the atmosphere by understanding the routing rules:
 
-1. ```rainCloud```'s register for the job types they want to handle by specifying which types and which functions should be invoked when work is received for that job type.
+1. ```rainClouds``` register for the job types they want to handle by specifying which types and which functions should be invoked when work is received for that job type.
 2. Atmosphere distributes jobs among all ```rainClouds``` registered for that job in a round-robin fashion (least recently tasked gets the next job). 
-3. ```rainClouds``` can only process one job *of each job type* at a time. If you have I/O intensive tasks this works extremely well. If you have compute intensive tasks this does not. See the section at the end on computer intensive tasking to learn how to employ atmosphere effectively with CPU-heavy workloads.
+3. ```rainClouds``` can only process one job *of each job type* at a time. If you have I/O intensive tasks this works extremely well. If you have compute intensive tasks this does not. See the section at the end on compute intensive tasking to learn how to employ atmosphere effectively with CPU-heavy workloads.
 4. Atmosphere does not distribute jobs to busy ```rainClouds```. A cloud is busy if it is currently processing a job of the *same type* as the job trying to be scheduled.
 5. If a ```rainCloud``` crashes or is shutdown, any tasks that have not yet completed are re-queued and go the next available cloud following the rules above. This happens automatically (no action is necessary on the part of the developer).
 
@@ -90,6 +90,12 @@ brew install rabbitmq
 
 # Hello World!
 
+Welcome life in an atmosphere... breathe in... breathe out... =)
+
+Let's use our job queue to do some simple remote-procedure-call-style work.
+
+We submit a job and print out the result when it's done. Atmosphere looks and behaves like any other locally executing node.js asynchronous function, but the work is being done on one of many remote servers or local cores.
+
 ### Local (makes request)
 ```coffeescript
 #[1.] Include Module
@@ -107,6 +113,7 @@ atmosphere.init "requester", (err) ->
 		data: {msg1: "Hello", msg2: "World!"} #arbitrary serializable object to pass to remote
 		timeout: 30 #seconds (if timeout elapses, error response is returned to callback)
 	atmosphere.submit job, (error, data) ->
+
 		#[4.] Job is complete!
 		return error if error?			
 		console.log "RPC completed and returned:", data
@@ -114,28 +121,24 @@ atmosphere.init "requester", (err) ->
 
 ### Remote (fulfills request)
 ```coffeescript
-#Include Module
+#[1.] Include Module
 atmosphere = require("atmosphere").rainCloud
 
-#Local Function to Execute (called remotely)
-# -- ticket = {type, name, id}
-# -- data = copy of data object passed to submit
+#[2.] Local Function to Execute (called remotely)
 localFunction = (ticket, data) ->
-	console.log "Doing #{data.msg} work here!"
+	console.log "Working on job with data: #{data.msg1} #{data.msg2}"
 	error = undefined
 	results = "This string was generated inside the work function"
 	atmosphere.doneWith(ticket, error, results)
 
-#Which possible jobs should this server register to handle
+#[3.] Which possible jobs should this server register to handle
 handleJobs = 
 	remoteFunction: localFunction #object key must match job.type
 
-#Connect to Atmosphere
+#[4.] Connect to Atmosphere
 atmosphere.init "responder", (err) ->
 	# Check for errors
-	if err?
-		console.log "Could not initialize.", err
-		return
+	return err if err?
 	#All set now we're waiting for jobs to arrive
 ```
 
