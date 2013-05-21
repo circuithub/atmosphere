@@ -50,6 +50,7 @@ exports.init = (role, jobTypes, cbDone) ->
   -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, errors, data) =>
+  #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
     elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
@@ -58,12 +59,34 @@ exports.doneWith = (ticket, errors, data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
-  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: core.rainID()}
-  message = 
-    errors: errors
-    data: data
-  core.publish currentJob[ticket.type].returnQueue, message, header
+
+  #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
+
+  #No more jobs in the chain
+  if theJob.next.length is 0
+    if theJob.callback 
+      #callback
+      header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
+      message = 
+        errors: errors
+        data: data
+      core.publish currentJob[ticket.type].returnQueue, message, header
+  
+  #More jobs in the chain
+  else
+    nextJob = theJob.next.shift()
+    payload = 
+      data: nextJob.data ?= {}
+      next: theJob.next
+    headers = 
+      job: 
+        name: theJob.job.name
+        id: theJob.job.id
+      returnQueue: theJob.returnQueue
+    core.submit nextJob.type, payload, headers
+  
+  #Done with this specific job in the job chain
   delete currentJob[ticket.type] #done with current job, update state
   process.nextTick () ->
     core.acknowledge theJob.type, (err) ->
@@ -137,16 +160,18 @@ exports.routers =
 lightning = (message, headers, deliveryInfo) =>
   if currentJob[deliveryInfo.queue]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
+  #Hold this information internal to atmosphere
   currentJob[deliveryInfo.queue] = {
     type: deliveryInfo.queue
-    job: headers.job # job = {name:, id:}
-    data: message
+    job: headers.job # job = {name:, id:}    
     returnQueue: headers.returnQueue
+    next: message.next
   }
+  #Release this information to the work function (dispatch job)
   jobWorkers[deliveryInfo.queue]
     type: deliveryInfo.queue
     name: headers.job.name
     id: headers.job.id
-  , currentJob[deliveryInfo.queue].data
+  , message.data

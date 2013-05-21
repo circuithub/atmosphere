@@ -90,16 +90,16 @@ brew install rabbitmq
 
 # Hello World!
 
-Welcome life in an atmosphere... breathe in... breathe out... =)
+Welcome to life in an atmosphere... breathe in... breathe out... =)
 
-Let's use our job queue to do some simple remote-procedure-call-style work.
+Let's use our job queue to do some simple remote-procedure-call-style work. We submit a job and print out the result when it's done. 
 
-We submit a job and print out the result when it's done. Atmosphere looks and behaves like any other locally executing node.js asynchronous function, but the work is being done on one of many remote servers or local cores.
+Atmosphere looks and behaves like any other locally executing node.js asynchronous function, but the work is being done on one of many remote servers or local cores.
 
 ### Local (makes request)
 ```coffeescript
 #[1.] Include Module
-atmosphere = require("atmosphere").rainMaker # <-- Notice
+atmosphere = require("atmosphere").rainMaker # <-- Notice this!
 
 #[2.] Connect to Atmosphere
 atmosphere.init "requester", (err) ->
@@ -122,7 +122,7 @@ atmosphere.init "requester", (err) ->
 ### Remote (fulfills request)
 ```coffeescript
 #[1.] Include Module
-atmosphere = require("atmosphere").rainCloud
+atmosphere = require("atmosphere").rainCloud #<-- Notice this!
 
 #[2.] Local Function to Execute (called remotely)
 localFunction = (ticket, data) ->
@@ -131,7 +131,7 @@ localFunction = (ticket, data) ->
 	results = "This string was generated inside the work function"
 	atmosphere.doneWith(ticket, error, results)
 
-#[3.] Which possible jobs should this server register to handle
+#[3.] Which possible jobs should this server register to handle?
 handleJobs = 
 	remoteFunction: localFunction #object key must match job.type
 
@@ -316,13 +316,15 @@ callback(errors, data)
 
 # Data Structures & Formats
 
-## Current Job State
+## External
+
+### Current Job State
 
 ```coffeescript
-    next: headers.next = [job2, job3, job4, ...]
+    message = {data: {}, next: [job2, job3, job4, ...]}
 ```
 
-## Job Ticket
+### Job Ticket
 
 ```coffeescript
 ticket = 
@@ -331,7 +333,42 @@ ticket =
     id: headers.job.id
 ```
 
-## Received from RabbitMQ
+## Internal 
+
+### jobChain (payload.next)
+
+```
+next = [
+	{
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+		callback: true #optional
+	},
+	{
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+		callback: false #optional
+	}
+]
+```
+
+### currentJob
+
+```coffeescript
+currentJob[deliveryInfo.queue] = {
+    type: deliveryInfo.queue
+    job: {name:, id:}    
+    returnQueue: headers.returnQueue
+    next: message.next
+}
+```
+
+
+### Received from RabbitMQ
 
 Message:
 ```json

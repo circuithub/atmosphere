@@ -113,6 +113,18 @@ exports.delete = () ->
 exports.publish = (queueName, messageObject, headerObject) ->
   conn.publish queueName, JSON.stringify(messageObject), {contentType: "application/json", headers: headerObject} 
 
+###
+  Submit a job
+  -- Enforces job structure to make future refactor work safer
+###
+exports.submit = types.cfn (-> [ 
+  @String()
+  @Object {data: @String(), next: @String()}
+  @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String()}
+  ]),  
+  (type, payload, headers) => 
+    return exports.publish type, payload, headers
+
 
 
 ########################################

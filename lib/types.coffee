@@ -40,3 +40,15 @@ exports.cfn = (schemaF, f) ->
       callback elma.errors "typeError", (adt.typecheck.show e for e in errors), arguments
     else
       f arguments..., callback
+
+classToType = {}
+for name in "Boolean Number String Function Array Date RegExp".split(" ")
+  classToType["[object " + name + "]"] = name.toLowerCase()
+
+exports.type = (obj) ->
+  if obj == undefined or obj == null
+    return String obj
+  myClass = Object.prototype.toString.call obj
+  if myClass of classToType
+    return classToType[myClass]
+  return "object"

@@ -5,7 +5,8 @@ types = require "./types"
 core = require "./core"
 monitor = require "./monitor"
 
-jobs = {}
+jobs = {} #indexed by "#{headers.type}-#{headers.job.name}"
+callbacks = {} #indexed by job.id
 
 
 
@@ -41,20 +42,38 @@ exports.init = (role, cbDone) ->
 exports.submit = types.cfn (-> [ 
   @Object {type: @String(), name: @String(), data: @Object(), timeout: @Number()}
   @Function() ]),  
-  (job, cbJobDone) =>
+  (jobChain, cbJobDone) =>
     if not core.ready() 
       cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
       return
-    #[1.] Inform Foreman Job Expected
+
+    #[1.] Array Prep (job chaining)
+    #--Format
+    if types.type jobChain isnt "array"
+      jobChain = [jobChain]
+    #--Clarify callback flow (only first callback=true remains)
+    foundCB = false
+    for eachJob in jobChain
+      if foundCB or (not eachJob.callback?) or not eachJob.callback
+        eachJob.callback = false
+      else
+        foundCB = true if eachJob.callback? and eachJob.callback   
+    jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
+    #--Look at first job
+    job = jobChain.shift()
+
+    #[2.] Inform Foreman Job Expected
     if jobs["#{job.type}-#{job.name}"]?
       cbJobDone elma.error "jobAlreadyExistsError", "Job #{job.type}-#{job.name} Already Pending"
       return
     job.timeout ?= 60
     job.id = uuid.v4()
-    jobs["#{job.type}-#{job.name}"] = {id: job.id, cb: cbJobDone, timeout: job.timeout}
-    #[2.] Submit Job
-    job.data ?= {} #default value if unspecified
-    core.publish job.type, job.data, {
+    jobs["#{job.type}-#{job.name}"] = {id: job.id, timeout: job.timeout}
+    callbacks[job.id] = cbJobDone
+    
+    #[3.] Submit Job
+    payload = {data: job.data ?= {}, next: jobChain}
+    core.submit job.type, payload, {
                                 job: {name: job.name, id: job.id}
                                 returnQueue: core.rainID()
                             }
@@ -85,14 +104,12 @@ exports.count = () ->
   Assigns incoming messages to jobs awaiting a response
 ###
 mailman = (message, headers, deliveryInfo) ->
-  if not jobs["#{headers.type}-#{headers.job.name}"]?
-    elma.warning "noSuchJobError","Message received for job #{headers.type}-#{headers.job.name}, but job doesn't exist."
-    return  
-  if not jobs["#{headers.type}-#{headers.job.name}"].id is headers.job.id
+  if not callbacks["#{headers.job.id}"]?
     elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
     return    
-  callback = jobs["#{headers.type}-#{headers.job.name}"].cb #cache function pointer
+  callback = callbacks["#{headers.job.id}"] #cache function pointer
   delete jobs["#{headers.type}-#{headers.job.name}"] #mark job as completed
+  delete callbacks["#{headers.job.id}"] #mark job as completed
   process.nextTick () -> #release stack frames/memory
     callback message.errors, message.data
 
