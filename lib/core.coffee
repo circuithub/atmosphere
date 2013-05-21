@@ -5,6 +5,7 @@ elma  = require("elma")(nconf)
 uuid = require "node-uuid"
 bsync = require "bsync"
 domain = require "domain"
+types = require "./types"
 
 
 
