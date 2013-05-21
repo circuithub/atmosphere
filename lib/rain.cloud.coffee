@@ -1,3 +1,4 @@
+_ = require "underscore"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 bsync = require "bsync"
@@ -49,7 +50,7 @@ exports.init = (role, jobTypes, cbDone) ->
   -- ticket: {type: "", job: {name: "", id: "uuid"} }
   -- message: the job response data (message body)
 ###
-exports.doneWith = (ticket, errors, data) =>
+exports.doneWith = (ticket, errors, result) =>
   #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
@@ -68,14 +69,14 @@ exports.doneWith = (ticket, errors, data) =>
       header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
       message = 
         errors: errors
-        data: data
+        data: result
       core.publish currentJob[ticket.type].returnQueue, message, header
   
   #More jobs in the chain
   else
     nextJob = theJob.next.shift()
     payload = 
-      data: nextJob.data ?= {}
+      data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
       next: theJob.next
     headers = 
       job: 
