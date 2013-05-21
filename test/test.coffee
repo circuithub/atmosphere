@@ -8,13 +8,16 @@ bsync = require "bsync"
 
 shouldNotHaveErrors = (errors) ->
   if errors?
-    console.log "\n\n\n=-=-=[shouldNotHaveErrors]", errors, "\n\n\n" #xxx
+    errorsString = ""
     if Array.isArray errors
-      errorsString = (for e in errors then "#{e.code}: #{e.message}").join "\n"
-      should.fail errorsString, ""
+      errorsString = (for e in errors then "#{e?.code}: #{e?.message}").join "\n"      
     else
-      errorsString = (for k,e of errors then "#{e.code}: #{e.message}").join "\n"
-      should.fail errorsString, ""
+      if errors.code?
+        errorsString = (for k,e of errors then "#{e?.code}: #{e?.message}").join "\n"    
+      else
+        for k, job of errors 
+          errorsString += (for k,e of job then "#{e?.code}: #{e?.message}").join "\n"    
+    should.fail errorsString, ""
       
 #Allowed Error Formats:
 #Array:
