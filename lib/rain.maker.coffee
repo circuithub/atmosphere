@@ -60,7 +60,6 @@ exports.submit =
     jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
     #--Look at first job
     job = jobChain.shift()
-    console.log "\n\n\n=-=-=[maker.submit]", job, "\n\n\n" #xxx
 
     #[2.] Inform Foreman Job Expected
     if jobs["#{job.type}-#{job.name}"]?
@@ -121,8 +120,9 @@ foreman = () ->
   for job of jobs then do (job) ->    
     jobs[job].timeout = jobs[job].timeout - 1
     if jobs[job].timeout <= 0
-      callback = jobs[job].cb #necessary to prevent loss of function pointer
+      callback = callbacks[jobs[job].id] #necessary to prevent loss of function pointer
       delete jobs[job] #mark job as completed
+      delete callbacks[jobs[job].id]
       process.nextTick () -> #release stack frames/memory
         callback elma.error "jobTimeout", "A response to job #{job} was not received in time."
   setTimeout(foreman, 1000)

@@ -50,7 +50,6 @@ exports.init = (role, jobTypes, cbDone) ->
   -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, errors, data) =>
-  console.log "\n\n\n=-=-=[doneWith]", ticket, errors, data, "\n\n\n" #xxx
   #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
@@ -60,10 +59,8 @@ exports.doneWith = (ticket, errors, data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
-  console.log "\n\n\n=-=-=[doneWith]", 2, "\n\n\n" #xxx
   #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
-  console.log "\n\n\n=-=-=[doneWith]", 3, theJob, theJob.next.length, theJob.callback, "\n\n\n" #xxx
   #No more jobs in the chain
   if theJob.next.length is 0
     if theJob.callback 

@@ -1,3 +1,4 @@
+_ = require "underscore"
 should       = require "should"
 atmosphere = require "../index"
 bsync = require "bsync"
@@ -48,8 +49,9 @@ shouldHaveErrors = (errors) ->
 #Determines is a specific error occurred
 shouldHaveError = (errors, errorCode) ->  
   shouldHaveErrors errors
-  (return true) for error in errors when error.code is errorCode
-  return false
+  errorCodeExists = false
+  return error for error in errors when error.code is errorCode
+  errorCodeExists.should.equal true
 
 ###############################
 ## RAINCLOUD Config
@@ -72,7 +74,8 @@ jobTypes = {
 }
 
 withTester = (ticket, data) ->
-  console.log "[Ww] Listen/Submit With Tester", ticket, data
+  ticket.data = {}
+  console.log "[Ww] Listen/Submit With Tester", ticket
 
 count = () ->
   console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{JSON.stringify atmosphere.rainCloud.count()}."
@@ -110,10 +113,10 @@ describe "atmosphere", ->
     for i in [0...10]
       #Submit Altium Conversion Job
       testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
-      bsync.parallel testFunctions, (allErrors, allResults) ->
-        shouldNotHaveErrors allErrors
-        console.log "[D] Job Done", allResults
-        done()
+    bsync.parallel testFunctions, (allErrors, allResults) ->
+      shouldNotHaveErrors allErrors
+      console.log "[D] Job Done", allResults
+      done()
 
   #-- NOTE: Support for this isn't rigorous. Jobs must be safe to run on top of itself, but this makes it more efficient since if the same job is routed to the same cloud it will be dropped.
   it "should handle a job collision (same job submitted simultaneously)", (done) ->
@@ -122,31 +125,30 @@ describe "atmosphere", ->
       job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}  
       job3: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
     bsync.parallel testFunctions, (allErrors, allResults) ->
-      shouldHaveErrors allErrors
       console.log "\n\n\n=-=-=[error test]", allErrors, "\n\n\n" #xxx
+      shouldHaveError [allErrors.job2, allErrors.job3], "jobAlreadyExistsError"
       done()
 
-#     #Test ...With functions
-#     atmosphere.rainBucket.listen "testSubmitWith", withTester, (err) ->
-#       atmosphere.rainBucket.submit "testSubmitWith", {type: "testSubmitWith", job: {name: "first-test", id: 42}}, "DATA!", (err) ->
-#         console.log "[Sw] Submitted.", err
+  it "should handle a job->job->callback job chain", (done) ->
+    done()
 
-#     #Stress Test (~33 Megabyte Payload)
-#     stressString = "asldjlsdijf ailjlafjlwjf asdkjfaasdfasdfas dvc827498skdjfkjfdifiesjkjkjkjkjkjlkjlljlkjljhghgjfghfhgfhgfhjgfjhgfjhgfjhgfjhgfhjgfghjfjhgfhghjgffslfksjsfifjofsfs98w798457234984328943274328743298423743298742398742398423748237432987423984239842379834243928743rweufewhjfdjkfshjkfsjhkfsjkhfsuiywye7423764794748423khejfjhkfsjhfyuirey254232uejkhfhkjfsjhkuyiwreyui5w397yurewhjkfj27492874982b 2398v982vn82vnv  2v984 2948v 92 24v42 478 4978 42v3798 4v23 98742v39898 798 29sj fklsdj fksadj fasdj fsadj fl fwreiruoweru lsdjflsadj flasdvnv xcnv,xnv ,mxvl lvknsvlaksndv,m xcnva jksdhfk jsdhf nm,vc aks jd nc sdcn k jaewh fkjashfhasdkbfvnhsnfdsnvfnhafksdnkahnfljadnkvnalhnflksnfashnfashnknhasfnasdhuwiqyeruwqygr65784659h2378465g87965987236589723459762485gy63uthkrhfgkjdfnhgvcxmnvnmcxbvjkhdshfjkdhfuityretiy84765387256093475923475823u5twhdkgfhkjfhgkjdncxnbvnmbnmcvbvjkdhgkjdfyhtuieryt9w34759843759843tuiwegkdhsfgjkhdsjfgnm,cvvbnm,xcnvbmxzcnvz,xcmnvkjdfhgusidktyiuer7y69854376598043769083769843576rewojutglkdfghj,cjnbm,ncvnbx,m"
-#     stressString += stressString for i in [0...15] 
-#     console.log "Stressing Rabbit... #{(stressString.length/1e6).toFixed(2)} MB"
-#     atmosphere.rainMaker.submit {type: "partsWithoutImages", name:"stress", data: {values: stressString}, timeout: 10}, (err, report) ->
-#       console.log "done!", err, report
-#     atmosphere.rainBucket.listen "partsWithoutImages"
-#     , (message, headers, deliveryInfo) ->
-#       console.log "RECEIVED!", deliveryInfo
-#     , () ->
-#       console.log "done! 2"
+  before (done) ->    
+    atmosphere.rainBucket.listen "testSubmitWith", withTester, (err) ->
+      shouldNotHaveErrors err
+      done()
 
+  it "should be able to submit a logging message", (done) ->
+    atmosphere.rainBucket.submit "testSubmitWith", {type: "testSubmitWith", job: {name: "first-test", id: 42}}, "DATA!", (err) ->
+      shouldNotHaveErrors err
+      console.log "[Sw] Submitted.", err
+      done()
 
-# setTimeout () ->
-#   count()
-# , 1000
-
-# count()
-# console.log "EOF"
+  it "should survive stress test", (done) ->
+    #Stress Test (~33 Megabyte Payload)
+    stressString = "asldjlsdijf ailjlafjlwjf asdkjfaasdfasdfas dvc827498skdjfkjfdifiesjkjkjkjkjkjlkjlljlkjljhghgjfghfhgfhgfhjgfjhgfjhgfjhgfjhgfhjgfghjfjhgfhghjgffslfksjsfifjofsfs98w798457234984328943274328743298423743298742398742398423748237432987423984239842379834243928743rweufewhjfdjkfshjkfsjhkfsjkhfsuiywye7423764794748423khejfjhkfsjhfyuirey254232uejkhfhkjfsjhkuyiwreyui5w397yurewhjkfj27492874982b 2398v982vn82vnv  2v984 2948v 92 24v42 478 4978 42v3798 4v23 98742v39898 798 29sj fklsdj fksadj fasdj fsadj fl fwreiruoweru lsdjflsadj flasdvnv xcnv,xnv ,mxvl lvknsvlaksndv,m xcnva jksdhfk jsdhf nm,vc aks jd nc sdcn k jaewh fkjashfhasdkbfvnhsnfdsnvfnhafksdnkahnfljadnkvnalhnflksnfashnfashnknhasfnasdhuwiqyeruwqygr65784659h2378465g87965987236589723459762485gy63uthkrhfgkjdfnhgvcxmnvnmcxbvjkhdshfjkdhfuityretiy84765387256093475923475823u5twhdkgfhkjfhgkjdncxnbvnmbnmcvbvjkdhgkjdfyhtuieryt9w34759843759843tuiwegkdhsfgjkhdsjfgnm,cvvbnm,xcnvbmxzcnvz,xcmnvkjdfhgusidktyiuer7y69854376598043769083769843576rewojutglkdfghj,cjnbm,ncvnbx,m"
+    stressString += stressString for i in [0...15] 
+    console.log "Stressing Rabbit... #{(stressString.length/1e6).toFixed(2)} MB"
+    atmosphere.rainMaker.submit {type: "testSubmitWith", name:"stress", data: {values: stressString}, timeout: 10}, (err, report) ->
+      shouldNotHaveErrors err
+      console.log "done!", err, report
+      done()
