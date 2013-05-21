@@ -45,6 +45,13 @@ exports.init = (role, jobTypes, cbDone) ->
 ## API
 ########################################
 
+_callbackMQ = (theJob, ticket, errors, result) ->
+  header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
+  message = 
+    errors: errors
+    data: result
+  core.publish currentJob[ticket.type].returnQueue, message, header
+
 ###
   Reports completed job on a Rain Cloud
   -- ticket: {type: "", job: {name: "", id: "uuid"} }
@@ -65,27 +72,27 @@ exports.doneWith = (ticket, errors, result) =>
   #No more jobs in the chain
   if theJob.next.length is 0
     if theJob.callback 
-      #callback
-      header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
-      message = 
-        errors: errors
-        data: result
-      core.publish currentJob[ticket.type].returnQueue, message, header
-  
+      _callbackMQ theJob, ticket, errors, result
+      return
   #More jobs in the chain
   else
-    console.log "\n\n\n=-=-=[doneWith][chaining]", theJob, "\n\n\n" #xxx
-    nextJob = theJob.next.shift()
-    payload = 
-      data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
-      next: theJob.next
-    headers = 
-      job: 
-        name: theJob.job.name
-        id: theJob.job.id
-      returnQueue: theJob.returnQueue
-      callback: nextJob.callback
-    core.submit nextJob.type, payload, headers
+    if errors?
+      #Abort chain if errors occurred
+      _callbackMQ theJob, ticket, errors, result
+      return
+    else
+      console.log "\n\n\n=-=-=[doneWith][chaining]", theJob, "\n\n\n" #xxx
+      nextJob = theJob.next.shift()
+      payload = 
+        data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
+        next: theJob.next
+      headers = 
+        job: 
+          name: theJob.job.name
+          id: theJob.job.id
+        returnQueue: theJob.returnQueue
+        callback: nextJob.callback
+      core.submit nextJob.type, payload, headers
   
   #Done with this specific job in the job chain
   delete currentJob[ticket.type] #done with current job, update state

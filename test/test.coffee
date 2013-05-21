@@ -199,6 +199,7 @@ describe "atmosphere", ->
         data: {param3: "initial message"} #merged with results from job1
         timeout: 5 #in seconds; clock starts running at start of execution
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[jjcj]", error, data, "\n\n\n" #xxx
         shouldNotHaveErrors error
         should.exist data
         should.exist data.first

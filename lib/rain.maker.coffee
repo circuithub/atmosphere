@@ -47,9 +47,7 @@ exports.submit = (jobChain, cbJobDone) ->
 
     #[1.] Array Prep (job chaining)
     #--Format
-    console.log "\n\n\n=-=-=[submit1]", jobChain, types.type(jobChain), "\n\n\n" #xxx
     if types.type(jobChain) isnt "array"
-      console.log "\n\n\n=-=-=[submit2]", types.type(jobChain), "\n\n\n" #xxx
       jobChain = [jobChain]
     #--Clarify callback flow (only first callback=true remains)
     foundCB = false
@@ -60,9 +58,7 @@ exports.submit = (jobChain, cbJobDone) ->
         foundCB = true if eachJob.callback? and eachJob.callback   
     jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
     #--Look at first job
-    console.log "\n\n\n=-=-=[theJob](before)", job, jobChain, "\n\n\n" #xxx
     job = jobChain.shift()
-    console.log "\n\n\n=-=-=[theJob](after)", job, jobChain, "\n\n\n" #xxx
 
     #[2.] Inform Foreman Job Expected
     if jobs["#{job.type}-#{job.name}"]?
@@ -74,7 +70,6 @@ exports.submit = (jobChain, cbJobDone) ->
     callbacks[job.id] = cbJobDone
     
     #[3.] Submit Job
-    console.log "\n\n\n=-=-=[submit3]", job, "\n\n\n" #xxx
     payload = 
       data: job.data ?= {}
       next: jobChain
@@ -84,7 +79,6 @@ exports.submit = (jobChain, cbJobDone) ->
         name: job.name
         id:   job.id
       returnQueue: core.rainID()
-    console.log "\n\n\n=-=-=[submit4]", job.type, payload, headers, "\n\n\n" #xxx
     core.submit job.type, payload, headers
 
 ###
