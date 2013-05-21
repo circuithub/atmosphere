@@ -116,11 +116,11 @@ exports.publish = (queueName, messageObject, headerObject) ->
 
 ###
   Submit a job
-  -- Enforces job structure to make future refactor work safer
+  -- Enforces job structure to make future refactor work safer  
 ###
-exports.submit = types.cfn (-> [ 
+exports.submit = types.fn (-> [ 
   @String()
-  @Object {data: @String(), next: @String()}
+  @Object {data: @Object(), next: @Array()}
   @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String()}
   ]),  
   (type, payload, headers) => 

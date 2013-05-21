@@ -36,13 +36,12 @@ exports.init = (role, cbDone) ->
 
 ###
   Submit a job to the queue, but anticipate a response  
-  -- job: must be in this format {type: "typeOfJob/queueName", name: "jobName", data: {}, timeout: 30 } the job details (message body) <-- timeout (in seconds) is optional defaults to 30 seconds
+  -- jobChain: Either a single job, or an array of jobs
+  --    job = {type: "typeOfJob/queueName", name: "jobName", data: {}, timeout: 30}
   -- cbJobDone: callback when response received (error, data) format
 ###
-exports.submit = types.cfn (-> [ 
-  @Object {type: @String(), name: @String(), data: @Object(), timeout: @Number()}
-  @Function() ]),  
-  (jobChain, cbJobDone) =>
+exports.submit =   
+  (jobChain, cbJobDone) ->
     if not core.ready() 
       cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
       return
