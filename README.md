@@ -4,7 +4,7 @@
  |     |    |    |  |  | |_____| ______| |       |     | |______ |    \_ |______
 
 ```
-Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
+Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
 # Features
 
@@ -15,7 +15,129 @@ Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 * "Fixes" Heroku Routing: You control how and when Atmosphere distributes work
 * Proven: Backed by RabbitMQ, used in production
 
+# Usage Model
 
+Atmosphere is a flexible jobs queue. It can support three basic use cases:
+
+1. Simple Remote Procedure Call (S-RPC) -- A job is submited, executed by one of several remote listening workers, and a callback function is invoked when the work is complete or the timeout expires.
+2. Complex Remote Procedure Call (C-RPC) -- A chain of jobs are submitted and execution in sequence is desired. Data is passed from one job to the next. The callback may be invoked at any specified point along the chain... or at the end if unspecified.
+3. Message Passing for Logging (MP-L) -- A job is submitted with no expectation for a response. Used for monitoring/logging applications.
+
+# Jobs Model
+
+Externally, a job looks like this:
+
+```coffeescript
+	job = 
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+```
+
+It has...
+
+* a category (or "type") -- internally, this is the name of the queue in the RabbitMQ dashboard 
+* a name -- this is a descriptor for the work within the category, for example {type:"syncUser", name: "user1"}
+* data -- this is optional and arbitrary. It is passed to the function actually doing the work on the ```rainCloud```.
+* a timeout -- After this many seconds, if a response from the completed job hasn't been received, an error will be sent to the calling function on the ```rainMaker```. However, the job will still proceed to completion on the ```rainCloud```. This is useful for situations where the ```rainCloud's``` get busy and you want to inform your user of the ongoing delay. Only one response is ever sent per job so a side-channel (usually a database) must be used to indicate work completion after that point.
+
+
+# Routing Model
+
+Atmosphere consists of two entities: ```rainMaker```'s and ```rainCloud```'s
+
+* ```rainMaker```'s dance to make it rain -- they submit jobs because they want work done.
+* ```rainCloud```'s actually release water -- they perform the work because a job was received.
+
+You can control how work is distributed in the atmosphere by understanding the routing rules:
+
+1. ```rainCloud```'s register for the job types they want to handle by specifying which types and which functions should be invoked when work is received for that job type.
+2. Atmosphere distributes jobs among all ```rainClouds``` registered for that job in a round-robin fashion (least recently tasked gets the next job). 
+3. ```rainClouds``` can only process one job *of each job type* at a time. If you have I/O intensive tasks this works extremely well. If you have compute intensive tasks this does not. See the section at the end on computer intensive tasking to learn how to employ atmosphere effectively with CPU-heavy workloads.
+4. Atmosphere does not distribute jobs to busy ```rainClouds```. A cloud is busy if it is currently processing a job of the *same type* as the job trying to be scheduled.
+5. If a ```rainCloud``` crashes or is shutdown, any tasks that have not yet completed are re-queued and go the next available cloud following the rules above. This happens automatically (no action is necessary on the part of the developer).
+
+
+
+# Installation & Usage
+
+Atmosphere is tested and supported in node.js v.0.10.x and above.
+
+```npm install atmosphere```
+
+## Installing RabbitMQ
+
+Installing RabbitMQ
+```
+brew update
+brew install rabbitmq
+```
+
+```PATH=$PATH:/usr/local/sbin``` to your ```.bash_profile``` or ```.profile``` 
+
+### Running
+
+* You can start RabbitMQ with ```/usr/local/sbin/rabbitmq-server```
+* If you amend your path, the server can then be started with ```rabbitmq-server```. 
+* All scripts run under your own user account. Sudo is not required.
+
+### Monitoring
+
+* The web UI is located at: [http://localhost:15672/](http://localhost:15672/) (User and Password are "guest")
+* The HTTP API and its documentation are both located at: http://localhost:15672/api/.
+
+
+# Hello World!
+
+### Local (makes request)
+```coffeescript
+#[1.] Include Module
+atmosphere = require("atmosphere").rainMaker # <-- Notice
+
+#[2.] Connect to Atmosphere
+atmosphere.init "requester", (err) ->
+	# Check for initialization errors
+	return err if err?
+
+	#[3.] Submit job
+	job = 
+		type: "example" #the job type (queue name)
+		name: "my first atmosphere job" #name for this work request (passed to remote router)
+		data: {msg1: "Hello", msg2: "World!"} #arbitrary serializable object to pass to remote
+		timeout: 30 #seconds (if timeout elapses, error response is returned to callback)
+	atmosphere.submit job, (error, data) ->
+		#[4.] Job is complete!
+		return error if error?			
+		console.log "RPC completed and returned:", data
+```
+
+### Remote (fulfills request)
+```coffeescript
+#Include Module
+atmosphere = require("atmosphere").rainCloud
+
+#Local Function to Execute (called remotely)
+# -- ticket = {type, name, id}
+# -- data = copy of data object passed to submit
+localFunction = (ticket, data) ->
+	console.log "Doing #{data.msg} work here!"
+	error = undefined
+	results = "This string was generated inside the work function"
+	atmosphere.doneWith(ticket, error, results)
+
+#Which possible jobs should this server register to handle
+handleJobs = 
+	remoteFunction: localFunction #object key must match job.type
+
+#Connect to Atmosphere
+atmosphere.init "responder", (err) ->
+	# Check for errors
+	if err?
+		console.log "Could not initialize.", err
+		return
+	#All set now we're waiting for jobs to arrive
+```
 
 
 # Usage Models
