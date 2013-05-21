@@ -40,15 +40,16 @@ exports.init = (role, cbDone) ->
   --    job = {type: "typeOfJob/queueName", name: "jobName", data: {}, timeout: 30}
   -- cbJobDone: callback when response received (error, data) format
 ###
-exports.submit =   
-  (jobChain, cbJobDone) ->
+exports.submit = (jobChain, cbJobDone) ->
     if not core.ready() 
       cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
       return
 
     #[1.] Array Prep (job chaining)
     #--Format
-    if types.type jobChain isnt "array"
+    console.log "\n\n\n=-=-=[submit1]", jobChain, types.type(jobChain), "\n\n\n" #xxx
+    if types.type(jobChain) isnt "array"
+      console.log "\n\n\n=-=-=[submit2]", types.type(jobChain), "\n\n\n" #xxx
       jobChain = [jobChain]
     #--Clarify callback flow (only first callback=true remains)
     foundCB = false
@@ -59,7 +60,9 @@ exports.submit =
         foundCB = true if eachJob.callback? and eachJob.callback   
     jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
     #--Look at first job
+    console.log "\n\n\n=-=-=[theJob](before)", job, jobChain, "\n\n\n" #xxx
     job = jobChain.shift()
+    console.log "\n\n\n=-=-=[theJob](after)", job, jobChain, "\n\n\n" #xxx
 
     #[2.] Inform Foreman Job Expected
     if jobs["#{job.type}-#{job.name}"]?
@@ -71,12 +74,18 @@ exports.submit =
     callbacks[job.id] = cbJobDone
     
     #[3.] Submit Job
-    payload = {data: job.data ?= {}, next: jobChain}
-    core.submit job.type, payload, {
-                                callback: job.callback
-                                job: {name: job.name, id: job.id}
-                                returnQueue: core.rainID()
-                            }
+    console.log "\n\n\n=-=-=[submit3]", job, "\n\n\n" #xxx
+    payload = 
+      data: job.data ?= {}
+      next: jobChain
+    headers =
+      callback: job.callback
+      job: 
+        name: job.name
+        id:   job.id
+      returnQueue: core.rainID()
+    console.log "\n\n\n=-=-=[submit4]", job.type, payload, headers, "\n\n\n" #xxx
+    core.submit job.type, payload, headers
 
 ###
   Subscribe to incoming jobs in the queue (exclusively -- block others from listening)

@@ -74,6 +74,7 @@ exports.doneWith = (ticket, errors, result) =>
   
   #More jobs in the chain
   else
+    console.log "\n\n\n=-=-=[doneWith][chaining]", theJob, "\n\n\n" #xxx
     nextJob = theJob.next.shift()
     payload = 
       data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
@@ -83,6 +84,7 @@ exports.doneWith = (ticket, errors, result) =>
         name: theJob.job.name
         id: theJob.job.id
       returnQueue: theJob.returnQueue
+      callback: nextJob.callback
     core.submit nextJob.type, payload, headers
   
   #Done with this specific job in the job chain

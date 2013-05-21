@@ -157,7 +157,7 @@ describe "atmosphere", ->
     before (done) ->
       done()
     
-    it "should handle a job->job->callback job chain", (done) ->
+    it "should handle a job->job->job->callback job chain", (done) ->
       job1 = 
         type: "first" #the job type/queue name
         name: "job1" #name for this job
@@ -173,12 +173,62 @@ describe "atmosphere", ->
         name: "job3"
         data: {param3: "initial message"} #merged with results from job1
         timeout: 5 #in seconds; clock starts running at start of execution
-      atmosphere.submit [job1, job2, job3], (error, data) ->
+      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
         shouldNotHaveErrors error
         should.exist data
         should.exist data.first
         should.exist data.second
         should.exist data.third
+      done()
+
+    it "should handle a job->job->callback->job chain", (done) ->
+      job1 = 
+        type: "first" #the job type/queue name
+        name: "job1" #name for this job
+        data: {param1: "initial message"} #arbitrary serializable object
+        timeout: 5 #seconds
+      job2 = 
+        type: "second"
+        name: "job2"
+        data: {param2: "initial message"} #merged with results from job1
+        timeout: 5 #in seconds; clock starts running at start of execution
+        callback: true
+      job3 = 
+        type: "third"
+        name: "job3"
+        data: {param3: "initial message"} #merged with results from job1
+        timeout: 5 #in seconds; clock starts running at start of execution
+      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        shouldNotHaveErrors error
+        should.exist data
+        should.exist data.first
+        should.exist data.second
+        should.not.exist data.third
+      done()
+
+    it "should handle a job->callback->job->job chain", (done) ->
+      job1 = 
+        type: "first" #the job type/queue name
+        name: "job1" #name for this job
+        data: {param1: "initial message"} #arbitrary serializable object
+        timeout: 5 #seconds
+        callback: true
+      job2 = 
+        type: "second"
+        name: "job2"
+        data: {param2: "initial message"} #merged with results from job1
+        timeout: 5 #in seconds; clock starts running at start of execution
+      job3 = 
+        type: "third"
+        name: "job3"
+        data: {param3: "initial message"} #merged with results from job1
+        timeout: 5 #in seconds; clock starts running at start of execution
+      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        shouldNotHaveErrors error
+        should.exist data
+        should.exist data.first
+        should.not.exist data.second
+        should.not.exist data.third
       done()
 
   # describe "#logging use case", ->
