@@ -96,6 +96,11 @@ exports.listen = (type, cbExecute, cbListening) =>
 exports.count = () ->
   return Object.keys(jobs).length
 
+###
+  Create the externally visible job key 
+  -- Job chains must have unique external keys, even though this isn't enforced at present
+###
+exports.jobName = core.jobName
 
 
 ########################################

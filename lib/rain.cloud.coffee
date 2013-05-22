@@ -79,9 +79,14 @@ exports.doneWith = (ticket, errors, result) =>
       #Abort chain if errors occurred
       _callbackMQ theJob, ticket, errors, result      
     else
+      #Get next job in the chain
       nextJob = theJob.next.shift()
+      #Cascade results (merge incoming results from last job with incoming user data for new job)      
+      nextData = (nextJob.data ?= {})
+      nextData[theJob.type] = result
+      #Format and Submit next job
       payload = 
-        data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
+        data: nextData
         next: theJob.next
       headers = 
         job: 
@@ -176,8 +181,8 @@ lightning = (message, headers, deliveryInfo) =>
     callback: headers.callback
   }
   #Release this information to the work function (dispatch job)
-  jobWorkers[deliveryInfo.queue]
+  ticket = 
     type: deliveryInfo.queue
     name: headers.job.name
     id: headers.job.id
-  , message.data
+  jobWorkers[deliveryInfo.queue] ticket, message.data

@@ -24,20 +24,20 @@ workerDoOrCAD = (ticket, data) ->
 worker1 = (ticket, data) ->
   console.log "[W] FIRST", ticket, data 
   count()
-  data.first = "results from worker 1"
-  atmosphere.rainCloud.doneWith ticket, undefined, data
+  data2 = {previous: data, first: "results from worker 1"}
+  atmosphere.rainCloud.doneWith ticket, undefined, data2
 
 worker2 = (ticket, data) ->
   console.log "[W] SECOND", ticket, data 
   count()
-  data.second = "results from worker 2"
-  atmosphere.rainCloud.doneWith ticket, undefined, data
+  data2 = {previous: data, second: "results from worker 2"}
+  atmosphere.rainCloud.doneWith ticket, undefined, data2
 
 worker3 = (ticket, data) ->
   console.log "[W] THIRD", ticket, data 
   count()
-  data.third = "results from worker 3"
-  atmosphere.rainCloud.doneWith ticket, undefined, data
+  data2 = {previous: data, third: "results from worker 3"}
+  atmosphere.rainCloud.doneWith ticket, undefined, data2
 
 jobTypes = {
   convertAltium: workerDoAltium
@@ -103,21 +103,19 @@ describe "atmosphere", ->
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 30 #seconds
       job2 = 
-        type: "second"
-        name: "job2"
-        data: {param2: "initial message"} #merged with results from job1
-        timeout: 15 #in seconds; clock starts running at start of execution
+        type: "second"        
+        data: {param2: "initial message"} #merged with results from job1        
       job3 = 
         type: "third"
-        name: "job3"
         data: {param3: "initial message"} #merged with results from job1
-        timeout: 15 #in seconds; clock starts running at start of execution
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
         h.shouldNotHaveErrors error
         should.exist data
-        should.exist data.first
-        should.exist data.second
-        should.exist data.third
+        should.exist data[job3.type]
+        should.exist data.previous.param3
+        should.exist data.previous[job2.type].previous.param2
+        should.exist data.previous[job2.type].previous[job1.type].previous.param1
         done()
 
     it "should handle a job->job->callback->job chain", (done) ->
@@ -128,21 +126,17 @@ describe "atmosphere", ->
         timeout: 5 #seconds
       job2 = 
         type: "second"
-        name: "job2"
         data: {param2: "initial message"} #merged with results from job1
-        timeout: 5 #in seconds; clock starts running at start of execution
         callback: true
       job3 = 
         type: "third"
-        name: "job3"
         data: {param3: "initial message"} #merged with results from job1
-        timeout: 5 #in seconds; clock starts running at start of execution
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[jjcj]", JSON.stringify(data), "\n\n\n" #xxx
         h.shouldNotHaveErrors error
-        should.exist data
-        should.exist data.first
-        should.exist data.second
-        should.not.exist data.third
+        should.exist data        
+        should.exist data.previous.param2
+        should.exist data.previous[job1.type].previous.param1
         done()
 
     it "should handle a job->callback->job->job chain", (done) ->
@@ -154,20 +148,16 @@ describe "atmosphere", ->
         callback: true
       job2 = 
         type: "second"
-        name: "job2"
         data: {param2: "initial message"} #merged with results from job1
-        timeout: 5 #in seconds; clock starts running at start of execution
       job3 = 
         type: "third"
-        name: "job3"
         data: {param3: "initial message"} #merged with results from job1
-        timeout: 5 #in seconds; clock starts running at start of execution
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[jcjj]", JSON.stringify(data), "\n\n\n" #xxx
         h.shouldNotHaveErrors error
-        should.exist data
-        should.exist data.first
-        should.not.exist data.second
-        should.not.exist data.third
+        should.exist data 
+        should.exist data.first       
+        should.exist data.previous.param1
         done()
 
   describe "#logging use case", ->

@@ -205,10 +205,53 @@ atmosphere.init "responder", (err) ->
 
 ## Sub-Dividing Complex Jobs (Chaining Jobs)
 
+#### Behavior Summary
+
 * If prior job finishes with error object defined, callback is made immediately
 * If prior job finishes without error, data object is passed to next job
 * Callback can be forced on success, but chain execution will continue
 * Only one callback per chain
+
+#### Specification of Subsequent Jobs
+
+* Subsequent jobs do not specify a job name -- same name is used throughout chain
+* Subsequent jobs do not specify a timeout -- timing begins from submission of job chain
+
+#### Data Cascade
+
+Data is passed between jobs by merging the data object specified in the job description in the job chain with the data object resulting from the execution of the previous job.
+
+Here is an example job chain:
+
+```coffeescript
+job1 = 
+	type: "first" #the job type/queue name
+    name: "job1" #name for this job
+    data: {param1: "initial message"}
+    timeout: 5 #seconds
+job2 = 
+	type: "second"
+	data: {param2: "initial message"}
+jobChain = [job1, job2]
+```
+
+1. When ```job1``` executes, ```data = {param1: "initial message"}```
+
+2. Let's say that ```job1``` finishes by calling ```doneWith(..)``` using the following:
+
+```coffeescript
+doneWith ticket, undefined, {a: 1, b: 2, c: 3}
+```
+
+3. When ```job2``` executes, ```data = { param2: "initial message", first: {a: 1, b: 2, c: 3} }```
+
+Notice that the job's data object is extended by an additional key equal to the job type of the previous job in the chain.
+
+In this way, you can ensure that the data you rely on came from the proper context. 
+
+Atmosphere only keeps track of the data between successive jobs, but you can easily extend this by passing results through. Simply call ```doneWith``` with the same data object as was passed in and extend it with your additonal results.
+
+#### Usage
 
 First, you must connect to atmosphere to submit jobs:
 
@@ -240,9 +283,7 @@ atmosphere.init "requester", (err) ->
 		timeout: 30 #seconds
 	job2 = 
 		type: "remoteFunction"
-		name: "not special job to run after special job"
 		data: {param2: "abc"} #merged with results from job1
-		timeout: 5 #in seconds; clock starts running at start of execution
 	atmosphere.submit [job1, job2], (error, data) ->
 		if error?
 			console.log "Error occurred executing function.", error
@@ -263,9 +304,7 @@ The callback is returned after job1 completes, but execution will continue to jo
 		callback: true
 	job2 = 
 		type: "remoteFunction"
-		name: "not special job to run after special job"
 		data: {param2: "abc"} #merged with results from job1
-		timeout: 5 #in seconds; clock starts running at start of execution
 	atmosphere.submit [job1, job2], (error, data) ->
 		if error?
 			console.log "Error occurred executing function.", error
