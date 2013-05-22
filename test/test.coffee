@@ -162,24 +162,26 @@ describe "atmosphere", ->
         type: "first" #the job type/queue name
         name: "job1" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
-        timeout: 5 #seconds
+        timeout: 30 #seconds
       job2 = 
         type: "second"
         name: "job2"
         data: {param2: "initial message"} #merged with results from job1
-        timeout: 5 #in seconds; clock starts running at start of execution
+        timeout: 15 #in seconds; clock starts running at start of execution
       job3 = 
         type: "third"
         name: "job3"
         data: {param3: "initial message"} #merged with results from job1
-        timeout: 5 #in seconds; clock starts running at start of execution
+        timeout: 15 #in seconds; clock starts running at start of execution
+      console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
         shouldNotHaveErrors error
         should.exist data
         should.exist data.first
         should.exist data.second
         should.exist data.third
-      done()
+        done()
 
     it "should handle a job->job->callback->job chain", (done) ->
       job1 = 
@@ -198,14 +200,16 @@ describe "atmosphere", ->
         name: "job3"
         data: {param3: "initial message"} #merged with results from job1
         timeout: 5 #in seconds; clock starts running at start of execution
+      console.log "\n\n\n=-=-=[TEST3]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[TEST4]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
         console.log "\n\n\n=-=-=[jjcj]", error, data, "\n\n\n" #xxx
         shouldNotHaveErrors error
         should.exist data
         should.exist data.first
         should.exist data.second
         should.not.exist data.third
-      done()
+        done()
 
     it "should handle a job->callback->job->job chain", (done) ->
       job1 = 
@@ -230,7 +234,7 @@ describe "atmosphere", ->
         should.exist data.first
         should.not.exist data.second
         should.not.exist data.third
-      done()
+        done()
 
   # describe "#logging use case", ->
 

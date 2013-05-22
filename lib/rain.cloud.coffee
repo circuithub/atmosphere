@@ -33,6 +33,7 @@ exports.init = (role, jobTypes, cbDone) ->
       if not jobWorkers[jobType]?
         jobWorkers[jobType] = jobTypes[jobType]
         workerFunctions.push bsync.apply exports.listen, jobType, lightning
+    console.log "\n\n\n=-=-=[rainCloud.init]", jobTypes, workerFunctions.length, "\n\n\n" #xxx
     bsync.parallel workerFunctions, (allErrors, allResults) ->
       if allErrors?
         cbDone allErrors
@@ -58,6 +59,7 @@ _callbackMQ = (theJob, ticket, errors, result) ->
   -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, errors, result) =>
+  console.log "\n\n\n=-=-=[doneWith]", ticket, core.ready(), currentJob, "\n\n\n" #xxx
   #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
@@ -81,7 +83,6 @@ exports.doneWith = (ticket, errors, result) =>
       _callbackMQ theJob, ticket, errors, result
       return
     else
-      console.log "\n\n\n=-=-=[doneWith][chaining]", theJob, "\n\n\n" #xxx
       nextJob = theJob.next.shift()
       payload = 
         data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
@@ -92,6 +93,7 @@ exports.doneWith = (ticket, errors, result) =>
           id: theJob.job.id
         returnQueue: theJob.returnQueue
         callback: nextJob.callback
+      console.log "\n\n\n=-=-=[doneWith][chaining]", nextJob.type, payload, headers, "\n\n\n" #xxx
       core.submit nextJob.type, payload, headers
   
   #Done with this specific job in the job chain
@@ -166,6 +168,7 @@ exports.routers =
     function(ticket, data) ->
 ###
 lightning = (message, headers, deliveryInfo) =>
+  console.log "\n\n\n=-=-=[lightning]", headers, currentJob, "\n\n\n" #xxx
   if currentJob[deliveryInfo.queue]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
     elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message

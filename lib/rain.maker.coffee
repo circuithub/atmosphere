@@ -8,7 +8,7 @@ monitor = require "./monitor"
 jobs = {} #indexed by "#{headers.type}-#{headers.job.name}"
 callbacks = {} #indexed by job.id
 
-
+exports._jobs = jobs
 
 ########################################
 ## SETUP
@@ -124,8 +124,12 @@ foreman = () ->
     jobs[job].timeout = jobs[job].timeout - 1
     if jobs[job].timeout <= 0
       callback = callbacks[jobs[job].id] #necessary to prevent loss of function pointer
+      
+      #mark job as completed
+      delete callbacks[jobs[job].id] 
       delete jobs[job] #mark job as completed
-      delete callbacks[jobs[job].id]
-      process.nextTick () -> #release stack frames/memory
+      
+      #release stack frames/memory
+      process.nextTick () -> 
         callback elma.error "jobTimeout", "A response to job #{job} was not received in time."
   setTimeout(foreman, 1000)
