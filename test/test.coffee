@@ -73,65 +73,65 @@ describe "atmosphere", ->
         console.log "[I] Initialized RAINMAKER", err
         done()
 
-  # describe "#basic RPC use case", ->  
+  describe "#basic RPC use case", ->  
   
-  #   it "should process two different job types simultaneously", (done) ->
-  #     testFunctions = 
-  #       job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
-  #       job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
-  #     bsync.parallel testFunctions, (allErrors, allResults) ->
-  #       shouldNotHaveErrors allErrors
-  #       console.log "[D] Jobs Done", allResults      
-  #       done()
+    it "should process two different job types simultaneously", (done) ->
+      testFunctions = 
+        job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+        job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        shouldNotHaveErrors allErrors
+        console.log "[D] Jobs Done", allResults      
+        done()
 
-  #   it "should process only one job of a type at a time", (done) ->
-  #     testFunctions = []
-  #     for i in [0...10]
-  #       #Submit Altium Conversion Job
-  #       testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
-  #     bsync.parallel testFunctions, (allErrors, allResults) ->
-  #       shouldNotHaveErrors allErrors
-  #       console.log "[D] Job Done", allResults
-  #       done()
+    it "should process only one job of a type at a time", (done) ->
+      testFunctions = []
+      for i in [0...10]
+        #Submit Altium Conversion Job
+        testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        shouldNotHaveErrors allErrors
+        console.log "[D] Job Done", allResults
+        done()
 
-  #   #-- NOTE: Support for this isn't rigorous. Jobs must be safe to run on top of itself, but this makes it more efficient since if the same job is routed to the same cloud it will be dropped.
-  #   it "should handle a job collision (same job submitted simultaneously)", (done) ->
-  #     testFunctions = 
-  #       job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
-  #       job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}  
-  #       job3: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
-  #     bsync.parallel testFunctions, (allErrors, allResults) ->
-  #       console.log "\n\n\n=-=-=[error test]", allErrors, "\n\n\n" #xxx
-  #       shouldHaveError [allErrors.job2, allErrors.job3], "jobAlreadyExistsError"
-  #       done()
+    #-- NOTE: Support for this isn't rigorous. Jobs must be safe to run on top of itself, but this makes it more efficient since if the same job is routed to the same cloud it will be dropped.
+    it "should handle a job collision (same job submitted simultaneously)", (done) ->
+      testFunctions = 
+        job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
+        job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}  
+        job3: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        console.log "\n\n\n=-=-=[error test]", allErrors, "\n\n\n" #xxx
+        shouldHaveError [allErrors.job2, allErrors.job3], "jobAlreadyExistsError"
+        done()
 
   describe "#complex RPC use case (job chaining)", ->
         
-    # it "should handle a job->job->job->callback job chain", (done) ->
-    #   job1 = 
-    #     type: "first" #the job type/queue name
-    #     name: "job1" #name for this job
-    #     data: {param1: "initial message"} #arbitrary serializable object
-    #     timeout: 30 #seconds
-    #   job2 = 
-    #     type: "second"
-    #     name: "job2"
-    #     data: {param2: "initial message"} #merged with results from job1
-    #     timeout: 15 #in seconds; clock starts running at start of execution
-    #   job3 = 
-    #     type: "third"
-    #     name: "job3"
-    #     data: {param3: "initial message"} #merged with results from job1
-    #     timeout: 15 #in seconds; clock starts running at start of execution
-    #   console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
-    #   atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-    #     console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, error, data, "\n\n\n" #xxx
-    #     shouldNotHaveErrors error
-    #     should.exist data
-    #     should.exist data.first
-    #     should.exist data.second
-    #     should.exist data.third
-    #     done()
+    it "should handle a job->job->job->callback job chain", (done) ->
+      job1 = 
+        type: "first" #the job type/queue name
+        name: "job1" #name for this job
+        data: {param1: "initial message"} #arbitrary serializable object
+        timeout: 30 #seconds
+      job2 = 
+        type: "second"
+        name: "job2"
+        data: {param2: "initial message"} #merged with results from job1
+        timeout: 15 #in seconds; clock starts running at start of execution
+      job3 = 
+        type: "third"
+        name: "job3"
+        data: {param3: "initial message"} #merged with results from job1
+        timeout: 15 #in seconds; clock starts running at start of execution
+      console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
+      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, error, data, "\n\n\n" #xxx
+        shouldNotHaveErrors error
+        should.exist data
+        should.exist data.first
+        should.exist data.second
+        should.exist data.third
+        done()
 
     it "should handle a job->job->callback->job chain", (done) ->
       job1 = 

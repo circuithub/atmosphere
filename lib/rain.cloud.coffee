@@ -47,6 +47,7 @@ exports.init = (role, jobTypes, cbDone) ->
 ########################################
 
 _callbackMQ = (theJob, ticket, errors, result) ->
+  console.log "\n\n\n=-=-=[_callbackMQ]", theJob, "\n\n\n" #xxx
   header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
   message = 
     errors: errors
@@ -77,7 +78,7 @@ exports.doneWith = (ticket, errors, result) =>
       _callbackMQ theJob, ticket, errors, result      
   #More jobs in the chain
   else
-    if errors?
+    if errors? or theJob.callback
       #Abort chain if errors occurred
       _callbackMQ theJob, ticket, errors, result      
     else
