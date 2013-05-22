@@ -1,57 +1,10 @@
-_ = require "underscore"
+_            = require "underscore"
 should       = require "should"
-atmosphere = require "../index"
-bsync = require "bsync"
+atmosphere   = require "../index"
+bsync        = require "bsync"
+h            = require "./helpers"
 
 
-###############################
-## HELPERS
-
-shouldNotHaveErrors = (errors) ->
-  if errors?
-    errorsString = ""
-    if Array.isArray errors
-      errorsString = (for e in errors then "#{e?.code}: #{e?.message}").join "\n"      
-    else
-      if errors.code?
-        errorsString = (for k,e of errors then "#{e?.code}: #{e?.message}").join "\n"    
-      else
-        for k, job of errors 
-          errorsString += (for k,e of job then "#{e?.code}: #{e?.message}").join "\n"    
-    should.fail errorsString, ""
-      
-#Allowed Error Formats:
-#Array:
-#   [ {id, code, message}, undefined, {id, code, message}, ... ]  ---  array of objects, undefined (no errors) allowed
-#Object:
-#   { 
-#       keyName1: [ {id, code, message}, undefined, {id, code, message}, ... ] 
-#       keyName2: undefined
-#   }
-shouldHaveErrors = (errors) ->
-  should.exist errors
-  if Array.isArray errors    
-    errors.should.not.be.empty
-    for e in errors
-      should.exist e.id
-      should.exist e.code
-      should.exist e.message
-  else
-    errors.should.be.an.instanceof Object # (Must be a circuithub error)
-    keys = _.keys errors
-    for i in [0...keys.length]
-      value = errors[keys[i]]
-      if value?      
-        should.exist value[0].id
-        should.exist value[0].code
-        should.exist value[0].message
-
-#Determines is a specific error occurred
-shouldHaveError = (errors, errorCode) ->  
-  shouldHaveErrors errors
-  errorCodeExists = false
-  return error for error in errors when error.code is errorCode
-  errorCodeExists.should.equal true
 
 ###############################
 ## RAINCLOUD Config
@@ -111,12 +64,12 @@ describe "atmosphere", ->
   before (done) ->
     #Init Cloud (Worker Server -- ex. EDA Server)
     atmosphere.rainCloud.init "test", jobTypes, (err) ->
-      shouldNotHaveErrors err
+      h.shouldNotHaveErrors err
       console.log "[I] Initialized RAINCLOUD", err
       
       #Init Rainmaker (App Server)
       atmosphere.rainMaker.init "test", (err) ->
-        shouldNotHaveErrors err
+        h.shouldNotHaveErrors err
         console.log "[I] Initialized RAINMAKER", err
         done()
 
@@ -153,35 +106,32 @@ describe "atmosphere", ->
   #       done()
 
   describe "#complex RPC use case (job chaining)", ->
-    
-    before (done) ->
-      done()
-    
-    it "should handle a job->job->job->callback job chain", (done) ->
-      job1 = 
-        type: "first" #the job type/queue name
-        name: "job1" #name for this job
-        data: {param1: "initial message"} #arbitrary serializable object
-        timeout: 30 #seconds
-      job2 = 
-        type: "second"
-        name: "job2"
-        data: {param2: "initial message"} #merged with results from job1
-        timeout: 15 #in seconds; clock starts running at start of execution
-      job3 = 
-        type: "third"
-        name: "job3"
-        data: {param3: "initial message"} #merged with results from job1
-        timeout: 15 #in seconds; clock starts running at start of execution
-      console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
-      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-        console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, error, data, "\n\n\n" #xxx
-        shouldNotHaveErrors error
-        should.exist data
-        should.exist data.first
-        should.exist data.second
-        should.exist data.third
-        done()
+        
+    # it "should handle a job->job->job->callback job chain", (done) ->
+    #   job1 = 
+    #     type: "first" #the job type/queue name
+    #     name: "job1" #name for this job
+    #     data: {param1: "initial message"} #arbitrary serializable object
+    #     timeout: 30 #seconds
+    #   job2 = 
+    #     type: "second"
+    #     name: "job2"
+    #     data: {param2: "initial message"} #merged with results from job1
+    #     timeout: 15 #in seconds; clock starts running at start of execution
+    #   job3 = 
+    #     type: "third"
+    #     name: "job3"
+    #     data: {param3: "initial message"} #merged with results from job1
+    #     timeout: 15 #in seconds; clock starts running at start of execution
+    #   console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
+    #   atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+    #     console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, error, data, "\n\n\n" #xxx
+    #     shouldNotHaveErrors error
+    #     should.exist data
+    #     should.exist data.first
+    #     should.exist data.second
+    #     should.exist data.third
+    #     done()
 
     it "should handle a job->job->callback->job chain", (done) ->
       job1 = 
@@ -204,7 +154,7 @@ describe "atmosphere", ->
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
         console.log "\n\n\n=-=-=[TEST4]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
         console.log "\n\n\n=-=-=[jjcj]", error, data, "\n\n\n" #xxx
-        shouldNotHaveErrors error
+        h.shouldNotHaveErrors error
         should.exist data
         should.exist data.first
         should.exist data.second
@@ -229,7 +179,7 @@ describe "atmosphere", ->
         data: {param3: "initial message"} #merged with results from job1
         timeout: 5 #in seconds; clock starts running at start of execution
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-        shouldNotHaveErrors error
+        h.shouldNotHaveErrors error
         should.exist data
         should.exist data.first
         should.not.exist data.second

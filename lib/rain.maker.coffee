@@ -118,7 +118,7 @@ mailman = (message, headers, deliveryInfo) ->
   Implements timeouts for jobs-in-progress
 ###
 foreman = () ->
-  for jobID, jobMeta of jobs then do (job) ->    
+  for jobID, jobMeta of jobs   
     jobMeta.timeout = jobMeta.timeout - 1
     if jobMeta.timeout <= 0
       #cache -- necessary to prevent loss of function pointer
