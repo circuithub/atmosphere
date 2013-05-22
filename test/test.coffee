@@ -175,7 +175,7 @@ describe "atmosphere", ->
         timeout: 15 #in seconds; clock starts running at start of execution
       console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-        console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
+        console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, error, data, "\n\n\n" #xxx
         shouldNotHaveErrors error
         should.exist data
         should.exist data.first

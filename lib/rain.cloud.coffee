@@ -74,14 +74,12 @@ exports.doneWith = (ticket, errors, result) =>
   #No more jobs in the chain
   if theJob.next.length is 0
     if theJob.callback 
-      _callbackMQ theJob, ticket, errors, result
-      return
+      _callbackMQ theJob, ticket, errors, result      
   #More jobs in the chain
   else
     if errors?
       #Abort chain if errors occurred
-      _callbackMQ theJob, ticket, errors, result
-      return
+      _callbackMQ theJob, ticket, errors, result      
     else
       nextJob = theJob.next.shift()
       payload = 
