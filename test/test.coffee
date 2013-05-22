@@ -62,7 +62,7 @@ count = () ->
 describe "atmosphere", ->
   
   before (done) ->
-    #Init Cloud (Worker Server -- ex. EDA Server)
+    #Init Cloud (Worker Server)
     atmosphere.rainCloud.init "test", jobTypes, (err) ->
       h.shouldNotHaveErrors err
       console.log "[I] Initialized RAINCLOUD", err
@@ -80,7 +80,7 @@ describe "atmosphere", ->
         job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
         job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
       bsync.parallel testFunctions, (allErrors, allResults) ->
-        shouldNotHaveErrors allErrors
+        h.shouldNotHaveErrors allErrors
         console.log "[D] Jobs Done", allResults      
         done()
 
@@ -90,19 +90,8 @@ describe "atmosphere", ->
         #Submit Altium Conversion Job
         testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
       bsync.parallel testFunctions, (allErrors, allResults) ->
-        shouldNotHaveErrors allErrors
+        h.shouldNotHaveErrors allErrors
         console.log "[D] Job Done", allResults
-        done()
-
-    #-- NOTE: Support for this isn't rigorous. Jobs must be safe to run on top of itself, but this makes it more efficient since if the same job is routed to the same cloud it will be dropped.
-    it "should handle a job collision (same job submitted simultaneously)", (done) ->
-      testFunctions = 
-        job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
-        job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}  
-        job3: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-collision", data: {}, timeout:2}
-      bsync.parallel testFunctions, (allErrors, allResults) ->
-        console.log "\n\n\n=-=-=[error test]", allErrors, "\n\n\n" #xxx
-        shouldHaveError [allErrors.job2, allErrors.job3], "jobAlreadyExistsError"
         done()
 
   describe "#complex RPC use case (job chaining)", ->
@@ -123,10 +112,8 @@ describe "atmosphere", ->
         name: "job3"
         data: {param3: "initial message"} #merged with results from job1
         timeout: 15 #in seconds; clock starts running at start of execution
-      console.log "\n\n\n=-=-=[TEST1]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-        console.log "\n\n\n=-=-=[TEST2]", atmosphere.rainMaker._jobs, error, data, "\n\n\n" #xxx
-        shouldNotHaveErrors error
+        h.shouldNotHaveErrors error
         should.exist data
         should.exist data.first
         should.exist data.second
@@ -150,10 +137,7 @@ describe "atmosphere", ->
         name: "job3"
         data: {param3: "initial message"} #merged with results from job1
         timeout: 5 #in seconds; clock starts running at start of execution
-      console.log "\n\n\n=-=-=[TEST3]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-        console.log "\n\n\n=-=-=[TEST4]", atmosphere.rainMaker._jobs, "\n\n\n" #xxx
-        console.log "\n\n\n=-=-=[jjcj]", error, data, "\n\n\n" #xxx
         h.shouldNotHaveErrors error
         should.exist data
         should.exist data.first
@@ -186,18 +170,18 @@ describe "atmosphere", ->
         should.not.exist data.third
         done()
 
-  # describe "#logging use case", ->
+  describe "#logging use case", ->
 
-  #   before (done) ->    
-  #     atmosphere.rainBucket.listen "testSubmitWith", withTester, (err) ->
-  #       shouldNotHaveErrors err
-  #       done()
+    before (done) ->    
+      atmosphere.rainBucket.listen "testSubmitWith", withTester, (err) ->
+        h.shouldNotHaveErrors err
+        done()
 
-  #   it "should be able to submit a logging message", (done) ->
-  #     atmosphere.rainBucket.submit "testSubmitWith", {type: "testSubmitWith", job: {name: "first-test", id: 42}}, "DATA!", (err) ->
-  #       shouldNotHaveErrors err
-  #       console.log "[Sw] Submitted.", err
-  #       done()
+    it "should be able to submit a logging message", (done) ->
+      atmosphere.rainBucket.submit "testSubmitWith", {type: "testSubmitWith", job: {name: "first-test", id: 42}}, "DATA!", (err) ->
+        h.shouldNotHaveErrors err
+        console.log "[Sw] Submitted.", err
+        done()
 
   #   it "should survive extremely large message", (done) ->
   #     #Stress Test (~33 Megabyte Payload)
