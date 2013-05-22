@@ -1,3 +1,4 @@
+_ = require "underscore"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 bsync = require "bsync"
@@ -44,12 +45,20 @@ exports.init = (role, jobTypes, cbDone) ->
 ## API
 ########################################
 
+_callbackMQ = (theJob, ticket, errors, result) ->
+  header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
+  message = 
+    errors: errors
+    data: result
+  core.publish currentJob[ticket.type].returnQueue, message, header
+
 ###
   Reports completed job on a Rain Cloud
   -- ticket: {type: "", job: {name: "", id: "uuid"} }
   -- message: the job response data (message body)
 ###
-exports.doneWith = (ticket, errors, data) =>
+exports.doneWith = (ticket, errors, result) =>
+  #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
     elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
@@ -58,12 +67,31 @@ exports.doneWith = (ticket, errors, data) =>
     #TODO: HANDLE THIS BETTER
     elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
-  header = {job: currentJob[ticket.type].job, type: currentJob[ticket.type].type, rainCloudID: core.rainID()}
-  message = 
-    errors: errors
-    data: data
-  core.publish currentJob[ticket.type].returnQueue, message, header
+  #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
+  #No more jobs in the chain
+  if theJob.next.length is 0
+    if theJob.callback 
+      _callbackMQ theJob, ticket, errors, result      
+  #More jobs in the chain
+  else
+    if errors? or theJob.callback
+      #Abort chain if errors occurred
+      _callbackMQ theJob, ticket, errors, result      
+    else
+      nextJob = theJob.next.shift()
+      payload = 
+        data: _.extend result, (nextJob.data ?= {}) #merge output of this job, with inputs to the next
+        next: theJob.next
+      headers = 
+        job: 
+          name: theJob.job.name
+          id: theJob.job.id
+        returnQueue: theJob.returnQueue
+        callback: nextJob.callback
+      core.submit nextJob.type, payload, headers
+  
+  #Done with this specific job in the job chain
   delete currentJob[ticket.type] #done with current job, update state
   process.nextTick () ->
     core.acknowledge theJob.type, (err) ->
@@ -137,12 +165,19 @@ exports.routers =
 lightning = (message, headers, deliveryInfo) =>
   if currentJob[deliveryInfo.queue]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.cloud server at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
+  #Hold this information internal to atmosphere
   currentJob[deliveryInfo.queue] = {
     type: deliveryInfo.queue
-    job: headers.job # job = {name:, id:}
-    data: message
+    job: headers.job # job = {name:, id:}    
     returnQueue: headers.returnQueue
+    next: message.next
+    callback: headers.callback
   }
-  jobWorkers[deliveryInfo.queue]({type: deliveryInfo.queue, job: headers.job}, currentJob[deliveryInfo.queue].data)
+  #Release this information to the work function (dispatch job)
+  jobWorkers[deliveryInfo.queue]
+    type: deliveryInfo.queue
+    name: headers.job.name
+    id: headers.job.id
+  , message.data

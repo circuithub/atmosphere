@@ -5,6 +5,7 @@ elma  = require("elma")(nconf)
 uuid = require "node-uuid"
 bsync = require "bsync"
 domain = require "domain"
+types = require "./types"
 
 
 
@@ -112,6 +113,18 @@ exports.delete = () ->
 ###
 exports.publish = (queueName, messageObject, headerObject) ->
   conn.publish queueName, JSON.stringify(messageObject), {contentType: "application/json", headers: headerObject} 
+
+###
+  Submit a job
+  -- Enforces job structure to make future refactor work safer  
+###
+exports.submit = types.fn (-> [ 
+  @String()
+  @Object {data: @Object(), next: @Array()}
+  @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String(), callback: @Boolean()}
+  ]),  
+  (type, payload, headers) => 
+    return exports.publish type, payload, headers
 
 
 

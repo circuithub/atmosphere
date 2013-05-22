@@ -4,22 +4,275 @@
  |     |    |    |  |  | |_____| ______| |       |     | |______ |    \_ |______
 
 ```
-Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
+Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 
 # Features
 
-* Robust: timeouts, retries, error-handling, etc
+* Robust: timeouts, retries, error-handling, auto-reconnect, etc
 * Flexible: Supports multiple job queueing models
 * Efficient: thin, early release of resources
 * Scales: RPC and Task sub-division allows jobs to be spread across mulitple CPUs
 * "Fixes" Heroku Routing: You control how and when Atmosphere distributes work
 * Proven: Backed by RabbitMQ, used in production
 
+# Usage Model
+
+Atmosphere is a flexible jobs queue. It can support three basic use cases:
+
+1. Simple Remote Procedure Call (S-RPC) -- A job is submited, executed by one of several remote listening workers, and a callback function is invoked when the work is complete or the timeout expires.
+2. Complex Remote Procedure Call (C-RPC) -- A chain of jobs are submitted and execution in sequence is desired. Data is passed from one job to the next. The callback may be invoked at any specified point along the chain... or at the end if unspecified.
+3. Message Passing for Logging (MP-L) -- A job is submitted with no expectation for a response. Used for monitoring/logging applications.
+
+# Jobs Model
+
+Externally, a job looks like this:
+
+```coffeescript
+	job = 
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+```
+
+It has...
+
+* a category (or "type") -- internally, this is the name of the queue in the RabbitMQ dashboard 
+* a name -- this is a descriptor for the work within the category, for example {type:"syncUser", name: "user1"}
+* data -- this is optional and arbitrary. It is passed to the function actually doing the work on the ```rainCloud```.
+* a timeout -- After this many seconds, if a response from the completed job hasn't been received, an error will be sent to the calling function on the ```rainMaker```. However, the job will still proceed to completion on the ```rainCloud```. This is useful for situations where the ```rainCloud's``` get busy and you want to inform your user of the ongoing delay. Only one response is ever sent per job so a side-channel (usually a database) must be used to indicate work completion after that point.
+
+
+# Routing Model
+
+Atmosphere consists of two entities: ```rainMaker``` and ```rainCloud```
+
+* ```rainMakers``` dance to make it rain -- they submit jobs because they want work done.
+* ```rainClouds``` actually release water -- they perform the work because a job was received.
+
+You can control how work is distributed in the atmosphere by understanding the routing rules:
+
+1. ```rainClouds``` register for the job types they want to handle by specifying which types and which functions should be invoked when work is received for that job type.
+2. Atmosphere distributes jobs among all ```rainClouds``` registered for that job in a round-robin fashion (least recently tasked gets the next job). 
+3. ```rainClouds``` can only process one job *of each job type* at a time. If you have I/O intensive tasks this works extremely well. If you have compute intensive tasks this does not. See the section at the end on compute intensive tasking to learn how to employ atmosphere effectively with CPU-heavy workloads.
+4. Atmosphere does not distribute jobs to busy ```rainClouds```. A cloud is busy if it is currently processing a job of the *same type* as the job trying to be scheduled.
+5. If a ```rainCloud``` crashes or is shutdown, any tasks that have not yet completed are re-queued and go the next available cloud following the rules above. This happens automatically (no action is necessary on the part of the developer).
+
+
+
+# Installation & Usage
+
+Atmosphere is tested and supported in node.js v.0.10.x and above.
+
+```npm install atmosphere```
+
+## Installing RabbitMQ
+
+Installing RabbitMQ
+```
+brew update
+brew install rabbitmq
+```
+
+```PATH=$PATH:/usr/local/sbin``` to your ```.bash_profile``` or ```.profile``` 
+
+### Running
+
+* You can start RabbitMQ with ```/usr/local/sbin/rabbitmq-server```
+* If you amend your path, the server can then be started with ```rabbitmq-server```. 
+* All scripts run under your own user account. Sudo is not required.
+
+### Monitoring
+
+* The web UI is located at: [http://localhost:15672/](http://localhost:15672/) (User and Password are "guest")
+* The HTTP API and its documentation are both located at: http://localhost:15672/api/.
+
+
+# Hello World!
+
+Welcome to life in an atmosphere... breathe in... breathe out... =)
+
+Let's use our job queue to do some simple remote-procedure-call-style work. We submit a job and print out the result when it's done. 
+
+Atmosphere looks and behaves like any other locally executing node.js asynchronous function, but the work is being done on one of many remote servers or local cores.
+
+### Local (makes request)
+```coffeescript
+#[1.] Include Module
+atmosphere = require("atmosphere").rainMaker # <-- Notice this!
+
+#[2.] Connect to Atmosphere
+atmosphere.init "requester", (err) ->
+	# Check for initialization errors
+	return err if err?
+
+	#[3.] Submit job
+	job = 
+		type: "example" #the job type (queue name)
+		name: "my first atmosphere job" #name for this work request (passed to remote router)
+		data: {msg1: "Hello", msg2: "World!"} #arbitrary serializable object to pass to remote
+		timeout: 30 #seconds (if timeout elapses, error response is returned to callback)
+	atmosphere.submit job, (error, data) ->
+
+		#[4.] Job is complete!
+		return error if error?			
+		console.log "RPC completed and returned:", data
+```
+
+### Remote (fulfills request)
+```coffeescript
+#[1.] Include Module
+atmosphere = require("atmosphere").rainCloud #<-- Notice this!
+
+#[2.] Local Function to Execute (called remotely)
+localFunction = (ticket, data) ->
+	console.log "Working on job with data: #{data.msg1} #{data.msg2}"
+	error = undefined
+	results = "This string was generated inside the work function"
+	atmosphere.doneWith(ticket, error, results)
+
+#[3.] Which possible jobs should this server register to handle?
+handleJobs = 
+	remoteFunction: localFunction #object key must match job.type
+
+#[4.] Connect to Atmosphere
+atmosphere.init "responder", (err) ->
+	# Check for errors
+	return err if err?
+	#All set now we're waiting for jobs to arrive
+```
+
+
 # Usage Models
 
-## RPC
 
-## Sub-Dividing Complex Jobs
+
+## RPC (Simple Job Queue)
+
+### Local (makes request)
+```coffeescript
+#Include Module
+atmosphere = require("atmosphere").rainMaker
+
+#Connect to Atmosphere
+atmosphere.init "requester", (err) ->
+	# Check for errors
+	if err?
+		console.log "Could not initialize.", err
+		return
+	# Submit job (make the remote procedure call)
+	job = 
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this work request (passed to remote router)
+		data: {msg: "useful"} #arbitrary serializable object to pass to remote function
+		timeout: 30 #seconds
+	atmosphere.submit job, (error, data) ->
+		if error?
+			console.log "Error occurred executing function.", error
+			return
+		console.log "RPC completed and returned:", data
+```
+
+### Remote (fulfills request)
+```coffeescript
+#Include Module
+atmosphere = require("atmosphere").rainCloud
+
+#Local Function to Execute (called remotely)
+# -- ticket = {type, name, id}
+# -- data = copy of data object passed to submit
+localFunction = (ticket, data) ->
+	console.log "Doing #{data.msg} work here!"
+	error = undefined
+	results = "This string was generated inside the work function"
+	atmosphere.doneWith(ticket, error, results)
+
+#Which possible jobs should this server register to handle
+handleJobs = 
+	remoteFunction: localFunction #object key must match job.type
+
+#Connect to Atmosphere
+atmosphere.init "responder", (err) ->
+	# Check for errors
+	if err?
+		console.log "Could not initialize.", err
+		return
+	#All set now we're waiting for jobs to arrive
+```
+
+
+
+
+## Sub-Dividing Complex Jobs (Chaining Jobs)
+
+* If prior job finishes with error object defined, callback is made immediately
+* If prior job finishes without error, data object is passed to next job
+* Callback can be forced on success, but chain execution will continue
+* Only one callback per chain
+
+First, you must connect to atmosphere to submit jobs:
+
+```coffeescript
+#Include Module
+atmosphere = require("atmosphere").rainMaker
+
+#Connect to Atmosphere
+atmosphere.init "requester", (err) ->
+	# Check for errors
+	if err?
+		console.log "Could not initialize.", err
+		return
+	# Submit job (make the remote procedure call)
+```
+
+### Submit a Job --> Job --> Callback
+
+* Jobs are daisy chained -- one job is run after the other completes
+* If the first jobs returns an error, the second is not processed
+* Results from the first job are merged with the second jobs data parameter before execution so that data cascades between jobs
+* Unlimited jobs many be chained in this fashion.
+
+```coffeescript
+	job1 = 
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+	job2 = 
+		type: "remoteFunction"
+		name: "not special job to run after special job"
+		data: {param2: "abc"} #merged with results from job1
+		timeout: 5 #in seconds; clock starts running at start of execution
+	atmosphere.submit [job1, job2], (error, data) ->
+		if error?
+			console.log "Error occurred executing function.", error
+			return
+		console.log "RPC completed and returned:", data
+```
+
+### Submit a Job --> Callback --> Job
+
+The callback is returned after job1 completes, but execution will continue to job2 if no error occurred. The callback from job2 (and subsequent) will be ignored.
+
+```coffeescript
+	job1 = 
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+		callback: true
+	job2 = 
+		type: "remoteFunction"
+		name: "not special job to run after special job"
+		data: {param2: "abc"} #merged with results from job1
+		timeout: 5 #in seconds; clock starts running at start of execution
+	atmosphere.submit [job1, job2], (error, data) ->
+		if error?
+			console.log "Error occurred executing function.", error
+			return
+		console.log "RPC completed and returned:", data
+```
+
 
 ## Logging/Monitoring
 
@@ -45,9 +298,87 @@ atmosphere.init.rainCloud jobTypes, (err) ->
 atmosphere.init.rainMaker (err) ->
 ```
 
-## Submit a Job
 
-### Example Response
+
+# Architecture
+```coffeescript
+rainMaker.submit(job, callback)
+	--> RabbitMQ -->
+		rainCloud.lightning(..)
+			envelope
+				external.function(ticket, data)
+			envelope
+		rainCloud.doneWith(..)
+	<-- RabbitMQ <--
+callback(errors, data)
+```
+
+
+# Data Structures & Formats
+
+## External
+
+### Current Job State
+
+```coffeescript
+    message = {data: {}, next: [job2, job3, job4, ...]}
+```
+
+### Job Ticket
+
+```coffeescript
+ticket = 
+    type: deliveryInfo.queue
+    name: headers.job.name
+    id: headers.job.id
+```
+
+## Internal 
+
+### jobChain (payload.next)
+
+```
+next = [
+	{
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+		callback: true #optional
+	},
+	{
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds
+		callback: false #optional
+	}
+]
+```
+
+### rainMaker: Current Jobs (jobs)
+```coffeescript
+jobs[job.id] = 
+	type: job.type
+	name: job.name
+	timeout: job.timeout
+	callback: cbJobDone
+```
+
+
+### rainCloud: Current Jobs (currentJob)
+
+```coffeescript
+currentJob[deliveryInfo.queue] = {
+    type: deliveryInfo.queue
+    job: {name:, id:}    
+    returnQueue: headers.returnQueue
+    next: message.next
+}
+```
+
+
+### Received from RabbitMQ
 
 Message:
 ```json
