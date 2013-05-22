@@ -5,8 +5,7 @@ types = require "./types"
 core = require "./core"
 monitor = require "./monitor"
 
-jobs = {} #indexed by "#{headers.type}-#{headers.job.name}"
-callbacks = {} #indexed by job.id
+jobs = {} #indexed by "headers.job.id"
 
 exports._jobs = jobs
 
@@ -61,13 +60,13 @@ exports.submit = (jobChain, cbJobDone) ->
     job = jobChain.shift()
 
     #[2.] Inform Foreman Job Expected
-    if jobs["#{job.type}-#{job.name}"]?
-      cbJobDone elma.error "jobAlreadyExistsError", "Job #{job.type}-#{job.name} Already Pending"
-      return
     job.timeout ?= 60
     job.id = uuid.v4()
-    jobs["#{job.type}-#{job.name}"] = {id: job.id, timeout: job.timeout}
-    callbacks[job.id] = cbJobDone
+    if jobs[job.id]?
+      cbJobDone elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
+      return
+    
+    jobs[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
     
     #[3.] Submit Job
     payload = 
@@ -107,12 +106,11 @@ exports.count = () ->
   Assigns incoming messages to jobs awaiting a response
 ###
 mailman = (message, headers, deliveryInfo) ->
-  if not callbacks["#{headers.job.id}"]?
+  if not jobs["#{headers.job.id}"]?
     elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
     return    
-  callback = callbacks["#{headers.job.id}"] #cache function pointer
-  delete jobs["#{headers.type}-#{headers.job.name}"] #mark job as completed
-  delete callbacks["#{headers.job.id}"] #mark job as completed
+  callback = jobs["#{headers.job.id}"].callback #cache function pointer
+  delete jobs["#{headers.job.id}"] #mark job as completed
   process.nextTick () -> #release stack frames/memory
     callback message.errors, message.data
 
@@ -120,16 +118,17 @@ mailman = (message, headers, deliveryInfo) ->
   Implements timeouts for jobs-in-progress
 ###
 foreman = () ->
-  for job of jobs then do (job) ->    
-    jobs[job].timeout = jobs[job].timeout - 1
-    if jobs[job].timeout <= 0
-      callback = callbacks[jobs[job].id] #necessary to prevent loss of function pointer
-      
+  for jobID, jobMeta of jobs then do (job) ->    
+    jobMeta.timeout = jobMeta.timeout - 1
+    if jobMeta.timeout <= 0
+      #cache -- necessary to prevent loss of function pointer
+      callback = jobMeta.callback 
+      job = jobMeta
+
       #mark job as completed
-      delete callbacks[jobs[job].id] 
-      delete jobs[job] #mark job as completed
+      delete jobs[jobID] #mark job as completed
       
       #release stack frames/memory
       process.nextTick () -> 
-        callback elma.error "jobTimeout", "A response to job #{job} was not received in time."
+        callback elma.error "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
   setTimeout(foreman, 1000)

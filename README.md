@@ -356,7 +356,17 @@ next = [
 ]
 ```
 
-### currentJob
+### rainMaker: Current Jobs (jobs)
+```coffeescript
+jobs[job.id] = 
+	type: job.type
+	name: job.name
+	timeout: job.timeout
+	callback: cbJobDone
+```
+
+
+### rainCloud: Current Jobs (currentJob)
 
 ```coffeescript
 currentJob[deliveryInfo.queue] = {
