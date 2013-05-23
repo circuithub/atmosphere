@@ -144,7 +144,7 @@ basic = (taskName, functionName) ->
   return _basicRouter
 
 _basicRouter = (ticket, data) ->
-  elma.info "[JOB] #{ticket.type}-#{ticket.job.name}-#{ticket.step}"
+  elma.info "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
   ticket.data = data if data? #add job data to ticket
   #Execute (invoke work function)
   rpcWorkers[ticket.type] ticket, (errors, results) ->
