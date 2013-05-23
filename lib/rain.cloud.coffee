@@ -70,8 +70,7 @@ exports.doneWith = (ticket, errors, result) =>
   #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
   #No more jobs in the chain
-  if theJob.next.length is 0
-    if theJob.callback 
+  if (not theJob.next?) or (theJob.next.length is 0 and theJob.callback)
       _callbackMQ theJob, ticket, errors, result      
   #More jobs in the chain
   else
