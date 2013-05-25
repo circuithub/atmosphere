@@ -69,15 +69,20 @@ exports.doneWith = (ticket, errors, result) =>
     return
   #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
+  #Console
+  numJobsNext = if theJob.next? then theJob.next.length else 0
+  elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow."
   #No more jobs in the chain
   if (not theJob.next?) or (theJob.next.length is 0 and theJob.callback)
       _callbackMQ theJob, ticket, errors, result      
   #More jobs in the chain
   else
-    if errors? or theJob.callback
+    if errors?
       #Abort chain if errors occurred
       _callbackMQ theJob, ticket, errors, result      
     else
+      #Fire callback if specified
+      _callbackMQ theJob, ticket, errors, result if theJob.callback
       #Get next job in the chain
       nextJob = theJob.next.shift()
       #Cascade results (merge incoming results from last job with incoming user data for new job)      
