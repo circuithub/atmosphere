@@ -28,5 +28,5 @@ exports.submit = (type, ticket, task, cbSubmitted) =>
     cbSubmitted [elma.error("noRabbitError", "Not connected to #{core.urlLogSafe} yet!")]
     return
   #[1.] Submit Task Message
-  core.publish type, task, {task: ticket, fromID: core.rainID()}
+  core.publish type, task, {task: ticket, fromID: core.rainID(), fromName: nconf.get("PS")}
   cbSubmitted()
