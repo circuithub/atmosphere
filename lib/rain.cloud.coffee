@@ -40,6 +40,8 @@ exports.init = (role, jobTypes, cbDone) ->
       monitor.boot() #log boot time
       cbDone undefined
 
+      
+
 
 ########################################
 ## API
@@ -71,11 +73,10 @@ exports.doneWith = (ticket, errors, result) =>
   theJob = currentJob[ticket.type]
   #Console
   numJobsNext = if theJob.next? then theJob.next.length else 0
-  elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow."
+  elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
-    _callbackMQ theJob, ticket, errors, result if theJob.callback
-    return #all done processing this job chain!
+    _callbackMQ theJob, ticket, errors, result if theJob.callback    
   #More jobs in the chain
   else
     if errors?
