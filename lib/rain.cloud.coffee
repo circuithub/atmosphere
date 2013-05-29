@@ -73,8 +73,9 @@ exports.doneWith = (ticket, errors, result) =>
   numJobsNext = if theJob.next? then theJob.next.length else 0
   elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow."
   #No more jobs in the chain
-  if (not theJob.next?) or (theJob.next.length is 0 and theJob.callback)
-      _callbackMQ theJob, ticket, errors, result      
+  if numJobsNext is 0  
+    _callbackMQ theJob, ticket, errors, result if theJob.callback
+    return #all done processing this job chain!
   #More jobs in the chain
   else
     if errors?
