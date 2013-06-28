@@ -17,17 +17,18 @@ exports._jobs = jobs
   Jobs system initialization
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
-exports.init = (role, cbDone) ->
+exports.init = (role, cbDone) =>
   core.setRole(role)
-  core.connect (err) ->
+  core.connect (err) =>
     if err?
       cbDone err
-      return
-    foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-    exports.listen core.rainID(), mailman, cbDone 
-    monitor.boot()
+      return    
+    @start () ->
+      monitor.boot()
 
-
+exports.start = (cbStarted) ->
+  foreman() #start job supervisor (runs asynchronously at 1sec intervals)
+  exports.listen core.rainID(), mailman, cbStarted
 
 ########################################
 ## API
@@ -111,6 +112,7 @@ exports.jobName = core.jobName
   Assigns incoming messages to jobs awaiting a response
 ###
 mailman = (message, headers, deliveryInfo) ->
+  console.log "\n\n\n=-=-=[atm.mail]", headers, "\n\n\n" #xxx
   if not jobs["#{headers.job.id}"]?
     elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
     return    

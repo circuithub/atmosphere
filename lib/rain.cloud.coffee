@@ -5,6 +5,7 @@ bsync = require "bsync"
 
 core = require "./core"
 monitor = require "./monitor"
+rainMaker = require "./rain.maker"
 
 jobWorkers = {}
 currentJob = {}
@@ -37,8 +38,10 @@ exports.init = (role, jobTypes, cbDone) ->
       if allErrors?
         cbDone allErrors
         return
-      monitor.boot() #log boot time
-      cbDone undefined
+      #[3.] Register to submit jobs (so workers can submit jobs)
+      rainMaker.start () -> 
+        monitor.boot() #log boot time
+        cbDone undefined
 
       
 
