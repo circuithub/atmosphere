@@ -39,10 +39,13 @@ exports.start = (cbStarted) ->
   -- jobChain: Either a single job, or an array of jobs
   --    job = {type: "typeOfJob/queueName", name: "jobName", data: {}, timeout: 30}
   -- cbJobDone: callback when response received (error, data) format
+  --    if cbJobDone = undefined, no callback is issued or expected (no internal timeout, tracking, or callback)
+          use for fire-and-forget dispatching
 ###
 exports.submit = (jobChain, cbJobDone) ->
     if not core.ready() 
-      cbJobDone elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      cbJobDone error if cbJobDone?
       return
 
     #[1.] Array Prep (job chaining)
@@ -52,11 +55,11 @@ exports.submit = (jobChain, cbJobDone) ->
     #--Clarify callback flow (only first callback=true remains)
     foundCB = false
     for eachJob in jobChain
-      if foundCB or (not eachJob.callback?) or (not eachJob.callback)
+      if foundCB or (not eachJob.callback?) or (not eachJob.callback) or (not cbJobDone?)
         eachJob.callback = false
       else
-        foundCB = true if eachJob.callback? and eachJob.callback   
-    jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
+        foundCB = true if eachJob.callback? and eachJob.callback  
+    jobChain[jobChain.length-1].callback = true if not foundCB and cbJobDone? #callback after last job if unspecified
     #--Look at first job
     job = jobChain.shift()
 
@@ -64,10 +67,12 @@ exports.submit = (jobChain, cbJobDone) ->
     job.timeout ?= 60
     job.id = uuid.v4()
     if jobs[job.id]?
-      cbJobDone elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
+      error = elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
+      cbJobDone error if cbJobDone?
       return
-    
-    jobs[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
+    #If callback is desired listen for it
+    if cbJobDone? 
+      jobs[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
     
     #[3.] Submit Job
     payload = 
