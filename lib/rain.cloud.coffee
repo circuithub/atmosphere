@@ -55,7 +55,6 @@ _callbackMQ = (theJob, ticket, errors, result) ->
   message = 
     errors: errors
     data: result
-  console.log "\n\n\n=-=-=[_callbackMQ]", currentJob[ticket.type].returnQueue, header, "\n\n\n" #xxx
   core.publish currentJob[ticket.type].returnQueue, message, header
 
 ###

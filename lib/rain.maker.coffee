@@ -28,8 +28,8 @@ exports.init = (role, cbDone) =>
       cbDone undefined
 
 exports.start = (cbStarted) ->
+  console.log "[INIT]", core.rainID()
   foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-  console.log "\n\n\n=-=-=[rain.cloud](init)", core.rainID(), "\n\n\n" #xxx
   exports.listen core.rainID(), mailman, cbStarted
 
 ########################################
@@ -119,7 +119,6 @@ exports.jobName = core.jobName
   Assigns incoming messages to jobs awaiting a response
 ###
 mailman = (message, headers, deliveryInfo) ->
-  console.log "\n\n\n=-=-=[atm.mail]", headers, "\n\n\n" #xxx
   if not jobs["#{headers.job.id}"]?
     elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
     return    
