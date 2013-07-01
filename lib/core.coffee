@@ -42,6 +42,7 @@ exports.setRole = (role) ->
   _roleID = _roleID.replace " ", "_"
   _roleID = _s.truncate _roleID, 8
   _roleID = _s.truncate _roleID, 7 if _roleID[7] is "_"
+  _roleID = _roleID.replace "...", ""
   _roleID = _roleID + "-" + _rainID
   return _roleID
 
@@ -147,17 +148,22 @@ exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
     cbListening elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
     return
   if not queues[type]?
+    console.log "\n\n\n=-=-=[core.listen]", "if", "\n\n\n" #xxx
     queue = conn.queue type, {autoDelete: not persist}, () -> # create a queue (if not exist, sanity check otherwise)
+      console.log "\n\n\n=-=-=[core.listen]", "queue-cb1", "\n\n\n" #xxx
       #save reference so we can send acknowledgements to this queue
       queues[type] = queue 
       # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
       subscribeDomain = domain.create()
       subscribeDomain.on "error", (err) -> 
         cbListening err
+        return
       subscribeDomain.run () ->
         queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
+      console.log "\n\n\n=-=-=[core.listen]", "cb", "\n\n\n" #xxx
       cbListening undefined
   else
+    console.log "\n\n\n=-=-=[core.listen]", "else", "\n\n\n" #xxx
     if not listeners[type]? #already listening?
       queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
     cbListening undefined

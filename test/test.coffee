@@ -4,56 +4,14 @@ atmosphere   = require "../index"
 bsync        = require "bsync"
 h            = require "./helpers"
 
-
-
-###############################
-## RAINCLOUD Config
-
-altiumCounter = 0
-
-workerDoAltium = (ticket, data) ->
-  console.log "[W] ALTIUM", ticket, data 
-  count()
-  altiumCounter++
-  atmosphere.rainCloud.doneWith ticket, undefined, {result:"Done with Altium", count: altiumCounter}
-
-workerDoOrCAD = (ticket, data) ->
-  console.log "[W] ORCAD", ticket, data
-  atmosphere.rainCloud.doneWith ticket, undefined, "Done with ORCAD job"
-
-worker1 = (ticket, data) ->
-  console.log "[W] FIRST", ticket, data 
-  count()
-  data2 = {previous: data, first: "results from worker 1"}
-  atmosphere.rainCloud.doneWith ticket, undefined, data2
-
-worker2 = (ticket, data) ->
-  console.log "[W] SECOND", ticket, data 
-  count()
-  data2 = {previous: data, second: "results from worker 2"}
-  atmosphere.rainCloud.doneWith ticket, undefined, data2
-
-worker3 = (ticket, data) ->
-  console.log "[W] THIRD", ticket, data 
-  count()
-  data2 = {previous: data, third: "results from worker 3"}
-  atmosphere.rainCloud.doneWith ticket, undefined, data2
-
-jobTypes = {
-  convertAltium: workerDoAltium
-  convertOrCAD: workerDoOrCAD
-  first: worker1
-  second: worker2
-  third: worker3
-}
-
-withTester = (ticket, data) ->
-  ticket.data = {}
-  console.log "[Ww] Listen/Submit With Tester", ticket
+console.log "\n\n\n=-=-=[START]", "Make sure that test.rain.cloud is running...", "\n\n\n" #xxx
 
 count = () ->
   console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{JSON.stringify atmosphere.rainCloud.count()}."
 
+withTester = (ticket, data) ->
+  ticket.data = {}
+  console.log "[Ww] Listen/Submit With Tester", ticket
 
 
 ###############################
@@ -62,16 +20,11 @@ count = () ->
 describe "atmosphere", ->
   
   before (done) ->
-    #Init Cloud (Worker Server)
-    atmosphere.rainCloud.init "rainCloud", jobTypes, (err) ->
+    #Init Rainmaker (App Server)
+    atmosphere.rainMaker.init "rainMaker", (err) ->
       h.shouldNotHaveErrors err
-      console.log "[I] Initialized RAINCLOUD", err
-      
-      #Init Rainmaker (App Server)
-      atmosphere.rainMaker.init "rainMaker", (err) ->
-        h.shouldNotHaveErrors err
-        console.log "[I] Initialized RAINMAKER", err
-        done()
+      console.log "[I] Initialized RAINMAKER", err
+      done()
 
   describe "#basic RPC use case", ->  
   
@@ -175,6 +128,21 @@ describe "atmosphere", ->
       console.log "\n\n\n=-=-=[jjj]", "beginning...", "\n\n\n" #xxx
       atmosphere.rainMaker.submit [job1, job2, job3], undefined
       done()
+
+    it "should route results from jobs that call jobs correctly", (done) ->
+      job = 
+        type: "jobjob"
+        name: "linkTest"
+        data: {param3: "initial message"}
+      console.log "\n\n\n=-=-=[j->j]", "beginning...", "\n\n\n" #xxx
+      atmosphere.rainMaker.submit job, (err, resp) ->
+        console.log "\n\n\n=-=-=[j->j]", err, resp, "\n\n\n" #xxx
+        h.shouldNotHaveErrors err
+        should.exist resp   
+        should.exist resp.first
+        should.exist resp.previous
+        should.exist resp.previous.fourth     
+        done()
 
   describe "#logging use case", ->
 

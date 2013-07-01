@@ -2,7 +2,7 @@
   "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
   "name": "atmosphere",
   "description": "Background jobs queue (currently uses RabbitMQ)",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "homepage": "http://circuithub.com",
   "engines": {
     "node": ">=0.10"

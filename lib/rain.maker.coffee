@@ -25,9 +25,11 @@ exports.init = (role, cbDone) =>
       return    
     @start () ->
       monitor.boot()
+      cbDone undefined
 
 exports.start = (cbStarted) ->
   foreman() #start job supervisor (runs asynchronously at 1sec intervals)
+  console.log "\n\n\n=-=-=[rain.cloud](init)", core.rainID(), "\n\n\n" #xxx
   exports.listen core.rainID(), mailman, cbStarted
 
 ########################################
