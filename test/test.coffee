@@ -63,12 +63,12 @@ describe "atmosphere", ->
   
   before (done) ->
     #Init Cloud (Worker Server)
-    atmosphere.rainCloud.init "test", jobTypes, (err) ->
+    atmosphere.rainCloud.init "rainCloud", jobTypes, (err) ->
       h.shouldNotHaveErrors err
       console.log "[I] Initialized RAINCLOUD", err
       
       #Init Rainmaker (App Server)
-      atmosphere.rainMaker.init "test", (err) ->
+      atmosphere.rainMaker.init "rainMaker", (err) ->
         h.shouldNotHaveErrors err
         console.log "[I] Initialized RAINMAKER", err
         done()
@@ -159,6 +159,22 @@ describe "atmosphere", ->
         should.exist data.first       
         should.exist data.previous.param1
         done()
+
+    it "should handle a job->job->job chain (fire-and-forget)", (done) ->
+      job1 = 
+        type: "first" #the job type/queue name
+        name: "job1" #name for this job
+        data: {param1: "initial message"} #arbitrary serializable object
+        timeout: 5 #seconds
+      job2 = 
+        type: "second"
+        data: {param2: "initial message"} #merged with results from job1
+      job3 = 
+        type: "third"
+        data: {param3: "initial message"} #merged with results from job1
+      console.log "\n\n\n=-=-=[jjj]", "beginning...", "\n\n\n" #xxx
+      atmosphere.rainMaker.submit [job1, job2, job3], undefined
+      done()
 
   describe "#logging use case", ->
 

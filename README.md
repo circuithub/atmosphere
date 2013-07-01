@@ -312,6 +312,27 @@ The callback is returned after job1 completes, but execution will continue to jo
 		console.log "RPC completed and returned:", data
 ```
 
+### Submit a Job --> Job (fire-and-forget)
+
+A fire-and-forget job is one that, once submitted, will not invoke a callback. This is useful for jobs that serve only as dispatchers for routine maintenance (fanout directors) or jobs performing final logging (where additional recovery is not possible). 
+
+You could, of course, use the normal callback syntax and simply ignore (empty function) the callback, but this will result in futher state management, tracking, and logged error messages (from the timeout if it occurs).
+
+* Most efficient way to ignore a callback (reduces memory allocation and log noise)
+* Execution will continue to job2 if no error occurred. 
+* Errors that occur will be reported to the console, but otherwise ignored.
+
+```coffeescript
+	job1 = 
+		type: "remoteFunction" #the job type/queue name
+		name: "special job" #name for this job
+		data: {msg: "useful"} #arbitrary serializable object
+		timeout: 30 #seconds		
+	job2 = 
+		type: "remoteFunction"
+		data: {param2: "abc"} #merged with results from job1
+	atmosphere.submit [job1, job2], undefined # <-- NOTE THIS!
+```
 
 ## Logging/Monitoring
 
