@@ -1,11 +1,11 @@
-amqp = require "amqp"
-_s = require "underscore.string"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
-uuid = require "node-uuid"
-bsync = require "bsync"
-domain = require "domain"
-types = require "./types"
+_s                     = require "underscore.string"
+uuid                   = require "node-uuid"
+bsync                  = require "bsync"
+domain                 = require "domain"
+types                  = require "./types"
+
+Firebase               = require "firebase"
+FirebaseTokenGenerator = require "firebase-token-generator"
 
 
 
@@ -13,9 +13,10 @@ types = require "./types"
 ## STATE MANAGEMENT
 ########################################
 
-url = nconf.get("CLOUDAMQP_URL") or "amqp://guest:guest@localhost:5672//" #default to localhost if no environment variable is set
-_urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
-exports.urlLogSafe = _urlLogSafe
+exports.init = (@url, @serverToken) =>
+  @firebaseServerURL ?= "https://atmosphere.firebaseio-demo.com/"  
+
+exports.urlLogSafe = url
 
 conn = undefined
 connectionReady = false
@@ -53,7 +54,7 @@ exports.setRole = (role) ->
 ########################################
 
 ###
-  Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
+  Report whether the Job queueing system is ready for use
 ###
 exports.ready = () ->
   return connectionReady
@@ -64,22 +65,32 @@ exports.ready = () ->
   -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-exports.connect = (cbConnected) ->
+exports.connect = (cbConnected) =>
   if not conn?
-    elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
-    conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
-    conn.on "error", (err) ->
-      elma.error "rabbitConnectedError", "RabbitMQ server at #{_urlLogSafe} reports ERROR.", err
-    conn.on "ready", (err) ->
-      elma.info "rabbitConnected", "Connected to RabbitMQ!"
-      if err?
-        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{_urlLogSafe} FAILED.", err
-        cbConnected err
-        return
-      connectionReady = true
+    dataRef = new Firebase @firebaseServerURL
+    firebaseServerToken = @generateServerToken()
+    if firebaseServer.toLowerCase().indexOf("-demo") isnt -1 #Skip authenication if using Firebase demo mode
+      console.log "[atmosphere]", "Running in demo mode (skipping authenication)"
+      ready = true
       cbConnected undefined
+      return
+    dataRef.auth firebaseServerToken, (error) ->
+      if not error?
+        connectionReady = true 
+        console.log "[atmosphere] Connected to Firebase!"
+      else
+        connectionReady = false
+        console.log "[atmosphere] Firebase server at #{_urlLogSafe} reports ERROR.", error
+      cbConnected error
   else
     cbConnected undefined
+
+###
+  Generate Access Token for Server
+  -- Full access! Be careful!
+###
+exports.generateServerToken = () ->
+  return serverToken
 
 
 

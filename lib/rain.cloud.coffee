@@ -1,6 +1,4 @@
 _ = require "underscore"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
 bsync = require "bsync"
 
 core = require "./core"
@@ -76,7 +74,7 @@ exports.doneWith = (ticket, errors, result) =>
   theJob = currentJob[ticket.type]
   #Console
   numJobsNext = if theJob.next? then theJob.next.length else 0
-  elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
+  console.log "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
     _callbackMQ theJob, ticket, errors, result if theJob.callback    
@@ -154,7 +152,7 @@ basic = (taskName, functionName) ->
   return _basicRouter
 
 _basicRouter = (ticket, data) ->
-  elma.info "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
+  console.log "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
   ticket.data = data if data? #add job data to ticket
   #Execute (invoke work function)
   rpcWorkers[ticket.type] ticket, (errors, results) ->

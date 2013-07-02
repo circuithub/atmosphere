@@ -19,6 +19,7 @@ exports._jobs = jobs
 ###
 exports.init = (role, cbDone) =>
   core.setRole(role)
+  core.init()
   core.connect (err) =>
     if err?
       cbDone err
