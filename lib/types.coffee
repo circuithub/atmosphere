@@ -1,5 +1,3 @@
-nconf          = require "nconf"
-elma           = require("elma")(nconf)
 adt =
   typecheck:    require "adt-typecheck.js"
 
@@ -38,13 +36,13 @@ exports._typecheck = (schemaF, f, chained) ->
     # It is not possible to pass along errors if no callback function is supplied
     if errors.length > 0
       if arguments.length != expectedNumArgs
-        elma.error "typeError", "Expected #{expectedNumArgs} arguments, but received #{arguments.length}.\n#{adt.typecheck.show errors}", arguments
+        console.log "typeError", "Expected #{expectedNumArgs} arguments, but received #{arguments.length}.\n#{adt.typecheck.show errors}", arguments
       if typeof arguments[arguments.length - 1] != 'function'
-        elma.error "typeError", adt.typecheck.show errors, arguments
+        console.log "typeError", adt.typecheck.show errors, arguments
     callback = arguments[arguments.length - 1]
     if errors.length > 0
       # Generate CircuitHub errors instead of one long typecheck message
-      callback elma.errors "typeError", (adt.typecheck.show e for e in errors), arguments
+      callback console.logs "typeError", (adt.typecheck.show e for e in errors), arguments
     else
       f arguments..., callback
 

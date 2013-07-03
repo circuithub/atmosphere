@@ -25,7 +25,7 @@ exports.listen = (type, cbExecute, cbListening) =>
 ###
 exports.submit = (type, ticket, task, cbSubmitted) =>
   if not core.ready() 
-    cbSubmitted [elma.error("noRabbitError", "Not connected to #{core.urlLogSafe} yet!")]
+    cbSubmitted [console.log("noRabbitError", "Not connected to #{core.urlLogSafe} yet!")]
     return
   #[1.] Submit Task Message
   fromName = if nconf.get("PS")? then nconf.get("PS") else ""

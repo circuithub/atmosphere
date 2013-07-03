@@ -1,4 +1,6 @@
 _ = require "underscore"
+nconf = require "nconf"
+elma  = require("elma")(nconf)
 bsync = require "bsync"
 
 core = require "./core"
@@ -64,17 +66,17 @@ exports.doneWith = (ticket, errors, result) =>
   #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
-    elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+    console.log "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
     return
   if not currentJob[ticket.type]?
     #TODO: HANDLE THIS BETTER
-    elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
+    console.log "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
     return
   #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
   #Console
   numJobsNext = if theJob.next? then theJob.next.length else 0
-  console.log "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
+  elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
     _callbackMQ theJob, ticket, errors, result if theJob.callback    
@@ -109,7 +111,7 @@ exports.doneWith = (ticket, errors, result) =>
     core.acknowledge theJob.type, (err) ->
       if err?
         #TODO: HANDLE THIS BETTER
-        elma.error "cantAckError", "Could not send ACK", theJob, err 
+        console.log "cantAckError", "Could not send ACK", theJob, err 
         return
       monitor.jobComplete()
 
@@ -152,7 +154,7 @@ basic = (taskName, functionName) ->
   return _basicRouter
 
 _basicRouter = (ticket, data) ->
-  console.log "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
+  elma.info "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
   ticket.data = data if data? #add job data to ticket
   #Execute (invoke work function)
   rpcWorkers[ticket.type] ticket, (errors, results) ->
@@ -177,7 +179,7 @@ exports.routers =
 lightning = (message, headers, deliveryInfo) =>
   if currentJob[deliveryInfo.queue]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+    console.log "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
     return
   #Hold this information internal to atmosphere
   currentJob[deliveryInfo.queue] = {

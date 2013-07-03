@@ -21,13 +21,23 @@ describe "atmosphere", ->
   
   describe "#core", ->
     it "should connect to Firebase", (done) ->
-      atmosphere.core.init() 
-      atmosphere.core.connect (error) ->
-        helpers.shouldNotHaveErrors error
+      atmosphere.core.init "testServer", undefined, undefined, (error) -> 
+        h.shouldNotHaveErrors error
         done()
 
-
-
+    it "should submit a job", (done) ->
+      payload = 
+        data: {hello: 1, world: 2}
+        next: []
+      headers =
+        callback: false
+        job: 
+          name: "blahmooquack-job"          
+        returnQueue: atmosphere.core.rainID()
+      jobID = atmosphere.core.publish "testQueue", payload, headers
+      console.log "\n\n\n=-=-=[jobID]", jobID, "\n\n\n" #xxx
+      #should.exist jobID
+      #done()
 
 
   # before (done) ->

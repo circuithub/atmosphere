@@ -5,7 +5,7 @@
 
 ###
 
-exports.rainCloud = require "./lib/rain.cloud"
-exports.rainMaker = require "./lib/rain.maker"
-exports.rainBucket = require "./lib/rain.bucket"
+# exports.rainCloud = require "./lib/rain.cloud"
+# exports.rainMaker = require "./lib/rain.maker"
+# exports.rainBucket = require "./lib/rain.bucket"
 exports.core = require "./lib/core"

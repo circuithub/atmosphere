@@ -1,5 +1,3 @@
-nconf = require "nconf"
-elma  = require("elma")(nconf)
 uuid = require "node-uuid"
 types = require "./types"
 core = require "./core"
@@ -18,9 +16,7 @@ exports._jobs = jobs
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
 exports.init = (role, cbDone) =>
-  core.setRole(role)
-  core.init()
-  core.connect (err) =>
+  core.init role, undefined, undefined, (err) =>
     if err?
       cbDone err
       return    
@@ -47,7 +43,7 @@ exports.start = (cbStarted) ->
 ###
 exports.submit = (jobChain, cbJobDone) ->
     if not core.ready() 
-      error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      error = console.log "[atmosphere]", "Not connected to #{core.urlLogSafe} yet!" 
       cbJobDone error if cbJobDone?
       return
 
@@ -70,7 +66,7 @@ exports.submit = (jobChain, cbJobDone) ->
     job.timeout ?= 60
     job.id = uuid.v4()
     if jobs[job.id]?
-      error = elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
+      error = console.log "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
       cbJobDone error if cbJobDone?
       return
     #If callback is desired listen for it
@@ -144,5 +140,5 @@ foreman = () ->
       
       #release stack frames/memory
       process.nextTick () -> 
-        callback elma.error "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
+        callback console.log "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
   setTimeout(foreman, 1000)
