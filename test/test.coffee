@@ -37,8 +37,12 @@ describe "atmosphere", ->
       jobID = atmosphere.core.publish "testQueue", payload, headers
       console.log "\n\n\n=-=-=[jobID]", jobID, "\n\n\n" #xxx
       #should.exist jobID
-      #done()
+      done()
 
+    it "should delete in place", (done) ->
+      atmosphere.core.listen undefined, undefined, undefined, undefined, undefined, (error) ->
+        h.shouldNotHaveErrors error
+        #done()
 
   # before (done) ->
   #   #Init Rainmaker (App Server)

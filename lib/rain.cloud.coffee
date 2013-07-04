@@ -123,7 +123,42 @@ exports.doneWith = (ticket, errors, result) =>
   -- cbListening: callback after listening to queue has started --> function (err)  
 ###
 exports.listen = (type, cbExecute, cbListening) =>
-  core.listen type, cbExecute, false, true, true, cbListening
+  if not core.ready() 
+    cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
+    return  
+  queueRef = core.refs.rainDropsRef.child queueName
+  queueRef.startAt().limit(1).on "child_added", ((snap) ->
+    @currentItem = snap.ref()
+    @tryToProcess()
+  ), this
+
+WorkQueue::readyToProcess = ->
+  @busy = false
+  @tryToProcess()
+
+tryToProcess = ->
+  if not @busy and @currentItem
+    @busy = true
+    dataToProcess = null
+    self = this
+    toProcess = @currentItem
+    @currentItem = null
+    toProcess.transaction ((theItem) ->
+      dataToProcess = theItem
+      if theItem
+        null
+      else
+        return
+    ), (error, committed, snapshot, dummy) ->
+      throw error  if error
+      if committed
+        console.log "Claimed a job."
+        self.cbExecute dataToProcess, ->
+          self.readyToProcess()
+
+      else
+        console.log "Another worker beat me to the job."
+        self.readyToProcess()
 
 ###
   report RainCloud performance statistics
