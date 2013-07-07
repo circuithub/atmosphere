@@ -20,15 +20,13 @@ currentJob = {}
   -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
   --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
 ###
-exports.init = (role, jobTypes, cbDone) ->    
-  #[0.] Initialize
-  core.setRole role
-  #[1.] Connect to message server    
-  core.connect (err) ->      
-    if err?
-      cbDone err
+exports.init = (role, url, token, jobTypes, cbDone) =>    
+  #[1.] Initialize
+  core.init role, url, token, (error) =>
+    if error?
+      cbDone error
       return
-    #[2.] Publish all jobs we can handle (listen to all queues for these jobs)
+    #[2.] Subscribe to all jobs we can handle (listen to all queues for these jobs)
     workerFunctions = []    
     for jobType of jobTypes
       if not jobWorkers[jobType]?
@@ -38,8 +36,8 @@ exports.init = (role, jobTypes, cbDone) ->
       if allErrors?
         cbDone allErrors
         return
+      
       #[3.] Register to submit jobs (so workers can submit jobs)
-      rainMaker.start () -> 
         monitor.boot() #log boot time
         cbDone undefined
 
@@ -122,43 +120,40 @@ exports.doneWith = (ticket, errors, result) =>
   -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
   -- cbListening: callback after listening to queue has started --> function (err)  
 ###
-exports.listen = (type, cbExecute, cbListening) =>
+exports.listen = (queueName, cbExecute, cbListening) =>
   if not core.ready() 
     cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
     return  
   queueRef = core.refs.rainDropsRef.child queueName
   queueRef.startAt().limit(1).on "child_added", ((snap) ->
-    @currentItem = snap.ref()
-    @tryToProcess()
+    @_process queueName, snap.ref(), cbExecute
   ), this
-
-WorkQueue::readyToProcess = ->
-  @busy = false
-  @tryToProcess()
-
-tryToProcess = ->
-  if not @busy and @currentItem
-    @busy = true
-    dataToProcess = null
-    self = this
-    toProcess = @currentItem
-    @currentItem = null
+  
+exports._process = (queueName, currentItem, cbExecute) =>
+  if not currentJob[queueName]? and currentItem? #not busy and got a job
+    currentJob[queueName] = true #now we're busy!
+    _queueName = queueName
+    dataToProcess = undefined
+    toProcess = currentItem
+    currentItem = null
     toProcess.transaction ((theItem) ->
       dataToProcess = theItem
-      if theItem
-        null
+      if theItem?
+        return null
       else
-        return
+        return undefined
     ), (error, committed, snapshot, dummy) ->
-      throw error  if error
+      throw error if error?
       if committed
-        console.log "Claimed a job."
-        self.cbExecute dataToProcess, ->
-          self.readyToProcess()
+        console.log "[atmosphere]", "Claimed a job."
+        #Move job to worker queue
 
+        #Execute job
+        cbExecute dataToProcess, (error, data) ->
+          delete currentJob[_queueName]
       else
-        console.log "Another worker beat me to the job."
-        self.readyToProcess()
+        console.log "[atmosphere]", "Another worker beat me to the job."
+        delete currentJob[_queueName]
 
 ###
   report RainCloud performance statistics
