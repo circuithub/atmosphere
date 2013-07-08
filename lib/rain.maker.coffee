@@ -3,7 +3,7 @@ types = require "./types"
 core = require "./core"
 monitor = require "./monitor"
 
-rainDrops = {} #indexed by "rainDropID"
+rainDrops = {} #indexed by "job.id, not by rainDropID"
 
 exports._rainDrops = rainDrops
 
@@ -30,7 +30,7 @@ exports.start = (cbStarted) =>
   @listen()
   cbStarted()
 
-  
+
 
 ########################################
 ## API
@@ -89,11 +89,8 @@ exports.submit = (jobChain, cbJobDone) ->
     core.submit job.type, payload, headers
 
 ###
-  Subscribe to incoming rainDrops in the queue (exclusively -- block others from listening)
-  >> Used for private response queues (responses to submitted rainDrops)
-  -- type: type of rainDrops to listen for (name of job queue)
-  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-  -- cbListening: callback after listening to queue has started --> function (err) 
+  Subscribe to incoming rainDrops in the queue 
+  -- This is how callbacks get effected
 ###
 exports.listen = () =>
   core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->

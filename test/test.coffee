@@ -58,7 +58,22 @@ describe "atmosphere", ->
           name: "blahmooquack-job"          
         returnQueue: atmosphere.core.rainID()
       atmosphere.core.publish "blah", payload, headers
-      #done()
+      done()
+
+    it "should initialize as a rainMaker", (done) ->
+      atmosphere.rainMaker.init "testMaker", undefined, undefined, (error) ->
+        h.shouldNotHaveErrors error
+        done()
+
+    it "should submit a job through a maker", (done) ->
+      job = 
+        type: "testMaker"
+        name: "jobName"
+        data: {yes: true, no: false}
+        timeout: 30
+      atmosphere.rainMaker.submit job, (error, data) ->
+        h.shouldNotHaveErrors error
+        #done()
 
   # before (done) ->
   #   #Init Rainmaker (App Server)

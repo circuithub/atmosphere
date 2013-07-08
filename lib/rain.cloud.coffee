@@ -51,11 +51,15 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
 ########################################
 
 _callbackMQ = (theJob, ticket, errors, result) ->
-  header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
-  message = 
-    errors: errors
-    data: result
-  core.publish currentJob[ticket.type].returnQueue, message, header
+  rainDropResponse = {}
+  rainDropResponse[theJob.job.id] =
+    job: theJob.job
+    type: theJob.type
+    rainCloudID: core.rainID()
+    response:  
+      errors: errors
+      data: result
+  core.refs().rainMakers.child("#{currentJob[ticket.type].returnQueue}/done/").update rainDropResponse
 
 ###
   Reports completed job on a Rain Cloud
