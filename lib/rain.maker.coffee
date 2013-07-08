@@ -20,6 +20,7 @@ exports.init = (role, url, token, cbDone) =>
     if err?
       cbDone err
       return    
+    core.refs().rainMakersRef.child("#{core.rainID()}/stats/alive").set true #TODO: unified heartbeating
     @start () ->
       monitor.boot()
       cbDone undefined
