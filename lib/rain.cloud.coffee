@@ -59,7 +59,7 @@ _callbackMQ = (theJob, ticket, errors, result) ->
 
 ###
   Reports completed job on a Rain Cloud
-  -- ticket: {type: "", job: {name: "", id: "uuid"} }
+  -- ticket: {type: "", name: "", id: "uuid"}
   -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, errors, result) =>
@@ -75,7 +75,7 @@ exports.doneWith = (ticket, errors, result) =>
   #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
   #Console
-  numJobsNext = if theJob.next? then theJob.next.length else 0
+  numJobsNext = if theJob.next?.chain? then theJob.next.chain.length else 0
   elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
@@ -104,16 +104,12 @@ exports.doneWith = (ticket, errors, result) =>
         returnQueue: theJob.returnQueue
         callback: nextJob.callback
       core.submit nextJob.type, payload, headers
-  
+  console.log "\n\n\n=-=-=[doneWith]", "done with specific job", "\n\n\n" #xxx
   #Done with this specific job in the job chain
-  delete currentJob[ticket.type] #done with current job, update state
-  process.nextTick () ->
-    core.acknowledge theJob.type, (err) ->
-      if err?
-        #TODO: HANDLE THIS BETTER
-        console.log "cantAckError", "Could not send ACK", theJob, err 
-        return
-      monitor.jobComplete()
+  delete currentJob[ticket.type] #done with current job, update state  
+  console.log "\n\n\n=-=-=[doneWith](ticket)", ticket, "\n\n\n" #xxx
+  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.id}").remove()      
+  monitor.jobComplete()
 
 ###
   Subscribe to persistent incoming jobs in the queue (non-exclusively)
@@ -134,29 +130,30 @@ exports.listen = (queueName, cbExecute, cbListening) =>
 
 exports._process = (queueName, currentItem, cbExecute) =>
   if not currentJob[queueName]? and currentItem? #not busy and got a job
-    currentJob[queueName] = true #now we're busy!
-    _queueName = queueName
     dataToProcess = undefined
     toProcess = currentItem
     currentItem = null
-    toProcess.transaction ((theItem) ->
+    updateFunction = (theItem) ->
       dataToProcess = theItem
       if theItem?
         return null
       else
         return undefined
-    ), (error, committed, snapshot, dummy) ->
+    onComplete = (error, committed, snapshot, dummy) ->
       throw error if error?
       if committed
         console.log "[atmosphere]", "Claimed a job."
         #Move job to worker queue
-        core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{_queueName}/blahmooquack").set dataToProcess        
+        core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{queueName}/#{toProcess.name()}").set dataToProcess        
         #Execute job
-        cbExecute dataToProcess, (error, data) ->
-          delete currentJob[_queueName]
+        cbExecute queueName, toProcess.name(), dataToProcess, (error) ->
+          console.log "\n\n\n=-=-=[execute.error]", error, "\n\n\n" #xxx
+          delete currentJob[queueName]
+          return
       else
         console.log "[atmosphere]", "Another worker beat me to the job."
-        delete currentJob[_queueName]
+        delete currentJob[queueName]
+    toProcess.transaction updateFunction, onComplete
 
 ###
   report RainCloud performance statistics
@@ -209,22 +206,28 @@ exports.routers =
   Messages are dispatched to the callback function this way:
     function(ticket, data) ->
 ###
-lightning = (message, headers, deliveryInfo) =>
-  if currentJob[deliveryInfo.queue]?
+lightning = (queueName, rainDropID, rainDrop, cbDispatched) =>
+  console.log "\n\n\n=-=-=[LIGHTNING]", queueName, rainDropID, rainDrop, "\n\n\n" #xxx
+  if currentJob[queueName]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    console.log "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+    cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", queueName, rainDropID, rainDrop
     return
   #Hold this information internal to atmosphere
-  currentJob[deliveryInfo.queue] = {
-    type: deliveryInfo.queue
-    job: headers.job # job = {name:, id:}    
-    returnQueue: headers.returnQueue
-    next: message.next
-    callback: headers.callback
-  }
+  console.log "\n\n\n=-=-=[atmosphere]", 1, "\n\n\n" #xxx
+  currentJob[queueName] = 
+    type: queueName
+    job: 
+      name: rainDrop.job.name
+      id: rainDropID
+    returnQueue: rainDrop.next.callbackTo
+    next: rainDrop.next
+    callback: rainDrop.next.callback
+  console.log "\n\n\n=-=-=[atmosphere]", 2, "\n\n\n" #xxx
   #Release this information to the work function (dispatch job)
   ticket = 
-    type: deliveryInfo.queue
-    name: headers.job.name
-    id: headers.job.id
-  jobWorkers[deliveryInfo.queue] ticket, message.data
+    type: queueName
+    name: rainDrop.job.name
+    id: rainDropID
+  console.log "\n\n\n=-=-=[lightning](dispatch)", jobWorkers[queueName], "\n\n\n" #xxx
+  jobWorkers[queueName] ticket, rainDrop.data
+  cbDispatched()

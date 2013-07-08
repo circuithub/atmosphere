@@ -13,6 +13,10 @@ withTester = (ticket, data) ->
   ticket.data = {}
   console.log "[Ww] Listen/Submit With Tester", ticket
 
+workTester = (ticket, data) ->
+  console.log "\n\n\n=-=-=[workTester]", ticket, data, "\n\n\n" #xxx
+  atmosphere.rainCloud.doneWith ticket, undefined, true
+  return
 
 ###############################
 ## RUN ME! Yay! Tests!
@@ -40,16 +44,21 @@ describe "atmosphere", ->
       done()
 
     it "should initialize as a rainCloud", (done) ->
-      atmosphere.rainCloud.init "testCloud", undefined, undefined, {blah: () -> console.log "HELLO WORLD!"}, (error) ->
+      atmosphere.rainCloud.init "testCloud", undefined, undefined, {blah: workTester}, (error) ->
         h.shouldNotHaveErrors error
         done()
 
-    it "should listen to a queue", (done) ->
-      cbExec = () ->
-        console.log "\n\n\n=-=-=[EXEC]", "GOT JOB!", "\n\n\n" #xxx
-      atmosphere.rainCloud.listen "blah", cbExec, (error) ->
-        h.shouldNotHaveErrors error
-        #done()
+    it "should be listening to a queue", (done) ->
+      payload = 
+        data: {hello: 1, world: 2}
+        next: []
+      headers =
+        callback: false
+        job: 
+          name: "blahmooquack-job"          
+        returnQueue: atmosphere.core.rainID()
+      atmosphere.core.publish "blah", payload, headers
+      #done()
 
   # before (done) ->
   #   #Init Rainmaker (App Server)
