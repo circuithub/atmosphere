@@ -166,10 +166,3 @@ exports.submit = types.fn (-> [
   ]),  
   (type, payload, headers) => 
     return exports.publish type, payload, headers
-
-###
-  Create the externally visible job key 
-  -- Job chains must have unique external keys, even though this isn't enforced at present
-###
-exports.jobName = (job) ->
-  return "#{job.type}-#{job.name}"

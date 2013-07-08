@@ -118,18 +118,18 @@ exports.doneWith = (ticket, errors, result) =>
   -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
   -- cbListening: callback after listening to queue has started --> function (err)  
 ###
-exports.listen = (queueName, cbExecute, cbListening) =>
+exports.listen = (rainBucket, cbExecute, cbListening) =>
   if not core.ready() 
     cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
     return  
-  queueRef = core.refs().rainDropsRef.child queueName
+  queueRef = core.refs().rainDropsRef.child rainBucket
   queueRef.startAt().limit(1).on "child_added", ((snap) ->
-    @_process queueName, snap.ref(), cbExecute
+    @_process rainBucket, snap.ref(), cbExecute
   ), this
   cbListening undefined
 
-exports._process = (queueName, currentItem, cbExecute) =>
-  if not currentJob[queueName]? and currentItem? #not busy and got a job
+exports._process = (rainBucket, currentItem, cbExecute) =>
+  if not currentJob[rainBucket]? and currentItem? #not busy and got a job
     dataToProcess = undefined
     toProcess = currentItem
     currentItem = null
@@ -144,15 +144,15 @@ exports._process = (queueName, currentItem, cbExecute) =>
       if committed
         console.log "[atmosphere]", "Claimed a job."
         #Move job to worker queue
-        core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{queueName}/#{toProcess.name()}").set dataToProcess        
+        core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainBucket}/#{toProcess.name()}").set dataToProcess        
         #Execute job
-        cbExecute queueName, toProcess.name(), dataToProcess, (error) ->
+        cbExecute rainBucket, toProcess.name(), dataToProcess, (error) ->
           console.log "\n\n\n=-=-=[execute.error]", error, "\n\n\n" #xxx
-          delete currentJob[queueName]
+          delete currentJob[rainBucket]
           return
       else
         console.log "[atmosphere]", "Another worker beat me to the job."
-        delete currentJob[queueName]
+        delete currentJob[rainBucket]
     toProcess.transaction updateFunction, onComplete
 
 ###
@@ -206,16 +206,16 @@ exports.routers =
   Messages are dispatched to the callback function this way:
     function(ticket, data) ->
 ###
-lightning = (queueName, rainDropID, rainDrop, cbDispatched) =>
-  console.log "\n\n\n=-=-=[LIGHTNING]", queueName, rainDropID, rainDrop, "\n\n\n" #xxx
-  if currentJob[queueName]?
+lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
+  console.log "\n\n\n=-=-=[LIGHTNING]", rainBucket, rainDropID, rainDrop, "\n\n\n" #xxx
+  if currentJob[rainBucket]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", queueName, rainDropID, rainDrop
+    cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
     return
   #Hold this information internal to atmosphere
   console.log "\n\n\n=-=-=[atmosphere]", 1, "\n\n\n" #xxx
-  currentJob[queueName] = 
-    type: queueName
+  currentJob[rainBucket] = 
+    type: rainBucket
     job: 
       name: rainDrop.job.name
       id: rainDropID
@@ -225,9 +225,9 @@ lightning = (queueName, rainDropID, rainDrop, cbDispatched) =>
   console.log "\n\n\n=-=-=[atmosphere]", 2, "\n\n\n" #xxx
   #Release this information to the work function (dispatch job)
   ticket = 
-    type: queueName
+    type: rainBucket
     name: rainDrop.job.name
     id: rainDropID
-  console.log "\n\n\n=-=-=[lightning](dispatch)", jobWorkers[queueName], "\n\n\n" #xxx
-  jobWorkers[queueName] ticket, rainDrop.data
+  console.log "\n\n\n=-=-=[lightning](dispatch)", jobWorkers[rainBucket], "\n\n\n" #xxx
+  jobWorkers[rainBucket] ticket, rainDrop.data
   cbDispatched()
