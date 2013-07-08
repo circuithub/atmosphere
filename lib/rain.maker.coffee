@@ -3,7 +3,7 @@ types = require "./types"
 core = require "./core"
 monitor = require "./monitor"
 
-rainDrops = {} #indexed by "job.id, not by rainDropID"
+rainDrops = {} #indexed by "rainDropID" as "job.id"
 
 exports._rainDrops = rainDrops
 
@@ -65,18 +65,7 @@ exports.submit = (jobChain, cbJobDone) ->
     #--Look at first job
     job = jobChain.shift()
 
-    #[2.] Inform Foreman Job Expected
-    job.timeout ?= 60
-    job.id = uuid.v4()
-    if rainDrops[job.id]?
-      error = console.log "jobAlreadyExistsError", "Job #{rainDrops[job.id].type}-#{rainDrops[job.id].name} Already Pending"
-      cbJobDone error if cbJobDone?
-      return
-    #If callback is desired listen for it
-    if cbJobDone? 
-      rainDrops[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
-    
-    #[3.] Submit Job
+    #[2.] Submit Job
     payload = 
       data: job.data ?= {}
       next: jobChain
@@ -84,10 +73,18 @@ exports.submit = (jobChain, cbJobDone) ->
       callback: job.callback
       job: 
         name: job.name
-        id:   job.id
+        type: job.type
       returnQueue: core.rainID()
-    core.submit job.type, payload, headers
+    rainDropID = core.submit job.type, payload, headers
 
+    #[3.] Inform Foreman Job Expected
+    job.timeout ?= 60
+    job.id = rainDropID
+    #If callback is desired listen for it
+    if cbJobDone? 
+      rainDrops[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
+    
+    
 ###
   Subscribe to incoming rainDrops in the queue 
   -- This is how callbacks get effected
