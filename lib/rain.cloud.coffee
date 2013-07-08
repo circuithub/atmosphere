@@ -28,16 +28,16 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
       return
     #[2.] Subscribe to all jobs we can handle (listen to all queues for these jobs)
     workerFunctions = []    
-    for jobType of jobTypes
+    for jobType, jobFunction of jobTypes
       if not jobWorkers[jobType]?
-        jobWorkers[jobType] = jobTypes[jobType]
-        workerFunctions.push bsync.apply exports.listen, jobType, lightning
+        jobWorkers[jobType] = jobFunction
+        workerFunctions.push bsync.apply @listen, jobType, lightning
     bsync.parallel workerFunctions, (allErrors, allResults) ->
       if allErrors?
         cbDone allErrors
         return
-      
       #[3.] Register to submit jobs (so workers can submit jobs)
+        #TODO (jonathan) confirm Maker init step is necessary here
         monitor.boot() #log boot time
         cbDone undefined
 
