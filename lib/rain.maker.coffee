@@ -84,16 +84,16 @@ exports.submit = (jobChain, cbJobDone) ->
     if cbJobDone? 
       rainDrops[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
     
-    
 ###
   Subscribe to incoming rainDrops in the queue 
   -- This is how callbacks get effected
 ###
 exports.listen = () =>
   core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->
+    rainDropID = snapshot.name()
     rainDrop = snapshot.val()
-    mailman rainDrop.job.type, snapshot.name(), rainDrop
-  return
+    core.refs().rainMakersRef.child("#{core.rainID()}/done/#{rainDropID}").remove()
+    mailman rainDrop.job.type, rainDropID, rainDrop
 
 ###
   The number of active rainDrops (submitted, but not timed-out or returned yet)
