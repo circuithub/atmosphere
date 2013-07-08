@@ -138,6 +138,7 @@ exports.delete = (queueName) ->
   -- Asynchronous, but callback is ignored
 ###
 exports.publish = (queueName, messageObject, headerObject) ->
+  headerObject.job.type = queueName #attach the job type (queue name) to the job
   rainDrop = 
     job: headerObject.job
     data: messageObject.data

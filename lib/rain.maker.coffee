@@ -24,10 +24,13 @@ exports.init = (role, url, token, cbDone) =>
       monitor.boot()
       cbDone undefined
 
-exports.start = (cbStarted) ->
+exports.start = (cbStarted) =>
   console.log "[INIT]", core.rainID()
   foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-  exports.listen core.rainID(), mailman, cbStarted
+  @listen()
+  cbStarted()
+
+  
 
 ########################################
 ## API
@@ -92,8 +95,11 @@ exports.submit = (jobChain, cbJobDone) ->
   -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
   -- cbListening: callback after listening to queue has started --> function (err) 
 ###
-exports.listen = (type, cbExecute, cbListening) =>
-  core.listen type, cbExecute, true, false, false, cbListening
+exports.listen = () =>
+  core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->
+    rainDrop = snapshot.val()
+    mailman rainDrop.job.type, snapshot.name(), rainDrop
+  return
 
 ###
   The number of active rainDrops (submitted, but not timed-out or returned yet)
