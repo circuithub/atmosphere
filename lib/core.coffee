@@ -25,6 +25,8 @@ exports.refs = () =>
 exports.initReferences = () =>
   @_ref = 
     rainDropsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainDrops/"
+    rainCloudsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainClouds/"
+    rainMakersRef: new Firebase "#{@firebaseServerURL}atmosphere/rainMakers/"
 
 exports.urlLogSafe = @url
 
@@ -144,7 +146,7 @@ exports.publish = (queueName, messageObject, headerObject) ->
       callbackTo: headerObject.returnQueue         
       chain: messageObject.next
   # Generate a reference to a new location with push
-  newRainDropRef = @rainDropsRef.child(queueName).push()
+  newRainDropRef = @_ref.rainDropsRef.child(queueName).push()
   # Set some data to the generated location
   newRainDropRef.set rainDrop, (error) ->
     if error?

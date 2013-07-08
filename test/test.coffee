@@ -39,8 +39,15 @@ describe "atmosphere", ->
       #should.exist jobID
       done()
 
-    it "should delete in place", (done) ->
-      atmosphere.core.listen undefined, undefined, undefined, undefined, undefined, (error) ->
+    it "should initialize as a rainCloud", (done) ->
+      atmosphere.rainCloud.init "testCloud", undefined, undefined, {blah: () -> console.log "HELLO WORLD!"}, (error) ->
+        h.shouldNotHaveErrors error
+        done()
+
+    it "should listen to a queue", (done) ->
+      cbExec = () ->
+        console.log "\n\n\n=-=-=[EXEC]", "GOT JOB!", "\n\n\n" #xxx
+      atmosphere.rainCloud.listen "blah", cbExec, (error) ->
         h.shouldNotHaveErrors error
         #done()
 

@@ -26,6 +26,7 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
     if error?
       cbDone error
       return
+    core.refs().rainCloudsRef.child("#{core.rainID()}/stats").set {alive: true}
     #[2.] Subscribe to all jobs we can handle (listen to all queues for these jobs)
     workerFunctions = []    
     for jobType, jobFunction of jobTypes
@@ -37,9 +38,10 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
         cbDone allErrors
         return
       #[3.] Register to submit jobs (so workers can submit jobs)
-        #TODO (jonathan) confirm Maker init step is necessary here
-        monitor.boot() #log boot time
-        cbDone undefined
+      #TODO (jonathan) confirm Maker init step is necessary here
+      monitor.boot() #log boot time
+      console.log "\n\n\n=-=-=[cloud.init]", "finished init", "\n\n\n" #xxx
+      cbDone undefined
 
       
 
@@ -124,11 +126,12 @@ exports.listen = (queueName, cbExecute, cbListening) =>
   if not core.ready() 
     cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
     return  
-  queueRef = core.refs.rainDropsRef.child queueName
+  queueRef = core.refs().rainDropsRef.child queueName
   queueRef.startAt().limit(1).on "child_added", ((snap) ->
     @_process queueName, snap.ref(), cbExecute
   ), this
-  
+  cbListening undefined
+
 exports._process = (queueName, currentItem, cbExecute) =>
   if not currentJob[queueName]? and currentItem? #not busy and got a job
     currentJob[queueName] = true #now we're busy!
@@ -147,7 +150,7 @@ exports._process = (queueName, currentItem, cbExecute) =>
       if committed
         console.log "[atmosphere]", "Claimed a job."
         #Move job to worker queue
-
+        core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{_queueName}/blahmooquack").set dataToProcess        
         #Execute job
         cbExecute dataToProcess, (error, data) ->
           delete currentJob[_queueName]
