@@ -113,7 +113,7 @@ exports.count = () ->
 ###
 mailman = (rainBucket, rainDropID, rainDrop) ->
   if not rainDrops["#{rainDropID}"]?
-    elma.warning "expiredJobError", "Received response for expired job."
+    console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainBucket} job: #{rainDropID}."
     return    
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
   delete rainDrops["#{rainDropID}"] #mark job as completed
