@@ -16,7 +16,6 @@ withTester = (ticket, data) ->
 workTester = (ticket, data) ->
   console.log "\n\n\n=-=-=[workTester]", ticket, data, "\n\n\n" #xxx
   atmosphere.rainCloud.doneWith ticket, undefined, true
-  return
 
 ###############################
 ## RUN ME! Yay! Tests!
@@ -38,27 +37,11 @@ describe "atmosphere", ->
         job: 
           name: "blahmooquack-job"          
         returnQueue: atmosphere.core.rainID()
-      jobID = atmosphere.core.publish "testQueue", payload, headers
-      console.log "\n\n\n=-=-=[jobID]", jobID, "\n\n\n" #xxx
-      #should.exist jobID
+      jobID = atmosphere.core.publish "testQ", payload, headers
+      should.exist jobID
       done()
 
-    it "should initialize as a rainCloud", (done) ->
-      atmosphere.rainCloud.init "testCloud", undefined, undefined, {blah: workTester}, (error) ->
-        h.shouldNotHaveErrors error
-        done()
-
-    it "should be listening to a queue", (done) ->
-      payload = 
-        data: {hello: 1, world: 2}
-        next: []
-      headers =
-        callback: false
-        job: 
-          name: "blahmooquack-job"          
-        returnQueue: atmosphere.core.rainID()
-      atmosphere.core.publish "blah", payload, headers
-      done()
+  describe "#rainMaker", ->
 
     it "should initialize as a rainMaker", (done) ->
       atmosphere.rainMaker.init "testMaker", undefined, undefined, (error) ->
@@ -67,65 +50,59 @@ describe "atmosphere", ->
 
     it "should submit a job through a maker", (done) ->
       job = 
-        type: "testMaker"
+        type: "first"
         name: "jobName"
         data: {yes: true, no: false}
         timeout: 30
       atmosphere.rainMaker.submit job, (error, data) ->
         h.shouldNotHaveErrors error
-        #done()
+        should.exist data
+        done()
 
-  # before (done) ->
-  #   #Init Rainmaker (App Server)
-  #   atmosphere.rainMaker.init "rainMaker", (err) ->
-  #     h.shouldNotHaveErrors err
-  #     console.log "[I] Initialized RAINMAKER", err
-  #     done()
-
-  # describe "#basic RPC use case", ->  
+  describe "#basic RPC use case", ->  
   
-  #   it "should process two different job types simultaneously", (done) ->
-  #     testFunctions = 
-  #       job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
-  #       job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
-  #     bsync.parallel testFunctions, (allErrors, allResults) ->
-  #       h.shouldNotHaveErrors allErrors
-  #       console.log "[D] Jobs Done", allResults      
-  #       done()
+    it "should process two different job types simultaneously", (done) ->
+      testFunctions = 
+        job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+        job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        h.shouldNotHaveErrors allErrors
+        console.log "[D] Jobs Done", allResults      
+        done()
 
-  #   it "should process only one job of a type at a time", (done) ->
-  #     testFunctions = []
-  #     for i in [0...10]
-  #       #Submit Altium Conversion Job
-  #       testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
-  #     bsync.parallel testFunctions, (allErrors, allResults) ->
-  #       h.shouldNotHaveErrors allErrors
-  #       console.log "[D] Job Done", allResults
-  #       done()
+    it "should process only one job of a type at a time", (done) ->
+      testFunctions = []
+      for i in [0...10]
+        #Submit Altium Conversion Job
+        testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        h.shouldNotHaveErrors allErrors
+        console.log "[D] Job Done", allResults
+        done()
 
-  # describe "#complex RPC use case (job chaining)", ->
+  describe "#complex RPC use case (job chaining)", ->
         
-  #   it "should handle a job->job->job->callback job chain", (done) ->
-  #     job1 = 
-  #       type: "first" #the job type/queue name
-  #       name: "job1" #name for this job
-  #       data: {param1: "initial message"} #arbitrary serializable object
-  #       timeout: 30 #seconds
-  #     job2 = 
-  #       type: "second"        
-  #       data: {param2: "initial message"} #merged with results from job1        
-  #     job3 = 
-  #       type: "third"
-  #       data: {param3: "initial message"} #merged with results from job1
-  #     atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-  #       console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
-  #       h.shouldNotHaveErrors error
-  #       should.exist data
-  #       should.exist data[job3.type]
-  #       should.exist data.previous.param3
-  #       should.exist data.previous[job2.type].previous.param2
-  #       should.exist data.previous[job2.type].previous[job1.type].previous.param1
-  #       done()
+    it "should handle a job->job->job->callback job chain", (done) ->
+      job1 = 
+        type: "first" #the job type/queue name
+        name: "job1" #name for this job
+        data: {param1: "initial message"} #arbitrary serializable object
+        timeout: 30 #seconds
+      job2 = 
+        type: "second"        
+        data: {param2: "initial message"} #merged with results from job1        
+      job3 = 
+        type: "third"
+        data: {param3: "initial message"} #merged with results from job1
+      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
+        h.shouldNotHaveErrors error
+        should.exist data
+        should.exist data[job3.type]
+        should.exist data.previous.param3
+        should.exist data.previous[job2.type].previous.param2
+        should.exist data.previous[job2.type].previous[job1.type].previous.param1
+        done()
 
   #   it "should handle a job->job->callback->job chain", (done) ->
   #     job1 = 

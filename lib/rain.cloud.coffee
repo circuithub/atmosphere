@@ -57,9 +57,9 @@ _callbackMQ = (theJob, ticket, errors, result) ->
     type: theJob.type
     rainCloudID: core.rainID()
     response:  
-      errors: errors
+      errors: if errors? then errors else null
       data: result
-  core.refs().rainMakers.child("#{currentJob[ticket.type].returnQueue}/done/").update rainDropResponse
+  core.refs().rainMakersRef.child("#{currentJob[ticket.type].returnQueue}/done/").set rainDropResponse
 
 ###
   Reports completed job on a Rain Cloud
@@ -93,7 +93,7 @@ exports.doneWith = (ticket, errors, result) =>
       #Fire callback if specified
       _callbackMQ theJob, ticket, errors, result if theJob.callback
       #Get next job in the chain
-      nextJob = theJob.next.shift()
+      nextJob = theJob.next.chain.shift()
       #Cascade results (merge incoming results from last job with incoming user data for new job)      
       nextData = (nextJob.data ?= {})
       nextData[theJob.type] = result
@@ -105,6 +105,7 @@ exports.doneWith = (ticket, errors, result) =>
         job: 
           name: theJob.job.name
           id: theJob.job.id
+          type: theJob.job.type
         returnQueue: theJob.returnQueue
         callback: nextJob.callback
       core.submit nextJob.type, payload, headers
@@ -112,7 +113,7 @@ exports.doneWith = (ticket, errors, result) =>
   #Done with this specific job in the job chain
   delete currentJob[ticket.type] #done with current job, update state  
   console.log "\n\n\n=-=-=[doneWith](ticket)", ticket, "\n\n\n" #xxx
-  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.id}").remove()      
+  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}").remove()      
   monitor.jobComplete()
 
 ###
