@@ -140,7 +140,7 @@ exports.delete = (queueName) ->
   -- Asynchronous, but callback is ignored
   -- If the jobID (rainDropID) is defined in headerObject, it will be used, otherwise new jobID will be created
 ###
-exports.publish = (queueName, messageObject, headerObject) ->
+exports.publish = (queueName, messageObject, headerObject) =>
   rainDrop = 
     job: headerObject.job
     data: messageObject.data
@@ -154,7 +154,8 @@ exports.publish = (queueName, messageObject, headerObject) ->
     newRainDropRef = @_ref.rainDropsRef.child "#{queueName}/#{headerObject.job.id}"
   else
     # Generate a reference to a new location with push
-    newRainDropRef = @_ref.rainDropsRef.child(queueName).push()
+    newRainDropID = @makeID queueName, headerObject.job.name
+    newRainDropRef = @_ref.rainDropsRef.child("#{queueName}/#{newRainDropID}")
   # Set some data to the generated location
   newRainDropRef.set rainDrop, (error) ->
     if error?
@@ -174,3 +175,8 @@ exports.submit = types.fn (-> [
   ]),  
   (type, payload, headers) => 
     return exports.publish type, payload, headers
+
+exports.makeID = (queueName, jobName) ->
+  candidate = "#{_s.dasherize queueName}_#{_s.slugify jobName}"
+  candidate = candidate.toLowerCase()
+  return candidate
