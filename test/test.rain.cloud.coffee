@@ -51,6 +51,7 @@ workerJobJob = (ticket, data) ->
     atmosphere.rainCloud.doneWith ticket, err, resp  
 
 
+
 jobTypes = {
   convertAltium: workerDoAltium
   convertOrCAD: workerDoOrCAD
@@ -60,6 +61,8 @@ jobTypes = {
   jobjob: workerJobJob
   jobjobjob: workerJobJob
 }
+
+
 
 count = () ->
   console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{JSON.stringify atmosphere.rainCloud.count()}."
