@@ -38,10 +38,13 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
         cbDone allErrors
         return
       #[3.] Register to submit jobs (so workers can submit jobs)
-      #TODO (jonathan) confirm Maker init step is necessary here
-      monitor.boot() #log boot time
-      console.log "\n\n\n=-=-=[cloud.init]", "finished init", "\n\n\n" #xxx
-      cbDone undefined
+      rainMaker.start (error) ->
+        if error?
+          cbDone error
+          return
+        monitor.boot() #log boot time
+        console.log "\n\n\n=-=-=[cloud.init]", "finished init", "\n\n\n" #xxx
+        cbDone undefined
 
       
 
@@ -70,17 +73,17 @@ exports.doneWith = (ticket, errors, result) =>
   #Sanity checking
   if not core.ready() 
     #TODO: HANDLE THIS BETTER
-    console.log "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+    console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe} yet!" 
     return
   if not currentJob[ticket.type]?
     #TODO: HANDLE THIS BETTER
-    console.log "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
+    console.log "[atmosphere]", "ENOTICKET", "Ticket for #{ticket.type} has no current job pending!" 
     return
   #Retrieve the interal state for this job
   theJob = currentJob[ticket.type]
   #Console
   numJobsNext = if theJob.next?.chain? then theJob.next.chain.length else 0
-  elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
+  elma.info "[atmosphere]", "IDONEWITH", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
     _callbackMQ theJob, ticket, errors, result if theJob.callback    
@@ -152,7 +155,6 @@ exports._process = (rainBucket, currentItem, cbExecute) =>
         core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainBucket}/#{toProcess.name()}").set dataToProcess        
         #Execute job
         cbExecute rainBucket, toProcess.name(), dataToProcess, (error) ->
-          console.log "\n\n\n=-=-=[execute.error]", error, "\n\n\n" #xxx
           delete currentJob[rainBucket]
           return
       else
@@ -218,7 +220,6 @@ lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
     cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
     return
   #Hold this information internal to atmosphere
-  console.log "\n\n\n=-=-=[atmosphere]", 1, "\n\n\n" #xxx
   currentJob[rainBucket] = 
     type: rainBucket
     job: 
@@ -227,12 +228,10 @@ lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
     returnQueue: rainDrop.next.callbackTo
     next: rainDrop.next
     callback: rainDrop.next.callback
-  console.log "\n\n\n=-=-=[atmosphere]", 2, "\n\n\n" #xxx
   #Release this information to the work function (dispatch job)
   ticket = 
     type: rainBucket
     name: rainDrop.job.name
     id: rainDropID
-  console.log "\n\n\n=-=-=[lightning](dispatch)", jobWorkers[rainBucket], "\n\n\n" #xxx
   jobWorkers[rainBucket] ticket, rainDrop.data
   cbDispatched()

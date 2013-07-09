@@ -80,12 +80,10 @@ exports.ready = () ->
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
 exports.connect = (cbConnected) =>
-  console.log "\n\n\n=-=-=[core.connect]", 1, "\n\n\n" #xxx
   if connectionReady
     #--Already connected
     cbConnected undefined
     return
-  console.log "\n\n\n=-=-=[core.connect]", 2, @firebaseServerURL, "\n\n\n" #xxx
   dataRef = new Firebase @firebaseServerURL
   firebaseServerToken = @generateServerToken()
   if @firebaseServerURL.toLowerCase().indexOf("-demo") isnt -1 #Skip authenication if using Firebase demo mode
