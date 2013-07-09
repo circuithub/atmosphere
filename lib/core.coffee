@@ -15,6 +15,7 @@ FirebaseTokenGenerator = require "firebase-token-generator"
 
 exports.init = (role, url, @serverToken, cbInitialized) =>
   @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
+  @firebaseServerURL += "/" if not _s.endsWith @firebaseServerURL, "/"
   @setRole role
   @connect cbInitialized
 
@@ -83,14 +84,18 @@ exports.connect = (cbConnected) =>
     #--Already connected
     cbConnected undefined
     return
-  dataRef = new Firebase @firebaseServerURL
-  firebaseServerToken = @generateServerToken()
+  dataRef = new Firebase @firebaseServerURL  
+  
+  #--Authentication is not required for dev mode
   if @firebaseServerURL.toLowerCase().indexOf("-demo") isnt -1 #Skip authenication if using Firebase demo mode
     console.log "[atmosphere]", "NOAUTH", "Running in demo mode (skipping authenication)"
     connectionReady = true
     @initReferences()
     cbConnected undefined
     return
+
+  #--Authenticate in production mode
+  firebaseServerToken = @generateServerToken()
   dataRef.auth firebaseServerToken, (error) =>
     if error?
       connectionReady = false
