@@ -103,7 +103,7 @@ exports.connect = (cbConnected) =>
       connectionReady = true 
       @initReferences()
       console.log "[atmosphere]", "SCONNECT", "Connected to Firebase!"      
-  cbConnected error
+    cbConnected error
 
 ###
   Generate Access Token for Server
