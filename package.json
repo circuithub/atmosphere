@@ -1,7 +1,7 @@
 {
   "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
   "name": "atmosphere",
-  "description": "Background jobs queue (currently uses RabbitMQ)",
+  "description": "Background jobs queue (Backed by Firebase)",
   "version": "0.6.0",
   "homepage": "http://circuithub.com",
   "engines": {
