@@ -67,6 +67,6 @@ count = () ->
 
 do ->
   #Init Cloud (Worker Server)
-  atmosphere.rainCloud.init "rainCloud", undefined, undefined, jobTypes, (err) ->
+  atmosphere.rainCloud.init "Cloud", undefined, undefined, jobTypes, (err) ->
     h.shouldNotHaveErrors err
     console.log "[I] Initialized RAINCLOUD", err

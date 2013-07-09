@@ -43,7 +43,6 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
           cbDone error
           return
         monitor.boot() #log boot time
-        console.log "\n\n\n=-=-=[cloud.init]", "finished init", "\n\n\n" #xxx
         cbDone undefined
 
       
