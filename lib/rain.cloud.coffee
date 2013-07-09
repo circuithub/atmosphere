@@ -112,10 +112,8 @@ exports.doneWith = (ticket, errors, result) =>
         returnQueue: theJob.returnQueue
         callback: nextJob.callback
       core.submit nextJob.type, payload, headers
-  console.log "\n\n\n=-=-=[doneWith]", "done with specific job", "\n\n\n" #xxx
   #Done with this specific job in the job chain
   delete currentJob[ticket.type] #done with current job, update state  
-  console.log "\n\n\n=-=-=[doneWith](ticket)", ticket, "\n\n\n" #xxx
   core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}").remove()      
   monitor.jobComplete()
 
@@ -138,7 +136,6 @@ exports.listen = (rainBucket, cbExecute, cbListening) =>
 
 exports._process = (rainBucket, currentItem, cbExecute) =>
   if not currentJob[rainBucket]? and currentItem? #not busy and got a job
-    console.log "\n\n\n=-=-=[_process]", rainBucket, Object.keys(currentJob), "\n\n\n" #xxx
     dataToProcess = undefined
     toProcess = currentItem
     currentItem = null
@@ -151,7 +148,7 @@ exports._process = (rainBucket, currentItem, cbExecute) =>
     onComplete = (error, committed, snapshot, dummy) ->
       throw error if error?
       if committed
-        console.log "[atmosphere]", "IWIN", "Claimed a job."
+        console.log "[atmosphere]", "IWIN", "Claimed a #{rainBucket} job."
         #Move job to worker queue
         core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainBucket}/#{toProcess.name()}").set dataToProcess        
         #Execute job
@@ -163,7 +160,7 @@ exports._process = (rainBucket, currentItem, cbExecute) =>
             delete currentJob[rainBucket]
           return
       else
-        console.log "[atmosphere]", "ILOSE", "Another worker beat me to the job."        
+        console.log "[atmosphere]", "ILOSE", "Another worker beat me to the #{rainBucket} job."        
     toProcess.transaction updateFunction, onComplete
   return undefined #prevent coffeescript default return from interfering (return undefined allows other rainClouds to take this job)
 
@@ -219,7 +216,7 @@ exports.routers =
     function(ticket, data) ->
 ###
 lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
-  console.log "\n\n\n=-=-=[LIGHTNING]", rainBucket, rainDropID, rainDrop, Object.keys(currentJob), "\n\n\n" #xxx
+  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, rainDrop, Object.keys(currentJob)
   if currentJob[rainBucket]?
     #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
     cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
