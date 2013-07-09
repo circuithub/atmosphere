@@ -51,6 +51,7 @@ workerJobJob = (ticket, data) ->
     atmosphere.rainCloud.doneWith ticket, err, resp  
 
 
+
 jobTypes = {
   convertAltium: workerDoAltium
   convertOrCAD: workerDoOrCAD
@@ -61,12 +62,14 @@ jobTypes = {
   jobjobjob: workerJobJob
 }
 
+
+
 count = () ->
   console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{JSON.stringify atmosphere.rainCloud.count()}."
 
 
 do ->
   #Init Cloud (Worker Server)
-  atmosphere.rainCloud.init "rainCloud", jobTypes, (err) ->
+  atmosphere.rainCloud.init "Cloud", undefined, undefined, jobTypes, (err) ->
     h.shouldNotHaveErrors err
     console.log "[I] Initialized RAINCLOUD", err

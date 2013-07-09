@@ -1,11 +1,11 @@
-amqp = require "amqp"
-_s = require "underscore.string"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
-uuid = require "node-uuid"
-bsync = require "bsync"
-domain = require "domain"
-types = require "./types"
+_s                     = require "underscore.string"
+uuid                   = require "node-uuid"
+bsync                  = require "bsync"
+domain                 = require "domain"
+types                  = require "./types"
+
+Firebase               = require "firebase"
+FirebaseTokenGenerator = require "firebase-token-generator"
 
 
 
@@ -13,11 +13,22 @@ types = require "./types"
 ## STATE MANAGEMENT
 ########################################
 
-url = nconf.get("CLOUDAMQP_URL") or "amqp://guest:guest@localhost:5672//" #default to localhost if no environment variable is set
-_urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
-exports.urlLogSafe = _urlLogSafe
+exports.init = (role, url, @serverToken, cbInitialized) =>
+  @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
+  @setRole role
+  @connect cbInitialized
 
-conn = undefined
+exports.refs = () =>
+  return @_ref
+
+exports.initReferences = () =>
+  @_ref = 
+    rainDropsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainDrops/"
+    rainCloudsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainClouds/"
+    rainMakersRef: new Firebase "#{@firebaseServerURL}atmosphere/rainMakers/"
+
+exports.urlLogSafe = @url
+
 connectionReady = false
 
 queues = {}
@@ -31,6 +42,10 @@ listeners = {}
 
 _rainID = uuid.v4() #Unique ID of this process/machine
 _roleID = undefined
+
+###
+  ID of this machine
+###
 exports.rainID = () ->
   return if _roleID? then _roleID else _rainID
 
@@ -53,33 +68,49 @@ exports.setRole = (role) ->
 ########################################
 
 ###
-  Report whether the Job queueing system is ready for use (connected to RabbitMQ backing)
+  Report whether the Job queueing system is ready for use
 ###
 exports.ready = () ->
   return connectionReady
 
 ###
-  Connect to specified RabbitMQ server, callback when done.
-  -- This is done automatically at the first module loading
-  -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
+  Connect to specified Firebase
+  -- Also handles re-connection and re-authentication (expired token)
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-exports.connect = (cbConnected) ->
-  if not conn?
-    elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
-    conn = amqp.createConnection {heartbeat: 60, url: url} # create the connection
-    conn.on "error", (err) ->
-      elma.error "rabbitConnectedError", "RabbitMQ server at #{_urlLogSafe} reports ERROR.", err
-    conn.on "ready", (err) ->
-      elma.info "rabbitConnected", "Connected to RabbitMQ!"
-      if err?
-        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{_urlLogSafe} FAILED.", err
-        cbConnected err
-        return
-      connectionReady = true
-      cbConnected undefined
-  else
+exports.connect = (cbConnected) =>
+  if connectionReady
+    #--Already connected
     cbConnected undefined
+    return
+  dataRef = new Firebase @firebaseServerURL
+  firebaseServerToken = @generateServerToken()
+  if @firebaseServerURL.toLowerCase().indexOf("-demo") isnt -1 #Skip authenication if using Firebase demo mode
+    console.log "[atmosphere]", "NOAUTH", "Running in demo mode (skipping authenication)"
+    connectionReady = true
+    @initReferences()
+    cbConnected undefined
+    return
+  dataRef.auth firebaseServerToken, (error) =>
+    if error?
+      connectionReady = false
+      if error.code is "EXPIRED_TOKEN"
+        console.log "[atmosphere]", "ETOKEN", "Expired Token. This should never happen..."
+        #TODO: Reconnect on loss of authentication -- logic goes here
+      else
+        console.log "[atmosphere]", "EAUTH", "Login failed!", error
+    else
+      connectionReady = true 
+      @initReferences()
+      console.log "[atmosphere]", "SCONNECT", "Connected to Firebase!"      
+  cbConnected error
+
+###
+  Generate Access Token for Server
+  -- Full access! Be careful!
+###
+exports.generateServerToken = () =>
+  return @serverToken
 
 
 
@@ -90,17 +121,8 @@ exports.connect = (cbConnected) ->
 ###
   Force delete of a queue (for maintainence/dev use)
 ###
-exports.delete = () ->
-  #Unsubscribe any active listener
-  if queues[typeResponse]?  
-    #Delete Queue
-    queues[typeResponse].destroy {ifEmpty: false, ifUnused: false}
-    #Update global state
-    queues[typeResponse] = undefined
-    listeners[typeResponse] = undefined
-    cbDone undefined
-  else
-    cbDone "Not currently aware of #{typeResponse}! You can't blind delete."
+exports.delete = (queueName) ->
+  @rainDropsRef.child(queueName).remove()
 
 
 
@@ -111,9 +133,30 @@ exports.delete = () ->
 ###
   Publish (RabbitMQ terminology) a message to the specified queue
   -- Asynchronous, but callback is ignored
+  -- If the jobID (rainDropID) is defined in headerObject, it will be used, otherwise new jobID will be created
 ###
 exports.publish = (queueName, messageObject, headerObject) ->
-  conn.publish queueName, JSON.stringify(messageObject), {contentType: "application/json", headers: headerObject} 
+  rainDrop = 
+    job: headerObject.job
+    data: messageObject.data
+    next: 
+      callback: headerObject.callback
+      callbackTo: headerObject.returnQueue         
+      chain: messageObject.next
+  newRainDropRef = undefined
+  if headerObject.job.id?
+    # If chain mode, then we already have the rainDropID
+    newRainDropRef = @_ref.rainDropsRef.child "#{queueName}/#{headerObject.job.id}"
+  else
+    # Generate a reference to a new location with push
+    newRainDropRef = @_ref.rainDropsRef.child(queueName).push()
+  # Set some data to the generated location
+  newRainDropRef.set rainDrop, (error) ->
+    if error?
+      console.log "[atmosphere]", "ESUBMIT", "Error occured during submit:", error, rainDrop
+      return
+  # Get the name generated by push (e.g. new job ID)
+  return newRainDropRef.name()
 
 ###
   Submit a job
@@ -122,66 +165,7 @@ exports.publish = (queueName, messageObject, headerObject) ->
 exports.submit = types.fn (-> [ 
   @String()
   @Object {data: @Object(), next: @Array()}
-  @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String(), callback: @Boolean()}
+  @Object {job: @Object({name: @String(), type: @String()}), returnQueue: @String(), callback: @Boolean()}
   ]),  
   (type, payload, headers) => 
     return exports.publish type, payload, headers
-
-###
-  Create the externally visible job key 
-  -- Job chains must have unique external keys, even though this isn't enforced at present
-###
-exports.jobName = (job) ->
-  return "#{job.type}-#{job.name}"
-
-########################################
-## SUBSCRIBE (LISTEN)
-########################################
-
-###
-  Implements listening behavior.
-  -- Prevents subscribing to a queue multiple times
-  -- Records the consumer-tag so you can unsubscribe
-###
-exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
-  if not connectionReady 
-    cbListening elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
-    return
-  if not queues[type]?
-    queue = conn.queue type, {autoDelete: not persist}, () -> # create a queue (if not exist, sanity check otherwise)
-      #save reference so we can send acknowledgements to this queue
-      queues[type] = queue 
-      # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
-      subscribeDomain = domain.create()
-      subscribeDomain.on "error", (err) -> 
-        cbListening err
-        return
-      subscribeDomain.run () ->
-        queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
-      cbListening undefined
-  else
-    if not listeners[type]? #already listening?
-      queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
-    cbListening undefined
-
-
-
-########################################
-## ACKNOWLEDGE
-########################################
-
-###
-  Acknowledge the last job received of the specified type
-  -- type: type of job you are ack'ing (you get only 1 job of any type at a time, but can subscribe to multiple types)
-  -- cbAcknowledged: callback after ack is sent successfully
-###
-exports.acknowledge = (type, cbAcknowledged) =>
-  if not connectionReady 
-    cbAcknowledged elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
-    return
-  if not queues[type]?
-    cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"
-    return
-  queues[type].shift()
-  cbAcknowledged undefined
-

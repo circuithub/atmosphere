@@ -1,36 +1,37 @@
-nconf = require "nconf"
-elma  = require("elma")(nconf)
 uuid = require "node-uuid"
 types = require "./types"
 core = require "./core"
 monitor = require "./monitor"
 
-jobs = {} #indexed by "headers.job.id"
+rainDrops = {} #indexed by "rainDropID" as "job.id"
 
-exports._jobs = jobs
+exports._rainDrops = rainDrops
 
 ########################################
 ## SETUP
 ########################################
 
 ###
-  Jobs system initialization
+  rainDrops system initialization
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
-exports.init = (role, cbDone) =>
-  core.setRole(role)
-  core.connect (err) =>
+exports.init = (role, url, token, cbDone) =>
+  core.init role, url, token, (err) =>
     if err?
       cbDone err
       return    
+    core.refs().rainMakersRef.child("#{core.rainID()}/stats/alive").set true #TODO: unified heartbeating
     @start () ->
       monitor.boot()
       cbDone undefined
 
-exports.start = (cbStarted) ->
+exports.start = (cbStarted) =>
   console.log "[INIT]", core.rainID()
   foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-  exports.listen core.rainID(), mailman, cbStarted
+  @listen()
+  cbStarted()
+
+
 
 ########################################
 ## API
@@ -38,15 +39,15 @@ exports.start = (cbStarted) ->
 
 ###
   Submit a job to the queue, but anticipate a response  
-  -- jobChain: Either a single job, or an array of jobs
-  --    job = {type: "typeOfJob/queueName", name: "jobName", data: {}, timeout: 30}
+  -- jobChain: Either a single job, or an array of rainDrops
+  --    job = {type: "typeOfJob/rainBucket", name: "jobName", data: {}, timeout: 30}
   -- cbJobDone: callback when response received (error, data) format
   --    if cbJobDone = undefined, no callback is issued or expected (no internal timeout, tracking, or callback)
           use for fire-and-forget dispatching
 ###
 exports.submit = (jobChain, cbJobDone) ->
     if not core.ready() 
-      error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      error = console.log "[atmosphere]", "Not connected to #{core.urlLogSafe} yet!" 
       cbJobDone error if cbJobDone?
       return
 
@@ -65,18 +66,7 @@ exports.submit = (jobChain, cbJobDone) ->
     #--Look at first job
     job = jobChain.shift()
 
-    #[2.] Inform Foreman Job Expected
-    job.timeout ?= 60
-    job.id = uuid.v4()
-    if jobs[job.id]?
-      error = elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
-      cbJobDone error if cbJobDone?
-      return
-    #If callback is desired listen for it
-    if cbJobDone? 
-      jobs[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
-    
-    #[3.] Submit Job
+    #[2.] Submit Job
     payload = 
       data: job.data ?= {}
       next: jobChain
@@ -84,31 +74,34 @@ exports.submit = (jobChain, cbJobDone) ->
       callback: job.callback
       job: 
         name: job.name
-        id:   job.id
+        type: job.type
       returnQueue: core.rainID()
-    core.submit job.type, payload, headers
+    rainDropID = core.submit job.type, payload, headers
+
+    #[3.] Inform Foreman Job Expected
+    job.timeout ?= 60
+    job.id = rainDropID
+    #If callback is desired listen for it
+    if cbJobDone? 
+      rainDrops[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
+    
+###
+  Subscribe to incoming rainDrops in the queue 
+  -- This is how callbacks get effected
+###
+exports.listen = () =>
+  core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->
+    rainDropID = snapshot.name()
+    rainDrop = snapshot.val()
+    core.refs().rainMakersRef.child("#{core.rainID()}/done/#{rainDropID}").remove()
+    mailman rainDrop.job.type, rainDropID, rainDrop
 
 ###
-  Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
-  >> Used for private response queues (responses to submitted jobs)
-  -- type: type of jobs to listen for (name of job queue)
-  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-  -- cbListening: callback after listening to queue has started --> function (err) 
-###
-exports.listen = (type, cbExecute, cbListening) =>
-  core.listen type, cbExecute, true, false, false, cbListening
-
-###
-  The number of active jobs (submitted, but not timed-out or returned yet)
+  The number of active rainDrops (submitted, but not timed-out or returned yet)
 ###
 exports.count = () ->
-  return Object.keys(jobs).length
+  return Object.keys(rainDrops).length
 
-###
-  Create the externally visible job key 
-  -- Job chains must have unique external keys, even though this isn't enforced at present
-###
-exports.jobName = core.jobName
 
 
 ########################################
@@ -116,22 +109,22 @@ exports.jobName = core.jobName
 ########################################
 
 ###
-  Assigns incoming messages to jobs awaiting a response
+  Assigns incoming messages to rainDrops awaiting a response
 ###
-mailman = (message, headers, deliveryInfo) ->
-  if not jobs["#{headers.job.id}"]?
-    elma.warning "expiredJobError", "Received response for expired job #{headers.type}-#{headers.job.name} #{headers.job.id}."
+mailman = (rainBucket, rainDropID, rainDrop) ->
+  if not rainDrops["#{rainDropID}"]?
+    elma.warning "expiredJobError", "Received response for expired job."
     return    
-  callback = jobs["#{headers.job.id}"].callback #cache function pointer
-  delete jobs["#{headers.job.id}"] #mark job as completed
+  callback = rainDrops["#{rainDropID}"].callback #cache function pointer
+  delete rainDrops["#{rainDropID}"] #mark job as completed
   process.nextTick () -> #release stack frames/memory
-    callback message.errors, message.data
+    callback rainDrop.response.errors, rainDrop.response.data
 
 ###
-  Implements timeouts for jobs-in-progress
+  Implements timeouts for rainDrops-in-progress
 ###
 foreman = () ->
-  for jobID, jobMeta of jobs   
+  for jobID, jobMeta of rainDrops   
     jobMeta.timeout = jobMeta.timeout - 1
     if jobMeta.timeout <= 0
       #cache -- necessary to prevent loss of function pointer
@@ -139,9 +132,9 @@ foreman = () ->
       job = jobMeta
 
       #mark job as completed
-      delete jobs[jobID] #mark job as completed
+      delete rainDrops[jobID] #mark job as completed
       
       #release stack frames/memory
       process.nextTick () -> 
-        callback elma.error "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
+        callback console.log "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
   setTimeout(foreman, 1000)
