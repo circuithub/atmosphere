@@ -100,12 +100,12 @@ exports.doneWith = (ticket, errors, result) =>
       #Format and Submit next job
       payload = 
         data: nextData
-        next: theJob.next
+        next: theJob.next.chain
       headers = 
         job: 
           name: theJob.job.name
-          id: theJob.job.id
-          type: theJob.job.type
+          id: theJob.job.id #don't generate a new jobID (same job still)
+          type: nextJob.type
         returnQueue: theJob.returnQueue
         callback: nextJob.callback
       core.submit nextJob.type, payload, headers

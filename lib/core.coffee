@@ -136,6 +136,7 @@ exports.delete = (queueName) ->
 ###
   Publish (RabbitMQ terminology) a message to the specified queue
   -- Asynchronous, but callback is ignored
+  -- If the jobID (rainDropID) is defined in headerObject, it will be used, otherwise new jobID will be created
 ###
 exports.publish = (queueName, messageObject, headerObject) ->
   rainDrop = 
@@ -145,8 +146,13 @@ exports.publish = (queueName, messageObject, headerObject) ->
       callback: headerObject.callback
       callbackTo: headerObject.returnQueue         
       chain: messageObject.next
-  # Generate a reference to a new location with push
-  newRainDropRef = @_ref.rainDropsRef.child(queueName).push()
+  newRainDropRef = undefined
+  if headerObject.job.id?
+    # If chain mode, then we already have the rainDropID
+    newRainDropRef = @_ref.rainDropsRef.child "#{queueName}/#{headerObject.job.id}"
+  else
+    # Generate a reference to a new location with push
+    newRainDropRef = @_ref.rainDropsRef.child(queueName).push()
   # Set some data to the generated location
   newRainDropRef.set rainDrop, (error) ->
     if error?
