@@ -139,13 +139,20 @@ exports._process = (rainBucket, currentItem, cbExecute) =>
     dataToProcess = undefined
     toProcess = currentItem
     currentItem = null
+    
+    #Transaction-protected Update Function
     updateFunction = (theItem) ->
+      console.log "\n\n\n=-=-=[updateFunction]", Object.keys(currentJob), theItem, "\n\n\n" #xxx
       dataToProcess = theItem
-      if theItem?
+      #We won the election and we don't already have a job pending...
+      if theItem? and not currentJob[theItem.job.type]?
         return null
       else
         return undefined
+
+    #On transaction complete
     onComplete = (error, committed, snapshot, dummy) ->
+      console.log "\n\n\n=-=-=[onComplete]", committed, "\n\n\n" #xxx
       throw error if error?
       if committed
         console.log "[atmosphere]", "IWIN", "Claimed a #{rainBucket} job."
@@ -161,8 +168,12 @@ exports._process = (rainBucket, currentItem, cbExecute) =>
           return
       else
         console.log "[atmosphere]", "ILOSE", "Another worker beat me to the #{rainBucket} job."        
+    
+    #Begin Transaction
     toProcess.transaction updateFunction, onComplete
-  return undefined #prevent coffeescript default return from interfering (return undefined allows other rainClouds to take this job)
+  
+  #Prevent Default -- Coffeescript will return some reference by default (return undefined allows other rainClouds to take this job)    
+  return undefined 
 
 ###
   report RainCloud performance statistics

@@ -177,6 +177,6 @@ exports.submit = types.fn (-> [
     return exports.publish type, payload, headers
 
 exports.makeID = (queueName, jobName) ->
-  candidate = "#{_s.dasherize queueName}_#{_s.slugify jobName}"
+  candidate = "#{_s.dasherize queueName}_#{jobName}"
   candidate = candidate.toLowerCase()
   return candidate

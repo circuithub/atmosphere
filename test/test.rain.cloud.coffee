@@ -4,6 +4,7 @@ atmosphere   = require "../index"
 bsync        = require "bsync"
 h            = require "./helpers"
 
+firebaseTestURL = "https://atmosphere.firebaseio-demo.com/"  
 
 
 ###############################
@@ -70,6 +71,6 @@ count = () ->
 
 do ->
   #Init Cloud (Worker Server)
-  atmosphere.rainCloud.init "Cloud", undefined, undefined, jobTypes, (err) ->
+  atmosphere.rainCloud.init "Cloud", firebaseTestURL, undefined, jobTypes, (err) ->
     h.shouldNotHaveErrors err
     console.log "[I] Initialized RAINCLOUD", err
