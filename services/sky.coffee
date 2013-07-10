@@ -207,6 +207,6 @@ exports.init = (cbReady) =>
         else
           console.log "[init] IGNORING #{task} (no period specified)"
     #[3.] Listen for responses
-    atmosphere.rainBucket.listen "disResponse", cortana, cbReady
+    #atmosphere.rainBucket.listen "disResponse", cortana, cbReady
     #[4.] Monitor for dead workers
     theChief()

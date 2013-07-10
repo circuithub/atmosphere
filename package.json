@@ -10,21 +10,22 @@
   },
   "private": true,
   "dependencies": {
-      "adt-typecheck.js": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/adt-typecheck.js.git#master"
-    , "bsync": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/bsync.git#master"
+      "adt-typecheck.js": "git://github.com/circuithub/adt-typecheck.js.git#master"
+    , "bsync": "git://github.com/circuithub/bsync.git#master"
+    , "dis-task-list": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/dis-task-list.git#master"            
+    , "objects": "git://github.com/circuithub/node-objects.git#master"   
+    , "passport-github": "git://github.com/lyatiss/passport-github.git#useragent"
+    
     , "coffee-script": "*"    
-    , "dis-task-list": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/dis-task-list.git#master"    
     , "express": "*"
     , "firebase": "*"
     , "firebase-token-generator": "*"
     , "jade": "*"
     , "mocha": "*"
     , "nconf": "*"    
-    , "node-uuid": "*"
-    , "objects": "git+https://99b8721b02af15be24163274dbb3604608c9e514:x-oauth-basic@github.com/circuithub/node-objects.git#master"
+    , "node-uuid": "*"    
     , "octonode": "*"
     , "passport": "*"
-    , "passport-github": "git://github.com/lyatiss/passport-github.git#useragent"
     , "should": "*"
     , "stylus": "*"
     , "underscore": "*"
