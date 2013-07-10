@@ -152,7 +152,7 @@ schedule = (snapshot) ->
 ###
 assign = (rainBucket) ->
   candidates = {id:[], metric:[]}
-  for rainCloudID, rainCloudData of rain 
+  for rainCloudID, rainCloudData of rain.rainClouds 
     #-- if registered for these job types (listening to this bucket) and not currently busy with a job from this bucket...
     if rainBucket in rainCloudData.status.rainBuckets and not rainCloudData.todo?[rainBucket]?
       candidates.id.push rainCloudID

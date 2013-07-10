@@ -13,10 +13,9 @@ FirebaseTokenGenerator = require "firebase-token-generator"
 ## STATE MANAGEMENT
 ########################################
 
-exports.init = (role, _firebaseServerURL, @firebaseServerToken, cbInitialized) =>
-  @setFirebaseURL _firebaseServerURL
+exports.init = (role, _firebaseServerURL, _firebaseServerToken, cbInitialized) =>
   @setRole role
-  @connect cbInitialized
+  @connect _firebaseServerURL, _firebaseServerToken, cbInitialized
 
 exports.setFirebaseURL = (url) =>
   @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
