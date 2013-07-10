@@ -26,12 +26,11 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
     if error?
       cbDone error
       return
-    core.refs().rainCloudsRef.child("#{core.rainID()}/stats").set {alive: true}
     #[2.] Subscribe to all jobs we can handle (listen to all queues for these jobs)
     workerFunctions = []    
-    for jobType, jobFunction of jobTypes      
-      jobWorkers[jobType] = jobFunction
-      workerFunctions.push bsync.apply @listen, jobType, lightning
+    for jobType, jobFunction of jobTypes
+      if not jobWorkers[jobType]?        
+        workerFunctions.push bsync.apply @listen, jobType, lightning
     bsync.parallel workerFunctions, (allErrors, allResults) ->
       if allErrors?
         cbDone allErrors

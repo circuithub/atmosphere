@@ -48,19 +48,20 @@ exports.init = (cbReady) =>
       if disTasks[task].type is "dis"
         if disTasks[task].period > 0
           console.log "[init] Will EXECUTE #{task}", JSON.stringify disTasks[task]
-          guiltySpark task, disTasks[task].data, disTasks[task].timeout, disTasks[task].period
+          #guiltySpark task, disTasks[task].data, disTasks[task].timeout, disTasks[task].period
         else
           console.log "[init] IGNORING #{task} (no period specified)"
     next()
 
   #[3.] Handle task scheduling
   brokerTasks = (next) ->
-    #atmosphere.rainBucket.listen "disResponse", cortana, cbReady
+    listenBase()
+    listenRainBuckets()
     next()
 
   #[4.] Monitor for dead workers
   recoverFailures = (next) ->
-    theChief()
+    #TODO    
     next()
 
   disTaskList -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
@@ -75,13 +76,14 @@ exports.init = (cbReady) =>
   Attach (and maintain) current state of specified atmosphere data type
   -- Keeps data.dataType up to date
 ###
+rain = undefined
 listen = (dataType) =>
   atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> rain[dataType] = snapshot.val()
-
-rain = 
-  rainClouds: listen "rainClouds"
-  rainDrops: listen "rainDrops"
-  rainMakers: listen "rainMakers"
+listenBase = () ->
+  rain = 
+    rainClouds: listen "rainClouds"
+    rainDrops: listen "rainDrops"
+    rainMakers: listen "rainMakers"
 
 ###
   Handle the addition (and removal) of rainBuckets (rainDrop types)
@@ -93,92 +95,6 @@ listenRainBuckets = () ->
   #rainBucket (job type) removed (deleted)
   atmosphere.core.refs().rainDropsRef.on "child_removed", (snapshot) ->
     atmosphere.core.refs().rainDropsRef.child(snapshot.name()).off() #remove all listeners/callbacks
-
-
-
-########################################
-## OPERATIONS
-########################################
-
-###
-  Warning: HALO reference
-  > We don't care about response or failures 
-  > it's just a trigger call (we'll auto retry anyway if it failed)
-  -- jobName: queue name
-  -- jobData: submitted with job
-  -- jobTimeout: in seconds
-  -- repeatPeriod: in seconds. Repeats job this many seconds *after* job completes.
-###
-guiltySpark = (jobName, jobData, jobTimeout, repeatPeriod) =>
-  #Make atmosphere request
-  console.log "[WAKE]", "Making request", jobName
-  atmosphere.rainMaker.submit {type: jobName, name: jobName, data: jobData, timeout: jobTimeout}, (err, data) => #5min timeout
-    if err?
-      console.log "[ESUBMIT]", "Submission of #{jobName} failed.", err
-    else  
-      console.log "[JSUCCESS]", "Job #{jobName} completed.", data
-      try
-        #Log Report
-        check(data).notNull().isUrl()          
-        reports[jobName].url = data        
-      catch e
-        console.log "[WNODATA]", "Job #{jobName} did not return a valid report URL.", e
-        return  
-    #Recycle
-    console.log "[SLEEP]", "#{jobName} resting for #{repeatPeriod} seconds."
-    setTimeout () => 
-      guiltySpark jobName, jobData, jobTimeout, repeatPeriod
-    , repeatPeriod * 1000
-
-_workerName = (fromID) ->
-  nameBits = fromID.split("-")
-  return "#{nameBits[0]}:#{nameBits[1][0...4]}"
-
-_jobMessage = (message, headers, deliveryInfo) ->
-  headers.task = JSON.parse(headers.task) if typeof headers.task is "string"
-  if message?.level isnt "heartbeat"
-    console.log "[RECEIVED]", JSON.stringify(message), JSON.stringify(headers)
-  theMessage = {
-    when: new Date()
-    class: 
-      type: headers.task.type
-      name: headers.task.name
-      step: headers.task.step
-    msg: message
-      # level: message.level
-      # message: message.message
-      # data: message.data
-    }
-  return theMessage
-
-  
-
-###
-  Warning: HALO reference
-  > Listen for and process incoming status messages from app servers executing DIS tasks
-  Useful data formats and structures:
-  -- message = {level: "start", message: message provided by job, data: data attached by job}
-  -- headers.task = {type: , job:{name: , id:}, step: <optional>} -- job ticket
-  -- deliveryInfo.queue = name of queue where delivered
-###
-cortana = (message, headers, deliveryInfo) =>
-
-  
-###
-  Warning: HALO reference
-  > Discover & clenanup dead workers
-###
-theChief = () ->
-  now = new Date().getTime()
-  for workerName, worker of workers
-    if now - worker.alive > 4000
-      delete workers[workerName] #dead worker!
-  setTimeout () ->
-    theChief()
-  , 1000
-
-
-
 
 
 
