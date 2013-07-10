@@ -10,7 +10,9 @@ reports  = {}
 workers  = {}
 
 
-
+########################################
+## CONNECT
+########################################
 
 exports.init = (cbReady) =>
   disTasks = undefined
@@ -49,55 +51,25 @@ exports.init = (cbReady) =>
           guiltySpark task, disTasks[task].data, disTasks[task].timeout, disTasks[task].period
         else
           console.log "[init] IGNORING #{task} (no period specified)"
-    #[3.] Listen for responses
+    next()
+
+  #[3.] Handle task scheduling
+  brokerTasks = (next) ->
     #atmosphere.rainBucket.listen "disResponse", cortana, cbReady
-    #[4.] Monitor for dead workers
+    next()
+
+  #[4.] Monitor for dead workers
+  recoverFailures = (next) ->
     theChief()
     next()
 
-  disTaskList -> rainInit -> registerTasks -> cbReady()
-
-###
-  Initialize a new worker data record
-###
-_createWorker = (fromID) ->
-  workers[fromID] =
-    alive: new Date().getTime() #heartbeat
-    name: _workerName fromID
-    cpu: [0,0,0] #cpu load averages over last [1min, 5min, 15min]
-    mem:
-      rss: 0 #total node.exe memory allocation
-      heapPercent: 0 #(derived)
-      heapUsed: 0 #head used
-      heapTotal: 0 #total allocated heap
-    stats:
-      running: 0 #number of currently running jobs
-      complete: 0 #number of jobs completed
-      uptime: 0 #number of minutes of continuous uptime
-      idleTime: 0 #number of idle milliseconds (time after/between jobs)
-    jobs: {} #Initialization -- see following for format
-      ###
-      jobName1: 
-        when: new Date()
-        class: 
-          type: headers.task.type
-          name: headers.task.job.name
-          step: headers.task.step
-        msg:
-          level: message.level
-          message: message.message
-          data: message.data
-        progress:
-          completed:
-          inTotal:
-          withData:
-          withErrors:
-          percent: (derived)
-      jobName2: 
-        ...
-      ###
+  disTaskList -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
 
 
+
+########################################
+## OPERATIONS
+########################################
 
 ###
   Warning: HALO reference
@@ -161,54 +133,54 @@ _jobMessage = (message, headers, deliveryInfo) ->
   -- deliveryInfo.queue = name of queue where delivered
 ###
 cortana = (message, headers, deliveryInfo) =>
-  #Format Message
-  theJob = _jobMessage message, headers, deliveryInfo
+  # #Format Message
+  # theJob = _jobMessage message, headers, deliveryInfo
 
-  #Update Receive Statistics
-  stats[message.level] ?= 0
-  stats[message.level]++
+  # #Update Receive Statistics
+  # stats[message.level] ?= 0
+  # stats[message.level]++
   
-  #Most Recently Received Messages
-  if theJob.msg.level isnt "heartbeat" #exclude heartbeats from message log to avoid clutter
-    messages.push theJob    
-    messages.shift() if messages.length > 25
+  # #Most Recently Received Messages
+  # if theJob.msg.level isnt "heartbeat" #exclude heartbeats from message log to avoid clutter
+  #   messages.push theJob    
+  #   messages.shift() if messages.length > 25
   
-  #Worker Basics
-  if not workers[headers.fromID]?
-    _createWorker headers.fromID
-  else
-    workers[headers.fromID].alive = new Date().getTime() #WDT
+  # #Worker Basics
+  # if not workers[headers.fromID]?
+  #   _createWorker headers.fromID
+  # else
+  #   workers[headers.fromID].alive = new Date().getTime() #WDT
 
-  #Current Worker Status
-  jobs = workers[headers.fromID].jobs
-  switch theJob.msg.level
-    when "heartbeat"
-      workers[headers.fromID][k] = v for k, v of theJob.msg.data
-      workers[headers.fromID].name = headers.fromName if headers.fromName?.length > 0
-      data = workers[headers.fromID]
-      #memory
-      data.mem.rss = (data.mem.rss/1e6).toFixed(3)
-      data.mem.heapPercent = (theJob.msg.data.mem.heapUsed / theJob.msg.data.mem.heapTotal * 100).toFixed(2)
-      data.mem.heapUsed = (data.mem.heapUsed/1e6).toFixed(3)
-      data.mem.heapTotal = (data.mem.heapTotal/1e6).toFixed(3)
-      #update knowledge of currently running jobs
-      if theJob.msg.data?.currentJobs?
-        data.stats.running = theJob.msg.data.currentJobs.length        
-        data.jobs = _.pick data.jobs, theJob.msg.data.currentJobs #Synchronize (remove dead jobs)
-      else
-        data.stats.running = 0
-        data.jobs = {} #reset (no jobs running)
-      #save update
-      workers[headers.fromID] = data
-    when "progress"
-      jobs[headers.task.type] = theJob
-      jobs[headers.task.type].progress = theJob.msg.data
-      jobs[headers.task.type].progress.percent = (theJob.msg.data.completed/theJob.msg.data.inTotal*100).toFixed(2)
-    else
-      priorProgress = jobs[headers.task.type].progress if jobs[headers.task.type]?
-      priorProgress ?= {completed:0, inTotal:1, percent: 0}
-      jobs[headers.task.type] = theJob
-      jobs[headers.task.type].progress = priorProgress
+  # #Current Worker Status
+  # jobs = workers[headers.fromID].jobs
+  # switch theJob.msg.level
+  #   when "heartbeat"
+  #     workers[headers.fromID][k] = v for k, v of theJob.msg.data
+  #     workers[headers.fromID].name = headers.fromName if headers.fromName?.length > 0
+  #     data = workers[headers.fromID]
+  #     #memory
+  #     data.mem.rss = (data.mem.rss/1e6).toFixed(3)
+  #     data.mem.heapPercent = (theJob.msg.data.mem.heapUsed / theJob.msg.data.mem.heapTotal * 100).toFixed(2)
+  #     data.mem.heapUsed = (data.mem.heapUsed/1e6).toFixed(3)
+  #     data.mem.heapTotal = (data.mem.heapTotal/1e6).toFixed(3)
+  #     #update knowledge of currently running jobs
+  #     if theJob.msg.data?.currentJobs?
+  #       data.stats.running = theJob.msg.data.currentJobs.length        
+  #       data.jobs = _.pick data.jobs, theJob.msg.data.currentJobs #Synchronize (remove dead jobs)
+  #     else
+  #       data.stats.running = 0
+  #       data.jobs = {} #reset (no jobs running)
+  #     #save update
+  #     workers[headers.fromID] = data
+  #   when "progress"
+  #     jobs[headers.task.type] = theJob
+  #     jobs[headers.task.type].progress = theJob.msg.data
+  #     jobs[headers.task.type].progress.percent = (theJob.msg.data.completed/theJob.msg.data.inTotal*100).toFixed(2)
+  #   else
+  #     priorProgress = jobs[headers.task.type].progress if jobs[headers.task.type]?
+  #     priorProgress ?= {completed:0, inTotal:1, percent: 0}
+  #     jobs[headers.task.type] = theJob
+  #     jobs[headers.task.type].progress = priorProgress
 
   #Report Filing
   reports[headers.task.type] = theJob if theJob.msg.level is "report"
@@ -225,6 +197,55 @@ theChief = () ->
   setTimeout () ->
     theChief()
   , 1000
+
+
+
+
+
+
+########################################
+## STATE MANAGEMENT
+########################################
+
+###
+  Initialize a new worker data record
+###
+_createWorker = (fromID) ->
+  workers[fromID] =
+    alive: new Date().getTime() #heartbeat
+    name: _workerName fromID
+    cpu: [0,0,0] #cpu load averages over last [1min, 5min, 15min]
+    mem:
+      rss: 0 #total node.exe memory allocation
+      heapPercent: 0 #(derived)
+      heapUsed: 0 #head used
+      heapTotal: 0 #total allocated heap
+    stats:
+      running: 0 #number of currently running jobs
+      complete: 0 #number of jobs completed
+      uptime: 0 #number of minutes of continuous uptime
+      idleTime: 0 #number of idle milliseconds (time after/between jobs)
+    jobs: {} #Initialization -- see following for format
+      ###
+      jobName1: 
+        when: new Date()
+        class: 
+          type: headers.task.type
+          name: headers.task.job.name
+          step: headers.task.step
+        msg:
+          level: message.level
+          message: message.message
+          data: message.data
+        progress:
+          completed:
+          inTotal:
+          withData:
+          withErrors:
+          percent: (derived)
+      jobName2: 
+        ...
+      ###
 
 exports.dashboard = () =>
   dashboard = 
