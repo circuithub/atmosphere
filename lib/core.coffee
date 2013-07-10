@@ -13,11 +13,16 @@ FirebaseTokenGenerator = require "firebase-token-generator"
 ## STATE MANAGEMENT
 ########################################
 
-exports.init = (role, @firebaseServerURL, @firebaseServerToken, cbInitialized) =>
-  @firebaseServerURL = if @firebaseServerURL? then @firebaseServerURL else "https://atmosphere.firebaseio-demo.com/"  
-  @firebaseServerURL += "/" if not _s.endsWith @firebaseServerURL, "/"
+exports.init = (role, _firebaseServerURL, @firebaseServerToken, cbInitialized) =>
+  @setFirebaseURL _firebaseServerURL
   @setRole role
   @connect cbInitialized
+
+exports.setFirebaseURL = (url) =>
+  @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
+  @firebaseServerURL += "/" if not _s.endsWith @firebaseServerURL, "/"
+
+exports.urlLogSafe = @url
 
 exports.refs = () =>
   return @_ref
@@ -29,7 +34,6 @@ exports.initReferences = () =>
     rainMakersRef: new Firebase "#{@firebaseServerURL}atmosphere/rainMakers/"
     baseRef: new Firebase "#{@firebaseServerURL}"
 
-exports.urlLogSafe = @url
 
 connectionReady = false
 
@@ -80,7 +84,8 @@ exports.ready = () ->
   -- Also handles re-connection and re-authentication (expired token)
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-exports.connect = (@firebaseServerURL, @firebaseServerToken, cbConnected) =>
+exports.connect = (_firebaseServerURL, @firebaseServerToken, cbConnected) =>
+  @setFirebaseURL _firebaseServerURL
   if connectionReady
     #--Already connected
     cbConnected undefined
