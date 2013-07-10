@@ -1,6 +1,6 @@
 _          = require "underscore"
 atmosphere = require "../index"
-disTasks   = require "dis-task-list"
+Firebase = require "firebase"
 {check}    = require "validator"
 nconf      = require "nconf"
 
@@ -8,6 +8,43 @@ stats    = {}
 messages = []
 reports  = {}
 workers  = {}
+
+
+
+
+exports.init = (cbReady) =>
+  disTasks = undefined
+  #[1.] Load Task List
+  disTaskList = (next) ->
+    atmosphere.core.connect nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
+      if err?
+        console.log "[ECONNECT]", "Could not connect to atmosphere.", err
+        cbReady err
+        return
+      atmosphere.core.refs().baseRef.child("disTaskList").once "value", loadList
+  loadList = (snapshot) ->
+    disTasks = snapshot.val()
+  rainInit = (next) ->
+    atmosphere.rainMaker.init "spark", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
+      #[1.] Connect
+      if err?
+        console.log "[ECONNECT]", "Could not connect to atmosphere.", err
+        cbReady err
+        return
+  registerTasks = (next) ->
+      #[2.] Load tasks
+      for task of disTasks
+        if disTasks[task].type is "dis"
+          if disTasks[task].period > 0
+            console.log "[init] Will EXECUTE #{task}", JSON.stringify disTasks[task]
+            guiltySpark task, disTasks[task].data, disTasks[task].timeout, disTasks[task].period
+          else
+            console.log "[init] IGNORING #{task} (no period specified)"
+      #[3.] Listen for responses
+      #atmosphere.rainBucket.listen "disResponse", cortana, cbReady
+      #[4.] Monitor for dead workers
+      theChief()
+  disTaskList -> rainInit -> registerTasks()
 
 ###
   Initialize a new worker data record
@@ -191,22 +228,4 @@ exports.stats = () =>
 
 
 
-exports.init = (cbReady) =>
-  atmosphere.rainMaker.init "spark", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
-    #[1.] Connect
-    if err?
-      console.log "[ECONNECT]", "Could not connect to atmosphere.", err
-      cbReady err
-      return
-    #[2.] Load tasks
-    for task of disTasks
-      if disTasks[task].type is "dis"
-        if disTasks[task].period > 0
-          console.log "[init] Will EXECUTE #{task}", JSON.stringify disTasks[task]
-          guiltySpark task, disTasks[task].data, disTasks[task].timeout, disTasks[task].period
-        else
-          console.log "[init] IGNORING #{task} (no period specified)"
-    #[3.] Listen for responses
-    #atmosphere.rainBucket.listen "disResponse", cortana, cbReady
-    #[4.] Monitor for dead workers
-    theChief()
+

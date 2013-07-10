@@ -13,8 +13,8 @@ FirebaseTokenGenerator = require "firebase-token-generator"
 ## STATE MANAGEMENT
 ########################################
 
-exports.init = (role, url, @serverToken, cbInitialized) =>
-  @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
+exports.init = (role, @firebaseServerURL, @firebaseServerToken, cbInitialized) =>
+  @firebaseServerURL = if @firebaseServerURL? then @firebaseServerURL else "https://atmosphere.firebaseio-demo.com/"  
   @firebaseServerURL += "/" if not _s.endsWith @firebaseServerURL, "/"
   @setRole role
   @connect cbInitialized
@@ -27,6 +27,7 @@ exports.initReferences = () =>
     rainDropsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainDrops/"
     rainCloudsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainClouds/"
     rainMakersRef: new Firebase "#{@firebaseServerURL}atmosphere/rainMakers/"
+    baseRef: new Firebase "#{@firebaseServerURL}"
 
 exports.urlLogSafe = @url
 
@@ -79,7 +80,7 @@ exports.ready = () ->
   -- Also handles re-connection and re-authentication (expired token)
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-exports.connect = (cbConnected) =>
+exports.connect = (@firebaseServerURL, @firebaseServerToken, cbConnected) =>
   if connectionReady
     #--Already connected
     cbConnected undefined
@@ -95,8 +96,8 @@ exports.connect = (cbConnected) =>
     return
 
   #--Authenticate in production mode
-  firebaseServerToken = @generateServerToken()
-  dataRef.auth firebaseServerToken, (error) =>
+  @firebaseServerToken = @generateServerToken()
+  dataRef.auth @firebaseServerToken, (error) =>
     if error?
       connectionReady = false
       if error.code is "EXPIRED_TOKEN"
@@ -113,9 +114,10 @@ exports.connect = (cbConnected) =>
 ###
   Generate Access Token for Server
   -- Full access! Be careful!
+  -- For future work (idle code path)
 ###
 exports.generateServerToken = () =>
-  return @serverToken
+  return @firebaseServerToken
 
 
 
