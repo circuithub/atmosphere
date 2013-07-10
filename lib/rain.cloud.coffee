@@ -29,14 +29,13 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
     core.refs().rainCloudsRef.child("#{core.rainID()}/stats").set {alive: true}
     #[2.] Subscribe to all jobs we can handle (listen to all queues for these jobs)
     workerFunctions = []    
-    for jobType, jobFunction of jobTypes
-      if not jobWorkers[jobType]?
-        jobWorkers[jobType] = jobFunction
-        workerFunctions.push bsync.apply @listen, jobType, lightning
+    for jobType, jobFunction of jobTypes      
+      jobWorkers[jobType] = jobFunction
+      workerFunctions.push bsync.apply @listen, jobType, lightning
     bsync.parallel workerFunctions, (allErrors, allResults) ->
       if allErrors?
         cbDone allErrors
-        return
+        return      
       #[3.] Register to submit jobs (so workers can submit jobs)
       rainMaker.start (error) ->
         if error?
@@ -125,68 +124,26 @@ exports.doneWith = (ticket, errors, result) =>
   -- cbListening: callback after listening to queue has started --> function (err)  
 ###
 exports.listen = (rainBucket, cbExecute, cbListening) =>
+  #--Sanity Check
   if not core.ready() 
     cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
     return  
-  queueRef = core.refs().rainDropsRef.child rainBucket
-  queueRef.startAt().limit(1).on "child_added", ((snap) ->
-    @_process rainBucket, snap.ref(), cbExecute
-  ), this
-  cbListening undefined
+  #--Register Callback
+  jobWorkers[rainBucket] = jobFunction
+  #--Register Bucket (inform scheduling engine we accept this type)
+  core.refs().rainCloudsRef[core.rainID()].child("status").set 
+    rainBuckets: Object.keys jobWorkers  
+    cpu: [0,0,0]
+  #--Listen for incoming jobs
+  rainBucketRef = core.refs().rainDropsRef.child rainBucket
+  rainBucketRef.startAt().limit(1).on "child_added", (snapshot) ->
+    #Execute job
+    cbExecute rainBucket, snapshot.name(), snapshot.val(), (error) ->
+      if error?
+        #TODO (jonathan) Job failed to be dispatched (right now, this can't happen, or isn't detected)
+        console.log "[atmosphere]", "EDISPATCH", error      
+        return
 
-exports._process = (rainBucket, currentItem, cbExecute) =>
-  if not currentJob[rainBucket]? and currentItem? #not busy and got a job
-    dataToProcess = undefined
-    toProcess = currentItem
-    currentItem = null
-    
-    #Transaction-protected Update Function
-    updateFunction = (theItem) ->
-      console.log "\n\n\n=-=-=[updateFunction]", Object.keys(currentJob), theItem, "\n\n\n" #xxx
-      dataToProcess = theItem
-      #We won the election and we don't already have a job pending...
-      if theItem? and not currentJob[theItem.job.type]?
-        return null
-      else
-        return undefined
-
-    #On transaction complete
-    onComplete = (error, committed, snapshot, dummy) ->
-      console.log "\n\n\n=-=-=[onComplete]", committed, "\n\n\n" #xxx
-      throw error if error?
-      if committed
-        console.log "[atmosphere]", "IWIN", "Claimed a #{rainBucket} job."
-        #Move job to worker queue
-        core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainBucket}/#{toProcess.name()}").set dataToProcess        
-        #Execute job
-        cbExecute rainBucket, toProcess.name(), dataToProcess, (error) ->
-          if error?
-            #Job failed to be dispatched (return it to the queue)
-            console.log "[atmosphere]", "EDISPATCH", error
-            core.refs().rainDropsRef.child("#{rainBucket}/#{toProcess.name()}").set dataToProcess        
-            delete currentJob[rainBucket]
-          return
-      else
-        console.log "[atmosphere]", "ILOSE", "Another worker beat me to the #{rainBucket} job."        
-    
-    #Begin Transaction
-    toProcess.transaction updateFunction, onComplete
-  
-  #Prevent Default -- Coffeescript will return some reference by default (return undefined allows other rainClouds to take this job)    
-  return undefined 
-
-###
-  report RainCloud performance statistics
-###
-exports.count = () ->
-  return monitor.stats()
-
-###
-  Object of current jobs (queue names currently being processed by this worker)
-  Returns an array of queue names (job types) with active jobs in it
-###
-exports.currentJobs = () ->
-  return Object.keys currentJob
 
 
 ########################################

@@ -25,10 +25,17 @@ exports.init = (role, url, token, cbDone) =>
       monitor.boot()
       cbDone undefined
 
+###
+  start internal machinery for job submission process
+  -- Safe to call this function multiple times (subsequent calls ignored)
+###
+_started = false
 exports.start = (cbStarted) =>
-  console.log "[INIT]", core.rainID()
-  foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-  @listen()
+  if not _started
+    console.log "[INIT]", core.rainID()
+    foreman() #start job supervisor (runs asynchronously at 1sec intervals)
+    @listen()
+    _started = true
   cbStarted()
 
 

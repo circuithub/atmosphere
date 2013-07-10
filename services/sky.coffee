@@ -213,9 +213,15 @@ schedule = (snapshot) ->
     if committed
       console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
       #Move job to worker queue
-      core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainBucket}/#{toProcess.name()}").set dataToProcess              
+      assignTo = assign rainBucket
+      if not assignTo?
+        #No rainCloud available to do the work -- put the job back on the queue
+        atmosphere.core.refs().rainDropsRef.child(snapshot.name()).set rainDrop
+      else
+        #Assign the rainDrop to the specified rainCloud
+        core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").set rainDrop
     else
-      console.log "[sky]", "ILOSE", "Another broker beat me to the #{rainBucket} job. SHOULDN'T HAPPEN!"        
+      console.log "[sky]", "ILOSE", "Another broker beat me to the #{rainBucket} job. SHOULDN'T HAPPEN! Only one active broker allowed at any one time."        
   
   #Begin Transaction
   snapshot.ref().transaction updateFunction, onComplete
@@ -228,7 +234,7 @@ schedule = (snapshot) ->
   >> Returns undefined if no rainClouds available
   -- rainBucket: String. Name of the bucket
 ###
-balance = (rainBucket) ->
+assign = (rainBucket) ->
   candidates = {id:[], metric:[]}
   for rainCloudID, rainCloudData of rain 
     #-- if registered for these job types (listening to this bucket) and not currently busy with a job from this bucket...
