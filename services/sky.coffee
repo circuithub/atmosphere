@@ -76,9 +76,9 @@ exports.init = (cbReady) =>
   -- Keeps data.dataType up to date
 ###
 listen = (dataType) =>
-  atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> data[dataType] = snapshot.val()
+  atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> rain[dataType] = snapshot.val()
 
-data = 
+rain = 
   rainClouds: listen "rainClouds"
   rainDrops: listen "rainDrops"
   rainMakers: listen "rainMakers"
@@ -221,11 +221,24 @@ schedule = (snapshot) ->
   snapshot.ref().transaction updateFunction, onComplete
 
 ###
-  Determine which rainCloud (worker) should get the incoming rainDrop (job)
+  Load balance the rainClouds. 
+  >> Determine which rainCloud (worker) should get the next rainDrop (job) in the specified rainBucket
+  >> Results are only valid immediately after function returns (data gets stale quickly)
+  >> Synchronous Function
+  >> Returns undefined if no rainClouds available
+  -- rainBucket: String. Name of the bucket
 ###
-balance = (rainBucket, cbAssign) ->
-  
-  data.rainClouds
+balance = (rainBucket) ->
+  candidates = {id:[], metric:[]}
+  for rainCloudID, rainCloudData of rain 
+    #-- if registered for these job types (listening to this bucket) and not currently busy with a job from this bucket...
+    if rainBucket in rainCloudData.status.rainBuckets and not rainCloudData.todo?[rainBucket]?
+      candidates.id.push rainCloudID
+      candidates.metric.push rainCloudData.status.cpu?[0]
+  return undefined if candidates.id.length is 0 #no available rainClouds (workers)
+  mostIdle = _.min candidates.metric
+  return candidates.id[_.indexOf mostIdle]
+
 
 
 
