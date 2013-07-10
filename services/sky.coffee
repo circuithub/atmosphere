@@ -68,6 +68,35 @@ exports.init = (cbReady) =>
 
 
 ########################################
+## STATE MANAGEMENT
+########################################
+
+###
+  Attach (and maintain) current state of specified atmosphere data type
+  -- Keeps data.dataType up to date
+###
+listen = (dataType) =>
+  atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> data[dataType] = snapshot.val()
+
+data = 
+  rainClouds: listen "rainClouds"
+  rainDrops: listen "rainDrops"
+  rainMakers: listen "rainMakers"
+
+###
+  Handle the addition (and removal) of rainBuckets (rainDrop types)
+###
+listenRainBuckets = () ->
+  #New rainBucket (job type) installed (added)
+  atmosphere.core.refs().rainDropsRef.on "child_added", (snapshot) ->
+    atmosphere.core.refs().rainDropsRef.child(snapshot.name()).on "child_added", schedule
+  #rainBucket (job type) removed (deleted)
+  atmosphere.core.refs().rainDropsRef.on "child_removed", (snapshot) ->
+    atmosphere.core.refs().rainDropsRef.child(snapshot.name()).off() #remove all listeners/callbacks
+
+
+
+########################################
 ## OPERATIONS
 ########################################
 
@@ -133,58 +162,8 @@ _jobMessage = (message, headers, deliveryInfo) ->
   -- deliveryInfo.queue = name of queue where delivered
 ###
 cortana = (message, headers, deliveryInfo) =>
-  # #Format Message
-  # theJob = _jobMessage message, headers, deliveryInfo
 
-  # #Update Receive Statistics
-  # stats[message.level] ?= 0
-  # stats[message.level]++
   
-  # #Most Recently Received Messages
-  # if theJob.msg.level isnt "heartbeat" #exclude heartbeats from message log to avoid clutter
-  #   messages.push theJob    
-  #   messages.shift() if messages.length > 25
-  
-  # #Worker Basics
-  # if not workers[headers.fromID]?
-  #   _createWorker headers.fromID
-  # else
-  #   workers[headers.fromID].alive = new Date().getTime() #WDT
-
-  # #Current Worker Status
-  # jobs = workers[headers.fromID].jobs
-  # switch theJob.msg.level
-  #   when "heartbeat"
-  #     workers[headers.fromID][k] = v for k, v of theJob.msg.data
-  #     workers[headers.fromID].name = headers.fromName if headers.fromName?.length > 0
-  #     data = workers[headers.fromID]
-  #     #memory
-  #     data.mem.rss = (data.mem.rss/1e6).toFixed(3)
-  #     data.mem.heapPercent = (theJob.msg.data.mem.heapUsed / theJob.msg.data.mem.heapTotal * 100).toFixed(2)
-  #     data.mem.heapUsed = (data.mem.heapUsed/1e6).toFixed(3)
-  #     data.mem.heapTotal = (data.mem.heapTotal/1e6).toFixed(3)
-  #     #update knowledge of currently running jobs
-  #     if theJob.msg.data?.currentJobs?
-  #       data.stats.running = theJob.msg.data.currentJobs.length        
-  #       data.jobs = _.pick data.jobs, theJob.msg.data.currentJobs #Synchronize (remove dead jobs)
-  #     else
-  #       data.stats.running = 0
-  #       data.jobs = {} #reset (no jobs running)
-  #     #save update
-  #     workers[headers.fromID] = data
-  #   when "progress"
-  #     jobs[headers.task.type] = theJob
-  #     jobs[headers.task.type].progress = theJob.msg.data
-  #     jobs[headers.task.type].progress.percent = (theJob.msg.data.completed/theJob.msg.data.inTotal*100).toFixed(2)
-  #   else
-  #     priorProgress = jobs[headers.task.type].progress if jobs[headers.task.type]?
-  #     priorProgress ?= {completed:0, inTotal:1, percent: 0}
-  #     jobs[headers.task.type] = theJob
-  #     jobs[headers.task.type].progress = priorProgress
-
-  #Report Filing
-  reports[headers.task.type] = theJob if theJob.msg.level is "report"
-
 ###
   Warning: HALO reference
   > Discover & clenanup dead workers
@@ -204,59 +183,54 @@ theChief = () ->
 
 
 ########################################
-## STATE MANAGEMENT
+## SCHEDULING
 ########################################
 
 ###
-  Initialize a new worker data record
+  Schedule new job
 ###
-_createWorker = (fromID) ->
-  workers[fromID] =
-    alive: new Date().getTime() #heartbeat
-    name: _workerName fromID
-    cpu: [0,0,0] #cpu load averages over last [1min, 5min, 15min]
-    mem:
-      rss: 0 #total node.exe memory allocation
-      heapPercent: 0 #(derived)
-      heapUsed: 0 #head used
-      heapTotal: 0 #total allocated heap
-    stats:
-      running: 0 #number of currently running jobs
-      complete: 0 #number of jobs completed
-      uptime: 0 #number of minutes of continuous uptime
-      idleTime: 0 #number of idle milliseconds (time after/between jobs)
-    jobs: {} #Initialization -- see following for format
-      ###
-      jobName1: 
-        when: new Date()
-        class: 
-          type: headers.task.type
-          name: headers.task.job.name
-          step: headers.task.step
-        msg:
-          level: message.level
-          message: message.message
-          data: message.data
-        progress:
-          completed:
-          inTotal:
-          withData:
-          withErrors:
-          percent: (derived)
-      jobName2: 
-        ...
-      ###
+schedule = (snapshot) ->  
+  rainDrop = undefined
+  rainBucket = undefined
+    
+  #Transaction-protected Update Function
+  updateFunction = (theItem) ->
+    #--Update data
+    rainDrop = theItem
+    #TODO (jonathan) Sanity check this; delete if malformed; report error
+    rainBucket = rainDrop?.job?.type
+    
+    #--Did we win the record lock?
+    if theItem?
+      return null #remove this job from the incoming rainDrops bucket
+    else
+      return undefined #abort (no changes)
 
-exports.dashboard = () =>
-  dashboard = 
-    stats: stats
-    messages: messages
-    reports: reports
-    workers: workers
-  return dashboard
+  #On transaction complete
+  onComplete = (error, committed, snapshot, dummy) ->
+    console.log "\n\n\n=-=-=[onComplete]", committed, "\n\n\n" #xxx
+    throw error if error?
+    if committed
+      console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
+      #Move job to worker queue
+      core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainBucket}/#{toProcess.name()}").set dataToProcess              
+    else
+      console.log "[sky]", "ILOSE", "Another broker beat me to the #{rainBucket} job. SHOULDN'T HAPPEN!"        
+  
+  #Begin Transaction
+  snapshot.ref().transaction updateFunction, onComplete
 
-exports.stats = () =>
-  return stats
+###
+  Determine which rainCloud (worker) should get the incoming rainDrop (job)
+###
+balance = (rainBucket, cbAssign) ->
+  
+  data.rainClouds
+
+
+
+
+
 
 
 
