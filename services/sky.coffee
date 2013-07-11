@@ -78,7 +78,9 @@ exports.init = (cbReady) =>
 ###
 rain = undefined
 listen = (dataType) =>
-  atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> rain[dataType] = snapshot.val()
+  atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
+    rain[dataType] = snapshot.val()
+    console.log "\n\n\n=-=-=[sky.listen]", atmosphere.core.refs()["#{dataType}Ref"].toString(), dataType, snapshot.val(), "\n\n\n" #xxx
 listenBase = () ->
   rain = 
     rainClouds: listen "rainClouds"

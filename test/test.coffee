@@ -31,7 +31,7 @@ describe "atmosphere", ->
       atmosphere.rainMaker.submit job, (error, data) ->
         h.shouldNotHaveErrors error
         should.exist data
-        done()
+        # done()
 
   describe "#basic RPC use case", ->  
   

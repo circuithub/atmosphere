@@ -113,8 +113,16 @@ exports.doneWith = (ticket, errors, result) =>
       core.submit nextJob.type, payload, headers
   #Done with this specific job in the job chain
   delete currentJob[ticket.type] #done with current job, update state  
-  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}").remove()      
+  console.log "\n\n\n=-=-=[cloud.doneWith]", "#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}", "\n\n\n" #xxx
+  #core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/").set "Hello World", (error) ->
+  # console.log "\n\n\n=-=-=[cloud.doneWith.remove]", error, "\n\n\n" #xxx        
+  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").set "Hello World"
   monitor.jobComplete()
+  console.log "\n\n\n=-=-=[cloud.doneWidth.final]", core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").toString(), "\n\n\n" #xxx
+  Firebase = require "firebase"
+  blah = new Firebase core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}").toString()
+  blah.remove()
+  console.log "\n\n\n=-=-=[cloud.doneWith.final2]", blah.toString(), "\n\n\n" #xxx
 
 ###
   Subscribe to persistent incoming jobs in the queue (non-exclusively)
