@@ -128,13 +128,13 @@ exports.listen = (rainBucket, cbExecute, cbListening) =>
     cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
     return  
   #--Register Callback
-  jobWorkers[rainBucket] = jobFunction
+  jobWorkers[rainBucket] = cbExecute
   #--Register Bucket (inform scheduling engine we accept this type)
-  core.refs().rainCloudsRef[core.rainID()].child("status").set 
+  core.refs().rainCloudsRef.child("#{core.rainID()}/status").set 
     rainBuckets: Object.keys jobWorkers  
     cpu: [0,0,0]
   #--Listen for incoming jobs
-  rainBucketRef = core.refs().rainDropsRef.child rainBucket
+  rainBucketRef = core.refs().rainDropsRef.child "todo/#{rainBucket}"
   rainBucketRef.startAt().limit(1).on "child_added", (snapshot) ->
     #Execute job
     cbExecute rainBucket, snapshot.name(), snapshot.val(), (error) ->

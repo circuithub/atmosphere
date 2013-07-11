@@ -105,16 +105,18 @@ listenRainBuckets = () ->
 ###
   Schedule new job
 ###
-schedule = (snapshot) ->  
+schedule = (rainDropSnapshot) ->  
   rainDrop = undefined
+  rainDropID = undefined
   rainBucket = undefined
     
   #Transaction-protected Update Function
   updateFunction = (theItem) ->
     #--Update data
-    rainDrop = theItem
-    #TODO (jonathan) Sanity check this; delete if malformed; report error
+    rainDrop = rainDropSnapshot.val()
+    rainDropID = rainDropSnapshot.name()
     rainBucket = rainDrop?.job?.type
+    #TODO (jonathan) Sanity check this; delete if malformed; report error
     
     #--Did we win the record lock?
     if theItem?
@@ -124,7 +126,7 @@ schedule = (snapshot) ->
 
   #On transaction complete
   onComplete = (error, committed, snapshot, dummy) ->
-    console.log "\n\n\n=-=-=[onComplete]", committed, "\n\n\n" #xxx
+    console.log "\n\n\n=-=-=[onComplete]", error, snapshot?.val(), committed, dummy, "\n\n\n" #xxx
     throw error if error?
     if committed
       console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
@@ -132,15 +134,17 @@ schedule = (snapshot) ->
       assignTo = assign rainBucket
       if not assignTo?
         #No rainCloud available to do the work -- put the job back on the queue
-        atmosphere.core.refs().rainDropsRef.child(snapshot.name()).set rainDrop
+        console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job." 
+        return if not rainBucket? #xxx temp testing for null
+        atmosphere.core.refs().rainDropsRef.child(rainDropSnapshot.name()).set rainDropSnapshot.val()
       else
         #Assign the rainDrop to the specified rainCloud
-        core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").set rainDrop
+        atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").set rainDrop
     else
       console.log "[sky]", "ILOSE", "Another broker beat me to the #{rainBucket} job. SHOULDN'T HAPPEN! Only one active broker allowed at any one time."        
   
   #Begin Transaction
-  snapshot.ref().transaction updateFunction, onComplete
+  rainDropSnapshot.ref().transaction updateFunction, onComplete
 
 ###
   Load balance the rainClouds. 
@@ -152,14 +156,19 @@ schedule = (snapshot) ->
 ###
 assign = (rainBucket) ->
   candidates = {id:[], metric:[]}
+  console.log "\n\n\n=-=-=[assign]", rain.rainClouds, "\n\n\n" #xxx
   for rainCloudID, rainCloudData of rain.rainClouds 
+    console.log "\n\n\n=-=-=[assign]", rainBucket, rainCloudData.status.rainBuckets, rainBucket in rainCloudData.status.rainBuckets, not rainCloudData.todo?[rainBucket]?, "\n\n\n" #xxx 
     #-- if registered for these job types (listening to this bucket) and not currently busy with a job from this bucket...
     if rainBucket in rainCloudData.status.rainBuckets and not rainCloudData.todo?[rainBucket]?
+      console.log "\n\n\n=-=-=[assign]", "INSIDE!", rainCloudID, "\n\n\n" #xxx
       candidates.id.push rainCloudID
-      candidates.metric.push rainCloudData.status.cpu?[0]
+      candidates.metric.push Number rainCloudData.status.cpu?[0]
   return undefined if candidates.id.length is 0 #no available rainClouds (workers)
-  mostIdle = _.min candidates.metric
-  return candidates.id[_.indexOf mostIdle]
+  mostIdle = _.min candidates.metric  
+  asignee = candidates.id[_.indexOf candidates.metric, mostIdle]
+  console.log "\n\n\n=-=-=[assign]", "ASSIGNED:", mostIdle, asignee, candidates.id, candidates.metric, "\n\n\n" #xxx
+  return asignee
 
 
 

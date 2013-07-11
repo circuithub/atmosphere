@@ -7,9 +7,8 @@ Firebase        = require "firebase"
 
 firebaseTestURL = "https://atmosphere.firebaseio-demo.com/" #If you edit this, you need to edit test.rain.cloud as well. 
 
-console.log "\n\n\n=-=-=[START]", "Make sure that test.rain.cloud is running...", "\n\n\n" #xxx
-
-
+console.log "\n\n\n=-=-=[START]", "Make sure that './test/test.rain.cloud' is running..."
+console.log "=-=-=[START]", "Make sure that 'coffee server.coffee' is running..."
 
 ###############################
 ## RUN ME! Yay! Tests!
@@ -45,25 +44,25 @@ describe "atmosphere", ->
     #     console.log "[D] Jobs Done", allResults      
     #     done()
 
-    it "should process only one job of a type at a time", (done) ->
-      testFunctions = []
-      snap = undefined
-      atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
-        snap = snapshot
-      for i in [0...10]
-        #Submit Altium Conversion Job
-        testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
-      bsync.parallel testFunctions, (allErrors, allResults) ->
-        h.shouldNotHaveErrors allErrors                
-        log = () -> 
-          if snap.val()?
-            console.log "--> [#{i}]", Object.keys snap.val()
-          else
-            console.log "--> [#{i}]", snap.val()
-          setTimeout log, 1000
-        log()
-        console.log "[D] Job Done", allResults
-        #done()
+    # it "should process only one job of a type at a time", (done) ->
+    #   testFunctions = []
+    #   snap = undefined
+    #   atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
+    #     snap = snapshot
+    #   for i in [0...10]
+    #     #Submit Altium Conversion Job
+    #     testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
+    #   bsync.parallel testFunctions, (allErrors, allResults) ->
+    #     h.shouldNotHaveErrors allErrors                
+    #     log = () -> 
+    #       if snap.val()?
+    #         console.log "--> [#{i}]", Object.keys snap.val()
+    #       else
+    #         console.log "--> [#{i}]", snap.val()
+    #       setTimeout log, 1000
+    #     log()
+    #     console.log "[D] Job Done", allResults
+    #     #done()
 
   # describe "#complex RPC use case (job chaining)", ->
         
