@@ -157,11 +157,11 @@ exports.publish = (queueName, messageObject, headerObject) =>
   newRainDropRef = undefined
   if headerObject.job.id?
     # If chain mode, then we already have the rainDropID
-    newRainDropRef = @_ref.rainDropsRef.child "#{queueName}/#{headerObject.job.id}"
+    newRainDropRef = @_ref.rainDropsRef.child "todo/#{queueName}/#{headerObject.job.id}"
   else
     # Generate a reference to a new location with push
     newRainDropID = @makeID queueName, headerObject.job.name
-    newRainDropRef = @_ref.rainDropsRef.child("#{queueName}/#{newRainDropID}")
+    newRainDropRef = @_ref.rainDropsRef.child("todo/#{queueName}/#{newRainDropID}")
   # Set some data to the generated location
   newRainDropRef.set rainDrop, (error) ->
     if error?

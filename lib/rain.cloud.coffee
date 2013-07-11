@@ -1,11 +1,11 @@
-_ = require "underscore"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
-bsync = require "bsync"
+_          = require "underscore"
+nconf      = require "nconf"
+elma       = require("elma")(nconf)
+bsync      = require "bsync"
 
-core = require "./core"
-monitor = require "./monitor"
-rainMaker = require "./rain.maker"
+core       = require "./core"
+monitor    = require "./monitor"
+rainMaker  = require "./rain.maker"
 
 jobWorkers = {}
 currentJob = {}

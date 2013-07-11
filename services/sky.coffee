@@ -90,11 +90,11 @@ listenBase = () ->
 ###
 listenRainBuckets = () ->
   #New rainBucket (job type) installed (added)
-  atmosphere.core.refs().rainDropsRef.on "child_added", (snapshot) ->
-    atmosphere.core.refs().rainDropsRef.child(snapshot.name()).on "child_added", schedule
+  atmosphere.core.refs().rainDropsRef.child("todo").on "child_added", (snapshot) ->
+    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").on "child_added", schedule
   #rainBucket (job type) removed (deleted)
-  atmosphere.core.refs().rainDropsRef.on "child_removed", (snapshot) ->
-    atmosphere.core.refs().rainDropsRef.child(snapshot.name()).off() #remove all listeners/callbacks
+  atmosphere.core.refs().rainDropsRef.child("todo").on "child_removed", (snapshot) ->
+    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").off() #remove all listeners/callbacks
 
 
 
@@ -134,9 +134,9 @@ schedule = (rainDropSnapshot) ->
       assignTo = assign rainBucket
       if not assignTo?
         #No rainCloud available to do the work -- put the job back on the queue
-        console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job." 
-        return if not rainBucket? #xxx temp testing for null
-        atmosphere.core.refs().rainDropsRef.child(rainDropSnapshot.name()).set rainDropSnapshot.val()
+        console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job."         
+        console.log "\n\n\n=-=-=[INOONE]", rainDropSnapshot.name(), rainDropSnapshot.val(), "\n\n\n" #xxx
+        atmosphere.core.refs().rainDropsRef.child("todo/#{rainDropSnapshot.name()}").set rainDropSnapshot.val()
       else
         #Assign the rainDrop to the specified rainCloud
         atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").set rainDrop
