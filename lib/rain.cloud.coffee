@@ -1,6 +1,5 @@
 _          = require "underscore"
 nconf      = require "nconf"
-elma       = require("elma")(nconf)
 bsync      = require "bsync"
 
 core       = require "./core"
@@ -82,18 +81,18 @@ exports.doneWith = (ticket, errors, result) =>
   theJob = currentJob[ticket.type]
   #Console
   numJobsNext = if theJob.next?.chain? then theJob.next.chain.length else 0
-  elma.info "[atmosphere]", "IDONEWITH", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
+  console.log "[atmosphere]", "IDONEWITH", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
-    _callbackMQ theJob, ticket, errors, result if theJob.callback    
+    #_callbackMQ theJob, ticket, errors, result if theJob.callback    
   #More jobs in the chain
   else
     if errors?
       #Abort chain if errors occurred
-      _callbackMQ theJob, ticket, errors, result      
+      #_callbackMQ theJob, ticket, errors, result      
     else
       #Fire callback if specified
-      _callbackMQ theJob, ticket, errors, result if theJob.callback
+      #_callbackMQ theJob, ticket, errors, result if theJob.callback
       #Get next job in the chain
       nextJob = theJob.next.chain.shift()
       #Cascade results (merge incoming results from last job with incoming user data for new job)      
@@ -112,17 +111,19 @@ exports.doneWith = (ticket, errors, result) =>
         callback: nextJob.callback
       core.submit nextJob.type, payload, headers
   #Done with this specific job in the job chain
-  delete currentJob[ticket.type] #done with current job, update state  
-  console.log "\n\n\n=-=-=[cloud.doneWith]", "#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}", "\n\n\n" #xxx
-  #core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/").set "Hello World", (error) ->
-  # console.log "\n\n\n=-=-=[cloud.doneWith.remove]", error, "\n\n\n" #xxx        
-  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").set "Hello World"
-  monitor.jobComplete()
-  console.log "\n\n\n=-=-=[cloud.doneWidth.final]", core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").toString(), "\n\n\n" #xxx
-  Firebase = require "firebase"
-  blah = new Firebase core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}").toString()
-  blah.remove()
-  console.log "\n\n\n=-=-=[cloud.doneWith.final2]", blah.toString(), "\n\n\n" #xxx
+  setTimeout () ->
+    delete currentJob[ticket.type] #done with current job, update state  
+    console.log "\n\n\n=-=-=[cloud.doneWith]", "#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}", "\n\n\n" #xxx
+    #core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/").set "Hello World", (error) ->
+    # console.log "\n\n\n=-=-=[cloud.doneWith.remove]", error, "\n\n\n" #xxx        
+    core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").set "Hello World"
+    monitor.jobComplete()
+    console.log "\n\n\n=-=-=[cloud.doneWidth.final]", core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").toString(), "\n\n\n" #xxx
+    Firebase = require "firebase"
+    blah = new Firebase core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}").toString()
+    blah.remove()
+    console.log "\n\n\n=-=-=[cloud.doneWith.final2]", blah.toString(), "\n\n\n" #xxx
+  , 3000
 
 ###
   Subscribe to persistent incoming jobs in the queue (non-exclusively)
@@ -170,7 +171,7 @@ basic = (taskName, functionName) ->
   return _basicRouter
 
 _basicRouter = (ticket, data) ->
-  elma.info "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
+  console.log "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
   ticket.data = data if data? #add job data to ticket
   #Execute (invoke work function)
   rpcWorkers[ticket.type] ticket, (errors, results) ->
