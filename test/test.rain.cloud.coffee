@@ -66,7 +66,7 @@ jobTypes = {
 
 
 count = () ->
-  console.log "[#] Maker: #{atmosphere.rainMaker.count()}; Cloud: #{JSON.stringify atmosphere.rainCloud.count()}."
+  #Reporting when necessary  
 
 
 do ->

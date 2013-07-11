@@ -30,7 +30,8 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
     workerFunctions = []    
     for jobType, jobFunction of jobTypes
       if not jobWorkers[jobType]?        
-        workerFunctions.push bsync.apply @listen, jobType, lightning
+        workerFunctions.push bsync.apply @listen, jobType, jobFunction
+        console.log "\n\n\n=-=-=[rainCloud.init]", jobType, "\n\n\n" #xxx
     bsync.parallel workerFunctions, (allErrors, allResults) ->
       if allErrors?
         cbDone allErrors
@@ -136,8 +137,9 @@ exports.listen = (rainBucket, cbExecute, cbListening) =>
   #--Listen for incoming jobs
   rainBucketRef = core.refs().rainDropsRef.child "todo/#{rainBucket}"
   rainBucketRef.startAt().limit(1).on "child_added", (snapshot) ->
+    console.log "\n\n\n=-=-=[cloud.listen]", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
     #Execute job
-    cbExecute rainBucket, snapshot.name(), snapshot.val(), (error) ->
+    lightning rainBucket, snapshot.name(), snapshot.val(), (error) ->
       if error?
         #TODO (jonathan) Job failed to be dispatched (right now, this can't happen, or isn't detected)
         console.log "[atmosphere]", "EDISPATCH", error      
