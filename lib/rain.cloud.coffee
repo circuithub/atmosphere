@@ -56,12 +56,12 @@ _callbackMQ = (theJob, ticket, errors, result) ->
     console.log "[atmosphere]", "ENOID", "Error. Malformed callback response attempt. No rainDropID specified.", theJob
     return
   rainDropResponse =
-    job: theJob.job
+    name: theJob.job.name
+    id: theJob.job.id
     type: theJob.type
-    rainCloudID: core.rainID()
-    response:  
-      errors: if errors? then errors else null
-      data: result
+    rainCloudID: core.rainID()  
+    errors: if errors? then errors else null
+    result: result
   core.refs().rainMakersRef.child("#{currentJob[ticket.type].returnQueue}/done/#{rainDropID}").set rainDropResponse
 
 ###

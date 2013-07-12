@@ -98,16 +98,15 @@ exports.submit = (jobChain, cbJobDone) ->
 ###
 exports.listen = () =>
   core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->
-    rainDropID = snapshot.name()
-    rainDrop = snapshot.val()
-    core.refs().rainMakersRef.child("#{core.rainID()}/done/#{rainDropID}").remove()
-    mailman rainDrop.job.type, rainDropID, rainDrop
-
-###
-  The number of active rainDrops (submitted, but not timed-out or returned yet)
-###
-exports.count = () ->
-  return Object.keys(rainDrops).length
+    rainBucket = snapshot.val().type
+    if not rainBucket?
+      console.log "[atmosphere]", "EBADCALLBACK", "Could not determine bucket for drop.", snapshot.val()
+      return
+    console.log "\n\n\n=-=-=[rain.maker.listen]1", rainBucket, snapshot.name(), "\n\n\n" #xxx
+    #Go get actual RainDrop
+    core.refs().rainDropsRef.child("todo/#{rainBucket}/#{snapshot.name()}").once "value", (snapshot) ->
+      console.log "\n\n\n=-=-=[maker.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
+      mailman rainDropResponse.type, snapshot.name(), snapshot.val()
 
 
 
@@ -118,14 +117,15 @@ exports.count = () ->
 ###
   Assigns incoming messages to rainDrops awaiting a response
 ###
-mailman = (rainBucket, rainDropID, rainDrop) ->
+mailman = (rainBucket, rainDropID, rainDropResponse) ->
   if not rainDrops["#{rainDropID}"]?
     console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainBucket} job: #{rainDropID}."
     return    
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
+  core.refs().rainMakersRef.child("#{core.rainID()}/done/#{rainDropID}").remove()
   delete rainDrops["#{rainDropID}"] #mark job as completed
   process.nextTick () -> #release stack frames/memory
-    callback rainDrop.response.errors, rainDrop.response.data
+    callback rainDropResponse.errors, rainDropResponse.result
 
 ###
   Implements timeouts for rainDrops-in-progress
