@@ -137,11 +137,12 @@ exports.listen = (rainBucket, cbExecute, cbListening) =>
     rainBuckets: Object.keys jobWorkers  
     cpu: [0,0,0]
   #--Listen for incoming jobs
-  rainBucketRef = core.refs().rainCloudsRef.child "todo/#{rainBucket}"
+  rainBucketRef = core.refs().rainCloudsRef.child "#{core.rainID()}/todo/#{rainBucket}"
   rainBucketRef.startAt().limit(1).on "child_added", (snapshot) ->
+    console.log "\n\n\n=-=-=[rain.cloud.listen]1", snapshot.name(), "\n\n\n" #xxx
     #Go get actual RainDrop
     core.refs().rainDropsRef.child("todo/#{rainBucket}/#{snapshot.name()}").once "value", (snapshot) ->
-      console.log "\n\n\n=-=-=[cloud.listen]", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
+      console.log "\n\n\n=-=-=[cloud.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
       #Execute job
       lightning rainBucket, snapshot.name(), snapshot.val(), (error) ->
         if error?

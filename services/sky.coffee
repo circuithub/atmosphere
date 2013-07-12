@@ -1,6 +1,5 @@
 _          = require "underscore"
 atmosphere = require "../index"
-Firebase = require "firebase"
 {check}    = require "validator"
 nconf      = require "nconf"
 
@@ -80,7 +79,7 @@ rain = undefined
 listen = (dataType) =>
   atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
     rain[dataType] = snapshot.val()
-    console.log "\n\n\n=-=-=[sky.listen]", atmosphere.core.refs()["#{dataType}Ref"].toString(), dataType, snapshot.val(), "\n\n\n" #xxx
+    console.log "=-=-=[sky.listen]", atmosphere.core.refs()["#{dataType}Ref"].toString(), snapshot.val() #xxx
 listenBase = () ->
   rain = 
     rainClouds: listen "rainClouds"
@@ -93,7 +92,8 @@ listenBase = () ->
 listenRainBuckets = () ->
   #New rainBucket (job type) installed (added)
   atmosphere.core.refs().rainDropsRef.child("todo").on "child_added", (snapshot) ->
-    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").on "child_added", schedule
+    console.log "\n\n\n=-=-=[listenRainBuckets.add]", snapshot.name(), "\n\n\n" #xxx
+    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").startAt().limit(1).on "child_added", schedule
   #rainBucket (job type) removed (deleted)
   atmosphere.core.refs().rainDropsRef.child("todo").on "child_removed", (snapshot) ->
     atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").off() #remove all listeners/callbacks
@@ -121,12 +121,12 @@ schedule = (rainDropSnapshot) ->
     console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job."         
   else
     #Assign the rainDrop to the specified rainCloud
-    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}/start").set Firebase.ServerValue.TIMESTAMP 
+    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}/start").set atmosphere.core.now()
     #Register to handle job completion
-    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").on "child_added", (snapshot) ->
-      return if snapshot.name() isnt "stop"
+    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}").on "child_added", (stopSnapshot) ->
+      return if stopSnapshot.name() isnt "stop"
       #TODO: analytics
-      atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").remove()
+      atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}").remove()
   
 ###
   Load balance the rainClouds. 
