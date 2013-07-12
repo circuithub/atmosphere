@@ -108,46 +108,26 @@ listenRainBuckets = () ->
   Schedule new job
 ###
 schedule = (rainDropSnapshot) ->  
-  rainDrop = undefined
-  rainDropID = undefined
-  rainBucket = undefined
-    
-  #Transaction-protected Update Function
-  updateFunction = (theItem) ->
-    #--Update data
-    rainDrop = rainDropSnapshot.val()
-    rainDropID = rainDropSnapshot.name()
-    rainBucket = rainDrop?.job?.type
-    #TODO (jonathan) Sanity check this; delete if malformed; report error
-    
-    #--Did we win the record lock?
-    if theItem?
-      return null #remove this job from the incoming rainDrops bucket
-    else
-      return undefined #abort (no changes)
-
-  #On transaction complete
-  onComplete = (error, committed, snapshot, dummy) ->
-    console.log "\n\n\n=-=-=[onComplete]", error, snapshot?.val(), committed, dummy, "\n\n\n" #xxx
-    throw error if error?
-    if committed
-      console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
-      #Move job to worker queue
-      assignTo = assign rainBucket
-      if not assignTo?
-        #No rainCloud available to do the work -- put the job back on the queue
-        console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job."         
-        console.log "\n\n\n=-=-=[INOONE]", rainDropSnapshot.name(), rainDropSnapshot.val(), "\n\n\n" #xxx
-        atmosphere.core.refs().rainDropsRef.child("todo/#{rainDropSnapshot.name()}").set rainDropSnapshot.val()
-      else
-        #Assign the rainDrop to the specified rainCloud
-        atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").set rainDrop
-    else
-      console.log "[sky]", "ILOSE", "Another broker beat me to the #{rainBucket} job. SHOULDN'T HAPPEN! Only one active broker allowed at any one time."        
+  #--Update data
+  rainDrop = rainDropSnapshot.val()
+  rainDropID = rainDropSnapshot.name()
+  rainBucket = rainDrop?.job?.type
+  #TODO (jonathan) Sanity check this; delete if malformed; report error
+  console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
+  #Move job to worker queue
+  assignTo = assign rainBucket
+  if not assignTo?
+    #No rainCloud available to do the work -- put the job back on the queue
+    console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job."         
+  else
+    #Assign the rainDrop to the specified rainCloud
+    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}/start").set Firebase.ServerValue.TIMESTAMP 
+    #Register to handle job completion
+    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").on "child_added", (snapshot) ->
+      return if snapshot.name() isnt "stop"
+      #TODO: analytics
+      atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{snapshot.name()}").remove()
   
-  #Begin Transaction
-  rainDropSnapshot.ref().transaction updateFunction, onComplete
-
 ###
   Load balance the rainClouds. 
   >> Determine which rainCloud (worker) should get the next rainDrop (job) in the specified rainBucket

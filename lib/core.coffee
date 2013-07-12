@@ -66,7 +66,12 @@ exports.setRole = (role) ->
   _roleID = _roleID + "-" + _rainID
   return _roleID
 
-
+###
+  Instruct Firebase to insert the server's timestamp
+  -- Use as a value into .set, .update Firebase commands
+###
+exports.now = () ->
+  return Firebase.ServerValue.TIMESTAMP 
 
 ########################################
 ## CONNECT

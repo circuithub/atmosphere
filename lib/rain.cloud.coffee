@@ -51,15 +51,18 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
 ########################################
 
 _callbackMQ = (theJob, ticket, errors, result) ->
-  rainDropResponse = {}
-  rainDropResponse[theJob.job.id] =
+  rainDropID = theJob?.job?.id
+  if not rainDropID?
+    console.log "[atmosphere]", "ENOID", "Error. Malformed callback response attempt. No rainDropID specified.", theJob
+    return
+  rainDropResponse =
     job: theJob.job
     type: theJob.type
     rainCloudID: core.rainID()
     response:  
       errors: if errors? then errors else null
       data: result
-  core.refs().rainMakersRef.child("#{currentJob[ticket.type].returnQueue}/done/").set rainDropResponse
+  core.refs().rainMakersRef.child("#{currentJob[ticket.type].returnQueue}/done/#{rainDropID}").set rainDropResponse
 
 ###
   Reports completed job on a Rain Cloud
@@ -84,15 +87,15 @@ exports.doneWith = (ticket, errors, result) =>
   console.log "[atmosphere]", "IDONEWITH", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
   if numJobsNext is 0  
-    #_callbackMQ theJob, ticket, errors, result if theJob.callback    
+    _callbackMQ theJob, ticket, errors, result if theJob.callback    
   #More jobs in the chain
   else
     if errors?
       #Abort chain if errors occurred
-      #_callbackMQ theJob, ticket, errors, result      
+      _callbackMQ theJob, ticket, errors, result      
     else
       #Fire callback if specified
-      #_callbackMQ theJob, ticket, errors, result if theJob.callback
+      _callbackMQ theJob, ticket, errors, result if theJob.callback
       #Get next job in the chain
       nextJob = theJob.next.chain.shift()
       #Cascade results (merge incoming results from last job with incoming user data for new job)      
@@ -111,19 +114,9 @@ exports.doneWith = (ticket, errors, result) =>
         callback: nextJob.callback
       core.submit nextJob.type, payload, headers
   #Done with this specific job in the job chain
-  setTimeout () ->
-    delete currentJob[ticket.type] #done with current job, update state  
-    console.log "\n\n\n=-=-=[cloud.doneWith]", "#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}", "\n\n\n" #xxx
-    #core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/").set "Hello World", (error) ->
-    # console.log "\n\n\n=-=-=[cloud.doneWith.remove]", error, "\n\n\n" #xxx        
-    core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").set "Hello World"
-    monitor.jobComplete()
-    console.log "\n\n\n=-=-=[cloud.doneWidth.final]", core.refs().rainCloudsRef.child("#{core.rainID()}/todo/").toString(), "\n\n\n" #xxx
-    Firebase = require "firebase"
-    blah = new Firebase core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}").toString()
-    blah.remove()
-    console.log "\n\n\n=-=-=[cloud.doneWith.final2]", blah.toString(), "\n\n\n" #xxx
-  , 3000
+  delete currentJob[ticket.type] #done with current job, update state  
+  core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}/stop").set core.now()
+  monitor.jobComplete()
 
 ###
   Subscribe to persistent incoming jobs in the queue (non-exclusively)
@@ -136,7 +129,7 @@ exports.listen = (rainBucket, cbExecute, cbListening) =>
   #--Sanity Check
   if not core.ready() 
     cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
-    return  
+    return
   #--Register Callback
   jobWorkers[rainBucket] = cbExecute
   #--Register Bucket (inform scheduling engine we accept this type)
@@ -144,15 +137,17 @@ exports.listen = (rainBucket, cbExecute, cbListening) =>
     rainBuckets: Object.keys jobWorkers  
     cpu: [0,0,0]
   #--Listen for incoming jobs
-  rainBucketRef = core.refs().rainDropsRef.child "todo/#{rainBucket}"
+  rainBucketRef = core.refs().rainCloudsRef.child "todo/#{rainBucket}"
   rainBucketRef.startAt().limit(1).on "child_added", (snapshot) ->
-    console.log "\n\n\n=-=-=[cloud.listen]", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
-    #Execute job
-    lightning rainBucket, snapshot.name(), snapshot.val(), (error) ->
-      if error?
-        #TODO (jonathan) Job failed to be dispatched (right now, this can't happen, or isn't detected)
-        console.log "[atmosphere]", "EDISPATCH", error      
-        return
+    #Go get actual RainDrop
+    core.refs().rainDropsRef.child("todo/#{rainBucket}/#{snapshot.name()}").once "value", (snapshot) ->
+      console.log "\n\n\n=-=-=[cloud.listen]", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
+      #Execute job
+      lightning rainBucket, snapshot.name(), snapshot.val(), (error) ->
+        if error?
+          #TODO (jonathan) Job failed to be dispatched (right now, this can't happen, or isn't detected)
+          console.log "[atmosphere]", "EDISPATCH", error      
+          return
 
 
 
