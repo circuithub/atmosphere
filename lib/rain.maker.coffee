@@ -98,15 +98,8 @@ exports.submit = (jobChain, cbJobDone) ->
 ###
 exports.listen = () =>
   core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->
-    rainBucket = snapshot.val().type
-    if not rainBucket?
-      console.log "[atmosphere]", "EBADCALLBACK", "Could not determine bucket for drop.", snapshot.val()
-      return
-    console.log "\n\n\n=-=-=[rain.maker.listen]1", rainBucket, snapshot.name(), "\n\n\n" #xxx
-    #Go get actual RainDrop
-    core.refs().rainDropsRef.child("todo/#{rainBucket}/#{snapshot.name()}").once "value", (snapshot) ->
-      console.log "\n\n\n=-=-=[maker.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
-      mailman snapshot.name(), snapshot.val()
+    console.log "\n\n\n=-=-=[maker.listen]", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
+    mailman snapshot.name(), snapshot.val()
 
 
 
@@ -124,6 +117,7 @@ mailman = (rainDropID, rainDropResponse) ->
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
   core.refs().rainMakersRef.child("#{core.rainID()}/done/#{rainDropID}").remove()
   delete rainDrops["#{rainDropID}"] #mark job as completed
+  console.log "\n\n\n=-=-=[mailman](callback)", rainDropResponse, rainDropResponse.errors, rainDropResponse.result, "\n\n\n" #xxx
   process.nextTick () -> #release stack frames/memory
     callback rainDropResponse.errors, rainDropResponse.result
 

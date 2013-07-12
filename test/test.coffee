@@ -29,6 +29,7 @@ describe "atmosphere", ->
         data: {yes: true, no: false}
         timeout: 30
       atmosphere.rainMaker.submit job, (error, data) ->
+        console.log "\n\n\n=-=-=[straight through]", error, data, "\n\n\n" #xxx
         h.shouldNotHaveErrors error
         should.exist data
         # done()

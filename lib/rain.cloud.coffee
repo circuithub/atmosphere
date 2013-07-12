@@ -63,6 +63,7 @@ _callbackMQ = (theJob, ticket, errors, result) ->
     errors: if errors? then errors else null
     result: result
   core.refs().rainMakersRef.child("#{currentJob[ticket.type].returnQueue}/done/#{rainDropID}").set rainDropResponse
+  console.log "\n\n\n=-=-=[_callbackMQ]", errors, result, "\n\n\n" #xxx
 
 ###
   Reports completed job on a Rain Cloud
