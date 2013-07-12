@@ -106,7 +106,7 @@ exports.listen = () =>
     #Go get actual RainDrop
     core.refs().rainDropsRef.child("todo/#{rainBucket}/#{snapshot.name()}").once "value", (snapshot) ->
       console.log "\n\n\n=-=-=[maker.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
-      mailman rainDropResponse.type, snapshot.name(), snapshot.val()
+      mailman snapshot.name(), snapshot.val()
 
 
 
@@ -117,7 +117,7 @@ exports.listen = () =>
 ###
   Assigns incoming messages to rainDrops awaiting a response
 ###
-mailman = (rainBucket, rainDropID, rainDropResponse) ->
+mailman = (rainDropID, rainDropResponse) ->
   if not rainDrops["#{rainDropID}"]?
     console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainBucket} job: #{rainDropID}."
     return    
