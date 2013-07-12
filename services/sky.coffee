@@ -105,6 +105,17 @@ listenRainBuckets = () ->
 ########################################
 
 ###
+  Determine if the specified entity exists
+###
+isAlive = (type, id) ->
+  switch type
+    when "rainCloud"
+      if rain.
+    when "rainMaker"
+    else
+      throw new Error "EBADTYPE", "[isAlive] Invalid type #{type}."
+
+###
   Schedule new job
 ###
 schedule = (rainDropSnapshot) ->  
@@ -113,16 +124,22 @@ schedule = (rainDropSnapshot) ->
   rainDropID = rainDropSnapshot.name()
   rainBucket = rainDrop?.job?.type
   #TODO (jonathan) Sanity check this; delete if malformed; report error
+  if rainDrop.rainCloud?
+    console.log "[sky]", "WREBOOT", "Detected a #{rainBucket} job in progress. Sky rebooted?"
+
+    return
   console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
   #Move job to worker queue
-  assignTo = assign rainBucket
+  assignTo = tirainBucket
   if not assignTo?
     #No rainCloud available to do the work -- put the job back on the queue
     console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job."         
   else
-    #Assign the rainDrop to the specified rainCloud
+    #[1.] Mark the job as assigned
+    atmosphere.core.refs().rainDropsRef.child("todo/#{rainBucket}/#{rainDropSnapshot.name()}/rainCloud").set assignTo
+    #[2.] Assign the rainDrop to the specified rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}/start").set atmosphere.core.now()
-    #Register to handle job completion
+    #[3.] Register to handle job completion
     atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}").on "child_added", (stopSnapshot) ->
       return if stopSnapshot.name() isnt "stop"
       #TODO: analytics
