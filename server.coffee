@@ -2,6 +2,7 @@ objects  = require "objects"
 nconf    = require "nconf"
 urlParse = require("url").parse
 express  = require "express"
+http = require "http"
 app      = express()
 
 nconf
