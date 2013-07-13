@@ -3,10 +3,6 @@ atmosphere = require "../index"
 {check}    = require "validator"
 nconf      = require "nconf"
 
-stats    = {}
-messages = []
-reports  = {}
-workers  = {}
 
 
 ########################################
@@ -14,7 +10,7 @@ workers  = {}
 ########################################
 
 exports.init = (cbReady) =>
-  disTasks = undefined
+  weather = undefined
   nextStep = undefined
 
   #[1.] Connect to Firebase
@@ -25,23 +21,19 @@ exports.init = (cbReady) =>
         cbReady err
         return
 
-  #[1.] Wait Until We Have Current Firebase State Loaded
-  state = (next) ->
-    initBase () -> next()
-
   #[1.] Load Task List
-  disTaskList = (next) ->
+  loadWeather = (next) ->
     nextStep = next
-    atmosphere.core.refs().baseRef.child("disTaskList").once "value", loadList
+    atmosphere.core.refs().baseRef.child("weatherPattern").once "value", loadList
   
-  #[2.] Retrieved DIS Task List
+  #[2.] Retrieved Weather Pattern
   loadList = (snapshot) ->
-    disTasks = snapshot.val()
+    weather = snapshot.val()
     nextStep()
   
   #[3.] Register as a Rain Maker
   rainInit = (next) ->
-    atmosphere.rainMaker.init "spark", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
+    atmosphere.rainMaker.init "sky", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
         cbReady err
@@ -61,8 +53,9 @@ exports.init = (cbReady) =>
 
   #[3.] Handle task scheduling
   brokerTasks = (next) ->
-    listenBase()
-    listenRainBuckets()
+    listen "rainClouds" #monitor rainClouds
+    atmosphere.core.refs().skyRef.child("todo").on "child_added", schedule
+    atmosphere.core.refs().skyRef.child("crashed").on "child_added", recover
     next()
 
   #[4.] Monitor for dead workers
@@ -70,7 +63,7 @@ exports.init = (cbReady) =>
     #TODO    
     next()
 
-  connect -> state -> disTaskList -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
+  connect -> loadWeather -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
 
 
 
@@ -87,40 +80,7 @@ listen = (dataType) =>
   atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
     rain[dataType] = snapshot.val()
     console.log "=-=-=[sky.listen]", atmosphere.core.refs()["#{dataType}Ref"].toString(), snapshot.val() #xxx
-listenBase = () ->
-  listen "rainDrops"
-  
-###
-  Load inital state from Firebase
-  -- Callback after loading is guaranteed to have occurred
-  -- Recovery depends on knowing current rainCloud/rainMaker state ahead of rainDrops
-###
-initBase = (cbInitialized) ->
-  workFunctions =
-    rainClouds: bsync.apply atmosphere.core.refs().rainCloudsRef.once, "value"    
-    rainMakers: bsync.apply atmosphere.core.refs().rainMakersRef.once, "value"
-  bsync.parallel workFunctions, (allResults) ->
-    rain = 
-      rainClouds: allResults.rainClouds.val()      
-      rainMakers: allResults.rainMakers.val()
-    listen "rainClouds"
-    listen "rainMakers"
-    cbInitialized undefined
-
-###
-  Handle the addition (and removal) of rainBuckets (rainDrop types)
-###
-listenRainBuckets = () ->
-  #New rainBucket (job type) installed (added)
-  atmosphere.core.refs().rainDropsRef.child("todo").on "child_added", (snapshot) ->
-    console.log "\n\n\n=-=-=[listenRainBuckets.add]", snapshot.name(), "\n\n\n" #xxx
-    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").on "child_added", schedule
-    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").on "child_removed", (snapshot) ->
-      schedule
-  #rainBucket (job type) removed (deleted)
-  atmosphere.core.refs().rainDropsRef.child("todo").on "child_removed", (snapshot) ->
-    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").off() #remove all listeners/callbacks
-
+ 
 
 
 ########################################
