@@ -1,0 +1,112 @@
+body {
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  padding-left: 50px;
+  padding-top: 50px;
+}
+a {
+  color: #00b7ff;
+}
+h1 {
+  margin-bottom: 2px;
+}
+span.subtitle {
+  padding: 0px;
+  padding-left: 30px;
+}
+h2 {
+  margin-top: 25px;
+  margin-bottom: 5px;
+  padding: 0;
+}
+.small {
+  font-size: 8px;
+  font-weight: 200;
+}
+.medium {
+  font-size: 11px;
+  font-weight: 200;
+}
+div.allWorkers {
+  white-space: nowrap;
+  overflow: auto;
+}
+div.eachWorker {
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 30px;
+  width: 220px;
+}
+table.worker td {
+  width: 50%;
+}
+.worker td {
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 2px;
+  padding-bottom: 8px;
+}
+table {
+  font: 11px "Lucida Grande", Helvetica, Arial, sans-serif;
+  font-weight: 200;
+}
+table .status {
+  font-weight: 600;
+  text-align: center;
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-bottom: 2px;
+  margin: 0;
+}
+table .percent {
+  font-weight: 400;
+  text-align: center;
+  font-size: 15px;
+  padding: 0;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+table .name {
+  font-weight: 400;
+  text-align: center;
+  font-size: 17px;
+}
+table .number {
+  font-weight: 200;
+  text-align: center;
+  font-size: 13px;
+  margin: 0;
+}
+table .label {
+  font-weight: 100;
+  text-align: center;
+  font-size: 9px;
+  margin: 0;
+}
+table .date {
+  text-align: right;
+}
+table .newJob {
+  border-top: 1px dotted #ccc;
+}
+table .job {
+  text-align: left;
+  padding-left: 4px;
+}
+table .job p {
+  margin: 0px;
+}
+table .job .jobType {
+  font-weight: 600;
+}
+table .job .jobName {
+  font-weight: 400;
+  font-size: 9px;
+  padding-left: 5px;
+}
+table .job .jobStep {
+  font-weight: 200;
+  font-size: 8px;
+  padding-left: 10px;
+}

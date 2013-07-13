@@ -1,0 +1,6 @@
+{
+  "GITHUB_CLIENT_ID"   : "58570aa4f2393fa90031",
+  "GITHUB_CLIENT_KEY"  : "6fd47205b055f83a408a3aa611d195df46e04a0e",
+  "GITHUB_CALLBACK_URL": "http://localhost:3000/auth/github/callback",
+  "CLOUDAMQP_URL" : "amqp://guest:guest@localhost:5672//"
+}  
