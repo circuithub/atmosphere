@@ -86,80 +86,63 @@ listen = (dataType) =>
 ########################################
 ## SCHEDULING
 ########################################
-
-###
-  Determine if the specified entity exists
-###
-isAlive = (type, id) -> rain["#{type}s"].id?
   
-###
-  The specified rainCloud is no longer online. Recover its assigned rainDrops.
-###
-recover = (rainCloudID) =>
-  for eachDrop, rainDropID of rain.rainDrops
-    if eachDrop.rainCloud is rainCloudID
-      atmosphere.core.refs().rainDropsRef.child("todo/#{rainDropID}/rainCloud").remove()
-
 ###
   Schedule new job
 ###
-schedule = (rainDropSnapshot) ->  
-  #--Update data
-  rainDrop = rainDropSnapshot.val()
-  rainDropID = rainDropSnapshot.name()
-  rainBucket = rainDrop?.job?.type
-  #TODO (jonathan) Sanity check this; delete if malformed; report error
-  if rainDrop.rainCloud?
-    console.log "[sky]", "WREBOOT", "Detected a #{rainBucket} job in progress. Sky rebooted?"
-    recover rainDrop.rainCloud if not isAlive "rainCloud", rainDrop.rainCloud
-    return
-  console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
-  #Move job to worker queue
-  assignTo = tirainBucket
-  if not assignTo?
-    #No rainCloud available to do the work -- put the job back on the queue
-    console.log "=-=-=[sky]", "INOONE", "No worker available for #{rainBucket} job."         
-  else
-    #[1.] Mark the job as assigned
-    atmosphere.core.refs().rainDropsRef.child("todo/#{rainBucket}/#{rainDropSnapshot.name()}/rainCloud").set assignTo
-    #[2.] Assign the rainDrop to the specified rainCloud
-    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}/start").set atmosphere.core.now()
-    #[3.] Register to handle job completion
-    atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}").on "child_added", (stopSnapshot) ->
-      return if stopSnapshot.name() isnt "stop"
-      #TODO: analytics
-      atmosphere.core.refs().rainCloudsRef.child("#{assignTo}/todo/#{rainBucket}/#{rainDropSnapshot.name()}").remove()
+schedule = (todoSnapshot) ->
+  #--Collect rainDrop data
+  rainDrop = undefined
+  rainDropID = todoSnapshot.name()
+  rainBucket = undefined
+  asignee = undefined
   
+  getDrop = (next) ->
+    atmosphere.core.refs().rainDrops.child(rainDropID).once "value", (rainDropSnapshot) ->
+      rainDrop = rainDropSnapshot.val()
+      rainBucket = rainDrop.job.type
+      #--Is this rainDrop already assigned to a rainCloud?
+      if rainDrop.log.assign? and rain.rainClouds[rainDrop.log.assign.what]?
+        #-- Exact job already assigned. Do nothing. Recovery occurred.
+        console.log "[sky]", "WREBOOT", "#{rainBucket}/#{rainDropID} is already assigned and in progress. Sky rebooted?"
+        return
+      next()
+
+  plan = (next) ->
+    candidates = {id:[], metric:[]}
+    for rainCloudID, rainCloudData of rain.rainClouds 
+      if rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
+        if not workingOn rainCloudID, rainBucket 
+          #-- This worker is available to take the job
+          candidates.id.push rainCloudID
+          candidates.metric.push Number rainCloudData.status.cpu?[0]
+    return if candidates.id.length is 0 #no available rainClouds (workers)
+    mostIdle = _.min candidates.metric  
+    asignee = candidates.id[_.indexOf candidates.metric, mostIdle]
+    next()
+
+  assign = (next) ->
+    if not asignee?
+      #No rainCloud available to do the work -- put the job back on the queue
+      console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
+      return
+    console.log "[sky]", "IBOSS", "Scheduling a #{rainBucket} job."
+    #[1.] Assigne the rainDrop to the indicated rainCloud
+    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropSnapshot.name()}").update rainDropSnapshot.val()
+    #[2.] Mark the rainDrop as assigned
+    atmosphere.core.refs().rainDropsRef.child("#{rainDropID}/log/assign").set {when: atmosphere.core.now(), what: asignee, who: atmosphere.core.rainID()}
+
+  getDrop -> plan -> assign()
+
+
+
 ###
-  Load balance the rainClouds. 
-  >> Determine which rainCloud (worker) should get the next rainDrop (job) in the specified rainBucket
-  >> Results are only valid immediately after function returns (data gets stale quickly)
-  >> Synchronous Function
-  >> Returns undefined if no rainClouds available
-  -- rainBucket: String. Name of the bucket
+  Is the specified rainCloud already working on a job (drop) of this type (bucket)
 ###
-assign = (rainBucket) ->
-  candidates = {id:[], metric:[]}
-  console.log "\n\n\n=-=-=[assign]", rain.rainClouds, "\n\n\n" #xxx
-  for rainCloudID, rainCloudData of rain.rainClouds 
-    console.log "\n\n\n=-=-=[assign]", rainBucket, rainCloudData.status.rainBuckets, rainBucket in rainCloudData.status.rainBuckets, not rainCloudData.todo?[rainBucket]?, "\n\n\n" #xxx 
-    #-- if registered for these job types (listening to this bucket) and not currently busy with a job from this bucket...
-    if rainBucket in rainCloudData.status.rainBuckets and not rainCloudData.todo?[rainBucket]?
-      console.log "\n\n\n=-=-=[assign]", "INSIDE!", rainCloudID, "\n\n\n" #xxx
-      candidates.id.push rainCloudID
-      candidates.metric.push Number rainCloudData.status.cpu?[0]
-  return undefined if candidates.id.length is 0 #no available rainClouds (workers)
-  mostIdle = _.min candidates.metric  
-  asignee = candidates.id[_.indexOf candidates.metric, mostIdle]
-  console.log "\n\n\n=-=-=[assign]", "ASSIGNED:", mostIdle, asignee, candidates.id, candidates.metric, "\n\n\n" #xxx
-  return asignee
-
-
-
-
-
-
-
-
-
-
+workingOn = (rainCloudID, rainBucket) ->
+  try
+    for workingDropID of rain.rainClouds.rainCloudID.todo
+      return true if rain.rainDrops.workingDropID.job.type is rainBucket 
+  catch e
+    console.log "\n\n\n=-=-=[workingOn]", e, "\n\n\n" #xxx
+  return false
