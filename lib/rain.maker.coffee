@@ -33,8 +33,7 @@ _started = false
 exports.start = (cbStarted) =>
   if not _started
     console.log "[INIT]", core.rainID()
-    foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-    @listen()
+    foreman() #start job supervisor (runs asynchronously at 1sec intervals)    
     _started = true
   cbStarted()
 
@@ -82,29 +81,22 @@ exports.submit = (jobChain, cbJobDone) ->
         data: eachJob.data
         log: 
           submit: core.now()      
-      if jobChain.length > 1
-
+      if jobChain.length > 1 and i > 0
+        rainDrop.prev = jobChain[i-1].id
+      if jobChain.length > 1 and i < jobChain.length-1
+        rainDrop.next = jobChain[i+1].id
       if eachJob.callback?        
         rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone}    
-        #TODO actually listen (register callback)
-
+        core.refs().rainDropsRef[jobChain[0].id].log.on "child_added", (snapshot) ->
+          if snapshot.name() is "stop"
+            core.refs().rainDropsRef[jobChain[0].id].once "value", (snapshot) ->
+              mailman snapshot.name(), snapshot.val()
+      core.refs().rainDropsRef[jobChain[0].id].update rainDrop
     #[3.] Inform Foreman Job Expected
     jobChain[0].timeout ?= 60
-    jobChain[0].id = rainDropID
     
     
     
-###
-  Subscribe to incoming rainDrops in the queue 
-  -- This is how callbacks get effected
-###
-exports.listen = () =>
-  core.refs().rainMakersRef.child("#{core.rainID()}/done/").on "child_added", (snapshot) ->
-    console.log "\n\n\n=-=-=[maker.listen]", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
-    mailman snapshot.name(), snapshot.val()
-
-
-
 ########################################
 ## INTERNAL OPERATIONS
 ########################################
@@ -112,16 +104,14 @@ exports.listen = () =>
 ###
   Assigns incoming messages to rainDrops awaiting a response
 ###
-mailman = (rainDropID, rainDropResponse) ->
+mailman = (rainDropID, rainDropVal) ->
   if not rainDrops["#{rainDropID}"]?
     console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainBucket} job: #{rainDropID}."
     return    
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
-  core.refs().rainMakersRef.child("#{core.rainID()}/done/#{rainDropID}").remove()
   delete rainDrops["#{rainDropID}"] #mark job as completed
-  console.log "\n\n\n=-=-=[mailman](callback)", rainDropResponse, rainDropResponse.errors, rainDropResponse.result, "\n\n\n" #xxx
   process.nextTick () -> #release stack frames/memory
-    callback rainDropResponse.errors, rainDropResponse.result
+    callback rainDropVal.result.errors, rainDropVal.result.response
 
 ###
   Implements timeouts for rainDrops-in-progress
