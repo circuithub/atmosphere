@@ -4,7 +4,14 @@
  |     |    |    |  |  | |_____| ______| |       |     | |______ |    \_ |______
 
 ```
-Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
+Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://firebase.com)
+
+----------
+# STATUS: UNSTABLE
+
+This project is currently undergoing a major upgrade in advance of its 1.0 release. You are advised against using this queueing system until relase day. 
+
+-----------
 
 # Features
 
@@ -13,7 +20,7 @@ Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By RabbitMQ
 * Efficient: thin, early release of resources
 * Scales: RPC and Task sub-division allows jobs to be spread across mulitple CPUs
 * "Fixes" Heroku Routing: You control how and when Atmosphere distributes work
-* Proven: Backed by RabbitMQ, used in production
+* Proven: Backed by Firebase, used in production
 
 # Usage Model
 

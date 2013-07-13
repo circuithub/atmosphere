@@ -62,35 +62,37 @@ exports.submit = (jobChain, cbJobDone) ->
     #--Format
     if types.type(jobChain) isnt "array"
       jobChain = [jobChain]
-    #--Clarify callback flow (only first callback=true remains)
     foundCB = false
-    for eachJob in jobChain
+    for eachJob, i in jobChain
+      #--Assign ID
+      eachJob.id = core.makeID eachJob.type, eachJob.name
+      #--Clarify callback flow (only first callback=true remains)
       if foundCB or (not eachJob.callback?) or (not eachJob.callback) or (not cbJobDone?)
         eachJob.callback = false
       else
         foundCB = true if eachJob.callback? and eachJob.callback  
     jobChain[jobChain.length-1].callback = true if not foundCB and cbJobDone? #callback after last job if unspecified
-    #--Look at first job
-    job = jobChain.shift()
+    
+    #--Link jobs
+    for eachJob, i in jobChain
+      rainDrop = 
+        job:
+          name: eachJob.name
+          type: eachJob.type
+        data: eachJob.data
+        log: 
+          submit: core.now()      
+      if jobChain.length > 1
 
-    #[2.] Submit Job
-    payload = 
-      data: job.data ?= {}
-      next: jobChain
-    headers =
-      callback: job.callback
-      job: 
-        name: job.name
-        type: job.type
-      returnQueue: core.rainID()
-    rainDropID = core.submit job.type, payload, headers
+      if eachJob.callback?        
+        rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone}    
+        #TODO actually listen (register callback)
 
     #[3.] Inform Foreman Job Expected
-    job.timeout ?= 60
-    job.id = rainDropID
-    #If callback is desired listen for it
-    if cbJobDone? 
-      rainDrops[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
+    jobChain[0].timeout ?= 60
+    jobChain[0].id = rainDropID
+    
+    
     
 ###
   Subscribe to incoming rainDrops in the queue 

@@ -30,7 +30,8 @@ exports.initReferences = () =>
   @_ref = 
     rainDropsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainDrops/"
     rainCloudsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainClouds/"
-    rainMakersRef: new Firebase "#{@firebaseServerURL}atmosphere/rainMakers/"
+    rainGaugeRef: new Firebase "#{@firebaseServerURL}atmosphere/rainGauge/"
+    skyRef: new Firebase "#{@firebaseServerURL}atmosphere/sky/"
     baseRef: new Firebase "#{@firebaseServerURL}"
 
 
@@ -127,18 +128,6 @@ exports.connect = (_firebaseServerURL, @firebaseServerToken, cbConnected) =>
 ###
 exports.generateServerToken = () =>
   return @firebaseServerToken
-
-
-
-########################################
-## DELETE
-########################################
-
-###
-  Force delete of a queue (for maintainence/dev use)
-###
-exports.delete = (queueName) ->
-  @rainDropsRef.child(queueName).remove()
 
 
 

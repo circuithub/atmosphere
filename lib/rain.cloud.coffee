@@ -43,7 +43,6 @@ exports.init = (role, url, token, jobTypes, cbDone) =>
         monitor.boot() #log boot time
         cbDone undefined
 
-      
 
 
 ########################################

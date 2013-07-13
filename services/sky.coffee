@@ -17,15 +17,22 @@ exports.init = (cbReady) =>
   disTasks = undefined
   nextStep = undefined
 
-  #[1.] Load Task List
-  disTaskList = (next) ->
+  #[1.] Connect to Firebase
+  connect = (next) ->
     atmosphere.core.connect nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
         cbReady err
         return
-      nextStep = next
-      atmosphere.core.refs().baseRef.child("disTaskList").once "value", loadList
+
+  #[1.] Wait Until We Have Current Firebase State Loaded
+  state = (next) ->
+    initBase () -> next()
+
+  #[1.] Load Task List
+  disTaskList = (next) ->
+    nextStep = next
+    atmosphere.core.refs().baseRef.child("disTaskList").once "value", loadList
   
   #[2.] Retrieved DIS Task List
   loadList = (snapshot) ->
@@ -63,7 +70,7 @@ exports.init = (cbReady) =>
     #TODO    
     next()
 
-  disTaskList -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
+  connect -> state -> disTaskList -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
 
 
 
@@ -81,10 +88,24 @@ listen = (dataType) =>
     rain[dataType] = snapshot.val()
     console.log "=-=-=[sky.listen]", atmosphere.core.refs()["#{dataType}Ref"].toString(), snapshot.val() #xxx
 listenBase = () ->
-  rain = 
-    rainClouds: listen "rainClouds"
-    rainDrops: listen "rainDrops"
-    rainMakers: listen "rainMakers"
+  listen "rainDrops"
+  
+###
+  Load inital state from Firebase
+  -- Callback after loading is guaranteed to have occurred
+  -- Recovery depends on knowing current rainCloud/rainMaker state ahead of rainDrops
+###
+initBase = (cbInitialized) ->
+  workFunctions =
+    rainClouds: bsync.apply atmosphere.core.refs().rainCloudsRef.once, "value"    
+    rainMakers: bsync.apply atmosphere.core.refs().rainMakersRef.once, "value"
+  bsync.parallel workFunctions, (allResults) ->
+    rain = 
+      rainClouds: allResults.rainClouds.val()      
+      rainMakers: allResults.rainMakers.val()
+    listen "rainClouds"
+    listen "rainMakers"
+    cbInitialized undefined
 
 ###
   Handle the addition (and removal) of rainBuckets (rainDrop types)
@@ -93,7 +114,9 @@ listenRainBuckets = () ->
   #New rainBucket (job type) installed (added)
   atmosphere.core.refs().rainDropsRef.child("todo").on "child_added", (snapshot) ->
     console.log "\n\n\n=-=-=[listenRainBuckets.add]", snapshot.name(), "\n\n\n" #xxx
-    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").startAt().limit(1).on "child_added", schedule
+    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").on "child_added", schedule
+    atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").on "child_removed", (snapshot) ->
+      schedule
   #rainBucket (job type) removed (deleted)
   atmosphere.core.refs().rainDropsRef.child("todo").on "child_removed", (snapshot) ->
     atmosphere.core.refs().rainDropsRef.child("todo/#{snapshot.name()}").off() #remove all listeners/callbacks
@@ -107,13 +130,15 @@ listenRainBuckets = () ->
 ###
   Determine if the specified entity exists
 ###
-isAlive = (type, id) ->
-  switch type
-    when "rainCloud"
-      if rain.
-    when "rainMaker"
-    else
-      throw new Error "EBADTYPE", "[isAlive] Invalid type #{type}."
+isAlive = (type, id) -> rain["#{type}s"].id?
+  
+###
+  The specified rainCloud is no longer online. Recover its assigned rainDrops.
+###
+recover = (rainCloudID) =>
+  for eachDrop, rainDropID of rain.rainDrops
+    if eachDrop.rainCloud is rainCloudID
+      atmosphere.core.refs().rainDropsRef.child("todo/#{rainDropID}/rainCloud").remove()
 
 ###
   Schedule new job
@@ -126,7 +151,7 @@ schedule = (rainDropSnapshot) ->
   #TODO (jonathan) Sanity check this; delete if malformed; report error
   if rainDrop.rainCloud?
     console.log "[sky]", "WREBOOT", "Detected a #{rainBucket} job in progress. Sky rebooted?"
-
+    recover rainDrop.rainCloud if not isAlive "rainCloud", rainDrop.rainCloud
     return
   console.log "[sky]", "IWIN", "Scheduling a #{rainBucket} job."
   #Move job to worker queue
