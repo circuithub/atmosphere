@@ -19,50 +19,59 @@ currentJob = {}
   -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
   --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
 ###
-exports.init = (role, url, token, jobTypes, cbDone) =>    
-  #[1.] Initialize
-  core.init role, url, token, (error) =>
-    if error?
-      cbDone error
-      return
-    #[2.] Subscribe to all jobs we can handle (listen to all queues for these jobs)
-    workerFunctions = []    
-    for jobType, jobFunction of jobTypes
-      if not jobWorkers[jobType]?        
-        workerFunctions.push bsync.apply @listen, jobType, jobFunction
-        console.log "\n\n\n=-=-=[rainCloud.init]", jobType, "\n\n\n" #xxx
-    bsync.parallel workerFunctions, (allErrors, allResults) ->
-      if allErrors?
-        cbDone allErrors
-        return      
-      #[3.] Register to submit jobs (so workers can submit jobs)
-      rainMaker.start (error) ->
-        if error?
-          cbDone error
-          return
-        monitor.boot() #log boot time
-        cbDone undefined
+exports.init = (role, url, token, rainBuckets, cbDone) =>    
 
+  #[1.] Connect  
+  connect = (next) ->
+    core.init role, url, token, (error) =>
+      if error?
+        cbDone error
+        return
+      next()
+
+      
+  #[2.] List all rainBuckets we can handle (--> listen to all queues for these jobs)
+  register = (next) ->
+    #--Register with Sky
+    core.refs().rainCloudsRef.child("#{core.rainID()}/status").set 
+      rainBuckets: Object.keys rainBuckets  
+      cpu: [0,0,0]  
+    #--Store Callback Functions
+    jobWorkers[rainBucket] = cbExecute for rainBucket, cbExecute of rainBuckets
+    next()
+
+  #[3.] Register to submit jobs (so workers can submit jobs)
+  submit = (next) ->
+    rainMaker.start (error) ->
+      if error?
+        cbDone error
+        return
+      monitor.boot() #log boot time
+      next()
+
+  #[4.] Listen for new jobs
+  listen = (next) ->
+    core.refs().rainCloudsRef.child("#{core.rainID()}/todo").on "child_added", (snapshot) ->
+      #--Log start
+      core.refs().rainDropsRef.child("#{snapshot.name()}/log").set {when: core.now(), who: core.rainID()}
+      #--Go get actual RainDrop
+      core.refs().rainDropsRef.child("#{snapshot.name()}").once "value", (snapshot) ->
+        console.log "\n\n\n=-=-=[cloud.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
+        #Execute job
+        lightning snapshot.val().job?.type, snapshot.name(), snapshot.val(), (error) ->
+          if error?
+            #Job failed to be dispatched (right now, this can't happen, or isn't detected)
+            console.log "[atmosphere]", "EDISPATCH", error      
+            return
+    next()
+
+  connect -> register -> submit -> listen -> cbDone()
+    
 
 
 ########################################
 ## API
 ########################################
-
-_callbackMQ = (theJob, ticket, errors, result) ->
-  rainDropID = theJob?.job?.id
-  if not rainDropID?
-    console.log "[atmosphere]", "ENOID", "Error. Malformed callback response attempt. No rainDropID specified.", theJob
-    return
-  rainDropResponse =
-    name: theJob.job.name
-    id: theJob.job.id
-    type: theJob.type
-    rainCloudID: core.rainID()  
-    errors: if errors? then errors else null
-    result: result
-  core.refs().rainMakersRef.child("#{currentJob[ticket.type].returnQueue}/done/#{rainDropID}").set rainDropResponse
-  console.log "\n\n\n=-=-=[_callbackMQ]", errors, result, "\n\n\n" #xxx
 
 ###
   Reports completed job on a Rain Cloud
@@ -118,37 +127,7 @@ exports.doneWith = (ticket, errors, result) =>
   core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{ticket.type}/#{ticket.id}/stop").set core.now()
   monitor.jobComplete()
 
-###
-  Subscribe to persistent incoming jobs in the queue (non-exclusively)
-  (Queue will continue to exist even if no-one is listening)
-  -- type: type of jobs to listen for (name of job queue)
-  -- cbExecute: function to execute when a job is assigned --> function (message, headers, deliveryInfo)
-  -- cbListening: callback after listening to queue has started --> function (err)  
-###
-exports.listen = (rainBucket, cbExecute, cbListening) =>
-  #--Sanity Check
-  if not core.ready() 
-    cbListening new Error "[atmosphere] ECONNECT Not connected to Firebase yet."
-    return
-  #--Register Callback
-  jobWorkers[rainBucket] = cbExecute
-  #--Register Bucket (inform scheduling engine we accept this type)
-  core.refs().rainCloudsRef.child("#{core.rainID()}/status").set 
-    rainBuckets: Object.keys jobWorkers  
-    cpu: [0,0,0]
-  #--Listen for incoming jobs
-  rainBucketRef = core.refs().rainCloudsRef.child "#{core.rainID()}/todo/#{rainBucket}"
-  rainBucketRef.startAt().limit(1).on "child_added", (snapshot) ->
-    console.log "\n\n\n=-=-=[rain.cloud.listen]1", snapshot.name(), "\n\n\n" #xxx
-    #Go get actual RainDrop
-    core.refs().rainDropsRef.child("todo/#{rainBucket}/#{snapshot.name()}").once "value", (snapshot) ->
-      console.log "\n\n\n=-=-=[cloud.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
-      #Execute job
-      lightning rainBucket, snapshot.name(), snapshot.val(), (error) ->
-        if error?
-          #TODO (jonathan) Job failed to be dispatched (right now, this can't happen, or isn't detected)
-          console.log "[atmosphere]", "EDISPATCH", error      
-          return
+
 
 
 
