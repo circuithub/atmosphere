@@ -54,8 +54,10 @@ exports.init = (cbReady) =>
   #[3.] Handle task scheduling
   brokerTasks = (next) ->
     listen "rainClouds" #monitor rainClouds
-    atmosphere.core.refs().skyRef.child("todo").on "child_added", schedule
-    atmosphere.core.refs().skyRef.child("crashed").on "child_added", recover
+    atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
+      schedule snapshot.name()
+    atmosphere.core.refs().skyRef.child("crashed").on "child_added", (snapshot) ->
+      recover snapshot.name() #TODO
     next()
 
   #[4.] Monitor for dead workers
@@ -90,10 +92,9 @@ listen = (dataType) =>
 ###
   Schedule new job
 ###
-schedule = (todoSnapshot) ->
+schedule = (rainDropID) ->
   #--Collect rainDrop data
   rainDrop = undefined
-  rainDropID = todoSnapshot.name()
   rainBucket = undefined
   asignee = undefined
   
@@ -108,6 +109,15 @@ schedule = (todoSnapshot) ->
         return
       next()
 
+  chain = (next) ->
+    if rainDrop.prev?
+      #-- This job is part of a job chain
+      if rainDrop.log.release?
+        #-- This job is ready for scheduling
+        next()        
+      else
+
+        return
   plan = (next) ->
     candidates = {id:[], metric:[]}
     for rainCloudID, rainCloudData of rain.rainClouds 

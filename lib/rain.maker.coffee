@@ -86,10 +86,10 @@ exports.submit = (jobChain, cbJobDone) ->
       if jobChain.length > 1 and i < jobChain.length-1
         rainDrop.next = jobChain[i+1].id
       if eachJob.callback?        
-        rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone}    
-        core.refs().rainDropsRef[jobChain[0].id].log.on "child_added", (snapshot) ->
+        rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
+        core.refs().rainDropsRef[eachJob.id].log.on "child_added", (snapshot) ->
           if snapshot.name() is "stop"
-            core.refs().rainDropsRef[jobChain[0].id].once "value", (snapshot) ->
+            core.refs().rainDropsRef[eachJob.id].once "value", (snapshot) ->
               mailman snapshot.name(), snapshot.val()
       core.refs().rainDropsRef[jobChain[0].id].update rainDrop
       core.refs().skyRef.child("todo/#{jobChain[0].id}").set true

@@ -101,7 +101,12 @@ exports.doneWith = (ticket, errors, result) =>
     rainDrop = snapshot.val()
     next()
 
-  #Console
+  #Write to rainDrop
+  write = (next) ->
+    #(1) Update log
+    rainDrop.log.stop = {when: core.now(), who: core.rainID()}
+    #(2) Errors and Result data from callback
+    
   numJobsNext = if theJob.next?.chain? then theJob.next.chain.length else 0
   console.log "[atmosphere]", "IDONEWITH", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
   #No more jobs in the chain
