@@ -9,7 +9,9 @@ Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://
 ----------
 # STATUS: UNSTABLE
 
-This project is currently undergoing a major upgrade in advance of its 1.0 release. You are advised against using this queueing system until relase day. 
+This project is currently undergoing a major upgrade in advance of its 1.0 release. You are advised against using this queueing system until relase day.
+
+update (2013.07.13): Expected release date is 2013.07.15. Stay tuned...
 
 -----------
 

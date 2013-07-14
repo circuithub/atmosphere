@@ -80,17 +80,27 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
 ###
 exports.doneWith = (ticket, errors, result) =>
   console.log "\n\n\n=-=-=[doneWith](currentJob)", Object.keys(currentJob), "\n\n\n" #xxx
+  rainDrop = undefined
+  rainDropID = ticket.id
+
   #Sanity checking
-  if not core.ready() 
-    #TODO: HANDLE THIS BETTER
-    console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe} yet!" 
-    return
-  if not currentJob[ticket.type]?
-    #TODO: HANDLE THIS BETTER
-    console.log "[atmosphere]", "ENOTICKET", "Ticket for #{ticket.type} has no current job pending!", Object.keys currentJob
-    return
+  sanity = (next) ->
+    if not core.ready() 
+      #TODO: HANDLE THIS BETTER
+      console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe} yet!" 
+      return
+    if not currentJob[ticket.type]?
+      #TODO: HANDLE THIS BETTER
+      console.log "[atmosphere]", "ENOTICKET", "Ticket for #{ticket.type} has no current job pending!", Object.keys currentJob
+      return
+    next()
+
   #Retrieve the interal state for this job
-  theJob = currentJob[ticket.type]
+  getDrop = (next) ->
+    core.refs().rainDropsRef[rainDropID].once "value", (snapshot) ->
+    rainDrop = snapshot.val()
+    next()
+
   #Console
   numJobsNext = if theJob.next?.chain? then theJob.next.chain.length else 0
   console.log "[atmosphere]", "IDONEWITH", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
@@ -175,14 +185,7 @@ lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
     cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
     return
   #Hold this information internal to atmosphere
-  currentJob[rainBucket] = 
-    type: rainBucket
-    job: 
-      name: rainDrop.job.name
-      id: rainDropID
-    returnQueue: rainDrop.next.callbackTo
-    next: rainDrop.next
-    callback: rainDrop.next.callback
+  currentJob[rainBucket] = rainDropID
   #Release this information to the work function (dispatch job)
   ticket = 
     type: rainBucket
