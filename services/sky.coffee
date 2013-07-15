@@ -9,30 +9,43 @@ nconf      = require "nconf"
 ## CONNECT
 ########################################
 
+###
+  The URL of the server we're connected to
+###
+exports.server = () ->
+  return atmosphere.core.urlLogSafe
+
 exports.init = (cbReady) =>
+  console.log "[sky]", "IKNIT", "Initializing Sky..."
+
   weather = undefined
   nextStep = undefined
 
   #[1.] Connect to Firebase
   connect = (next) ->
+    console.log "[sky]", "IKNIT1", "connect"
     atmosphere.core.connect nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
         cbReady err
         return
+      next()
 
   #[1.] Load Task List
   loadWeather = (next) ->
+    console.log "[sky]", "IKNIT2", "loadWeather"
     nextStep = next
     atmosphere.core.refs().baseRef.child("weatherPattern").once "value", loadList
   
   #[2.] Retrieved Weather Pattern
   loadList = (snapshot) ->
+    console.log "[sky]", "IKNIT3", "loadList"
     weather = snapshot.val()
     nextStep()
   
   #[3.] Register as a Rain Maker
   rainInit = (next) ->
+    console.log "[sky]", "IKNIT4", "rainInit"
     atmosphere.rainMaker.init "sky", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
@@ -42,17 +55,19 @@ exports.init = (cbReady) =>
 
   #[4.] Load tasks / Begin monitoring
   registerTasks = (next) ->    
-    for task of disTasks
-      if disTasks[task].type is "dis"
-        if disTasks[task].period > 0
-          console.log "[init] Will EXECUTE #{task}", JSON.stringify disTasks[task]
-          #guiltySpark task, disTasks[task].data, disTasks[task].timeout, disTasks[task].period
+    console.log "[sky]", "IKNIT5", "registerTasks"
+    for task of weather
+      if weather[task].type is "dis"
+        if weather[task].period > 0
+          console.log "[init] Will EXECUTE #{task}", JSON.stringify weather[task]
+          #guiltySpark task, weather[task].data, weather[task].timeout, weather[task].period
         else
           console.log "[init] IGNORING #{task} (no period specified)"
     next()
 
   #[3.] Handle task scheduling
   brokerTasks = (next) ->
+    console.log "[sky]", "IKNIT6", "brokerTasks"
     listen "rainClouds" #monitor rainClouds
     atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
       schedule snapshot.name()
@@ -62,6 +77,7 @@ exports.init = (cbReady) =>
 
   #[4.] Monitor for dead workers
   recoverFailures = (next) ->
+    console.log "[sky]", "IKNIT7", "recoverFailures"
     #TODO    
     next()
 
@@ -77,11 +93,11 @@ exports.init = (cbReady) =>
   Attach (and maintain) current state of specified atmosphere data type
   -- Keeps data.dataType up to date
 ###
-rain = undefined
+rain = {}
 listen = (dataType) =>
   atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
+    console.log "\n\n\n=-=-=[sky]", "listen", snapshot.val(), "\n\n\n" #xxx
     rain[dataType] = snapshot.val()
-    console.log "=-=-=[sky.listen]", atmosphere.core.refs()["#{dataType}Ref"].toString(), snapshot.val() #xxx
  
 
 
@@ -94,18 +110,22 @@ listen = (dataType) =>
   -- Called when entry added to /sky/todo
 ###
 schedule = (rainDropID) ->
+  console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}" 
+
   #--Collect rainDrop data
   rainDrop = undefined
   rainBucket = undefined
   asignee = undefined
   
   getDrop = (next) ->
-    atmosphere.core.refs().rainDrops.child(rainDropID).once "value", (rainDropSnapshot) ->
+    console.log "[sky]", "ISCHEDULE1", "getDrop"
+    atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
       rainDrop = rainDropSnapshot.val()
       rainBucket = rainDrop.job.type
       next()
   
   plan = (next) ->
+    console.log "[sky]", "ISCHEDULE2", "plan"
     candidates = {id:[], metric:[]}
     for rainCloudID, rainCloudData of rain.rainClouds 
       if rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
@@ -113,12 +133,15 @@ schedule = (rainDropID) ->
           #-- This worker is available to take the job
           candidates.id.push rainCloudID
           candidates.metric.push Number rainCloudData.status.cpu?[0]
-    return if candidates.id.length is 0 #no available rainClouds (workers)
+    if candidates.id.length is 0 #no available rainClouds (workers)
+      next()
+      return
     mostIdle = _.min candidates.metric  
     asignee = candidates.id[_.indexOf candidates.metric, mostIdle]
     next()
 
   assign = (next) ->
+    console.log "[sky]", "ISCHEDULE3", "assign"
     if not asignee?
       #No rainCloud available to do the work -- put the job back on the queue
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
