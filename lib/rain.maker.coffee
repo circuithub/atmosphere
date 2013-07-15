@@ -87,6 +87,7 @@ exports.submit = (jobChain, cbJobDone) ->
         rainDrop.next = jobChain[i+1].id
       if eachJob.callback?        
         rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
+        #--Listend for job completion callback
         core.refs().rainDropsRef[eachJob.id].log.on "child_added", (snapshot) ->
           if snapshot.name() is "stop"
             core.refs().rainDropsRef[eachJob.id].once "value", (snapshot) ->

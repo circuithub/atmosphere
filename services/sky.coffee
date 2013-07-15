@@ -90,7 +90,8 @@ listen = (dataType) =>
 ########################################
   
 ###
-  Schedule new job
+  Schedule the specifed rainDrop
+  -- Called when entry added to /sky/todo
 ###
 schedule = (rainDropID) ->
   #--Collect rainDrop data
@@ -102,22 +103,8 @@ schedule = (rainDropID) ->
     atmosphere.core.refs().rainDrops.child(rainDropID).once "value", (rainDropSnapshot) ->
       rainDrop = rainDropSnapshot.val()
       rainBucket = rainDrop.job.type
-      #--Is this rainDrop already assigned to a rainCloud?
-      if rainDrop.log.assign? and rain.rainClouds[rainDrop.log.assign.what]?
-        #-- Exact job already assigned. Do nothing. Recovery occurred.
-        console.log "[sky]", "WREBOOT", "#{rainBucket}/#{rainDropID} is already assigned and in progress. Sky rebooted?"
-        return
       next()
-
-  chain = (next) ->
-    if rainDrop.prev?
-      #-- This job is part of a job chain
-      if rainDrop.log.release?
-        #-- This job is ready for scheduling
-        next()        
-      else
-
-        return
+  
   plan = (next) ->
     candidates = {id:[], metric:[]}
     for rainCloudID, rainCloudData of rain.rainClouds 
@@ -140,7 +127,7 @@ schedule = (rainDropID) ->
     #[1.] Assigne the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropSnapshot.name()}").update rainDropSnapshot.val()
     #[2.] Mark the rainDrop as assigned
-    atmosphere.core.refs().rainDropsRef.child("#{rainDropID}/log/assign").set {when: atmosphere.core.now(), what: asignee, who: atmosphere.core.rainID()}
+    core.log rainDropID, "assign", asignee
 
   getDrop -> plan -> assign()
 

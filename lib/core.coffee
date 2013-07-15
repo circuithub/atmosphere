@@ -67,12 +67,10 @@ exports.setRole = (role) ->
   _roleID = _roleID + "-" + _rainID
   return _roleID
 
-###
-  Instruct Firebase to insert the server's timestamp
-  -- Use as a value into .set, .update Firebase commands
-###
-exports.now = () ->
-  return Firebase.ServerValue.TIMESTAMP 
+exports.makeID = (queueName, jobName) ->
+  candidate = "#{_s.dasherize queueName}_#{jobName}_#{uuid.v4()}"
+  candidate = candidate.toLowerCase()
+  return candidate
 
 ########################################
 ## CONNECT
@@ -176,7 +174,24 @@ exports.submit = types.fn (-> [
   (type, payload, headers) => 
     return exports.publish type, payload, headers
 
-exports.makeID = (queueName, jobName) ->
-  candidate = "#{_s.dasherize queueName}_#{jobName}_#{uuid.v4()}"
-  candidate = candidate.toLowerCase()
-  return candidate
+
+
+########################################
+## LOG
+########################################
+
+###
+  Instruct Firebase to insert the server's timestamp
+  -- Use as a value into .set, .update Firebase commands
+###
+exports.now = () ->
+  return Firebase.ServerValue.TIMESTAMP 
+
+###
+  Generate log format object
+###
+exports.log = (where) =>
+  when: @now()
+  who: @rainID()    
+  where: where
+

@@ -1,3 +1,5 @@
+core = require "./core"
+
 perfMon =
   complete: 0
   running: 0
@@ -26,3 +28,8 @@ exports.uptime = () ->
 exports.idletime = () ->
   return new Date().getTime() - perfMon.idleAt #milliseconds since last job completed
 
+###
+  Write to rainDrop's event log
+###
+exports.log = (rainDropID, event, where) =>
+  core.refs().rainDropsRef.child("#{rainDropID}/log/#{event}").set core.log where
