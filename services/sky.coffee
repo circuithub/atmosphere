@@ -73,7 +73,7 @@ exports.init = (cbReady) =>
     atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
       schedule snapshot.name()
     atmosphere.core.refs().skyRef.child("recover").on "child_added", (snapshot) ->
-      recover snapshot.name() #TODO
+      recover snapshot.name(), snapshot.val()
     next()
 
   #[6.] Monitor for recovery scenarios (dead workers, rescheduling, etc)
@@ -113,6 +113,32 @@ listen = (dataType) =>
 reschedule = () ->
   if rain.sky?.todo?
     schedule rainDropID for rainDropID, scheduled of rain.sky.todo when not scheduled
+
+###
+  Recover a failed rainCloud
+  -- rainCloudID
+  -- disconnectedAt - UNIX epoch time, milliseconds
+###
+recover = (rainCloudID, disconnectedAt) ->
+  rainCloud = undefined
+  getCloud = (next) ->
+    atmosphere.core.refs().rainCloudsRef.child("#{rainCloudID}").once "value", (snapshot) ->
+      rainCloud = snapshot.val()
+      if rainCloud.todo?
+        for eachJob of rainCloud.todo
+          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/assign").remove()
+          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/start").remove()
+          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/stop").remove()
+          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push core.log rainCloudID
+          atmosphere.core.refs().skyRef.child("todo/#{eachJob}").set false
+      next()
+  record = (next) ->
+    #TODO
+    next()
+  cleanup = (next) ->
+    atmosphere.core.refs().rainCloudsRef.child(rainCloudID).remove()
+    atmosphere.core.refs().skyRef.child("recover/#{rainCloudID}").remove()
+  getCloud -> record -> cleanup()
 
 
 ########################################
