@@ -21,7 +21,6 @@ exports.init = (role, url, token, cbDone) =>
       cbDone err
       return    
     @start () ->
-      monitor.boot()
       cbDone undefined
 
 ###
