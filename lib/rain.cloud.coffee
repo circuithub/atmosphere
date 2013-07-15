@@ -107,7 +107,7 @@ exports.doneWith = (ticket, errors, response) =>
       #-- jobChain, write results forward
       if errors?
         #-- errors occurred, report forward through all remaining jobs
-        cascadeError = rainDropID, errors, () ->
+        cascadeError rainDropID, errors, () ->
         return
       #-- No errors occurred, report forward
       core.refs().rainDropsRef.child("#{rainDrop.next}/data/previous/#{rainDrop.job.type}").set response, () ->
