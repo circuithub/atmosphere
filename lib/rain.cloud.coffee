@@ -70,7 +70,62 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
 
 
 ########################################
-## API
+## (1) EXECUTE INCOMING JOBS
+########################################
+
+###
+  Receives work to do messages on cloud and dispatches
+  Messages are dispatched to the callback function this way:
+    function(ticket, data) ->
+###
+lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
+  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, rainDrop, Object.keys(currentJob)
+  if currentJob[rainBucket]?
+    #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
+    cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
+    return
+  #Hold this information internal to atmosphere
+  currentJob[rainBucket] = rainDropID
+  #Release this information to the work function (dispatch job)
+  ticket = 
+    type: rainBucket
+    name: rainDrop.job.name
+    id: rainDropID
+  jobWorkers[rainBucket] ticket, rainDrop.data
+  cbDispatched()
+
+
+
+########################################
+## (2) WRAP EXECUTE FUNCTIONS (ROUTERS)
+########################################
+
+rpcWorkers = {} #When using the simple router, stores the actual worker functions the router should invoke
+
+###
+  Simple direct jobs router. Fastest/easiest way to get RPC running in your app.
+  --Takes in job list and wraps your function in (ticket, data) -> doneWith(..) behavior
+###
+basic = (taskName, functionName) ->
+  rpcWorkers[taskName] = functionName #save work function
+  return _basicRouter
+
+_basicRouter = (ticket, data) ->
+  console.log "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
+  ticket.data = data if data? #add job data to ticket
+  #Execute (invoke work function)
+  rpcWorkers[ticket.type] ticket, (errors, results) ->
+    # Release lower stack frames
+    process.nextTick () ->
+      exports.doneWith ticket, errors, results
+
+exports.routers =
+  basic: basic
+
+
+
+########################################
+## (3) PROCESS COMPLETED JOBS
 ########################################
 
 ###
@@ -155,55 +210,7 @@ cascadeError = (rainDropID, errors, cbReported) ->
 
 
 
-########################################
-## STOCK ROUTERS
-########################################
-
-rpcWorkers = {} #When using the simple router, stores the actual worker functions the router should invoke
-
-###
-  Simple direct jobs router. Fastest/easiest way to get RPC running in your app.
-  --Takes in job list and wraps your function in (ticket, data) -> doneWith(..) behavior
-###
-basic = (taskName, functionName) ->
-  rpcWorkers[taskName] = functionName #save work function
-  return _basicRouter
-
-_basicRouter = (ticket, data) ->
-  console.log "[JOB] #{ticket.type}-#{ticket.name}-#{ticket.step}"
-  ticket.data = data if data? #add job data to ticket
-  #Execute (invoke work function)
-  rpcWorkers[ticket.type] ticket, (errors, results) ->
-    # Release lower stack frames
-    process.nextTick () ->
-      exports.doneWith ticket, errors, results
-
-exports.routers =
-  basic: basic
 
 
 
-########################################
-## INTERNAL OPERATIONS
-########################################
 
-###
-  Receives work to do messages on cloud and dispatches
-  Messages are dispatched to the callback function this way:
-    function(ticket, data) ->
-###
-lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
-  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, rainDrop, Object.keys(currentJob)
-  if currentJob[rainBucket]?
-    #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
-    return
-  #Hold this information internal to atmosphere
-  currentJob[rainBucket] = rainDropID
-  #Release this information to the work function (dispatch job)
-  ticket = 
-    type: rainBucket
-    name: rainDrop.job.name
-    id: rainDropID
-  jobWorkers[rainBucket] ticket, rainDrop.data
-  cbDispatched()
