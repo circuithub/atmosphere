@@ -25,19 +25,19 @@ workerDoOrCAD = (ticket, data) ->
 worker1 = (ticket, data) ->
   console.log "[W] FIRST", ticket, data 
   count()
-  data2 = {previous: data, first: "results from worker 1"}
+  data2 = {input: data, first: "results from worker 1"}
   atmosphere.rainCloud.doneWith ticket, undefined, data2
 
 worker2 = (ticket, data) ->
   console.log "[W] SECOND", ticket, data 
   count()
-  data2 = {previous: data, second: "results from worker 2"}
+  data2 = {input: data, second: "results from worker 2"}
   atmosphere.rainCloud.doneWith ticket, undefined, data2
 
 worker3 = (ticket, data) ->
   console.log "[W] THIRD", ticket, data 
   count()
-  data2 = {previous: data, third: "results from worker 3"}
+  data2 = {input: data, third: "results from worker 3"}
   atmosphere.rainCloud.doneWith ticket, undefined, data2
 
 workerJobJob = (ticket, data) ->

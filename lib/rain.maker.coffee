@@ -113,6 +113,7 @@ exports.submit = (jobChain, cbJobDone) ->
   Assigns incoming messages to rainDrops awaiting a response
 ###
 mailman = (rainDropID, rainDropVal) ->
+  console.log "\n\n\n=-=-=[maker.mailman]", "Callback on job #{rainDropID}", rainDropVal, "\n\n\n" #xxx
   if not rainDrops["#{rainDropID}"]?
     console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainBucket} job: #{rainDropID}."
     return    

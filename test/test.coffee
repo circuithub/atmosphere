@@ -32,7 +32,7 @@ describe "atmosphere", ->
         console.log "\n\n\n=-=-=[straight through]", error, data, "\n\n\n" #xxx
         h.shouldNotHaveErrors error
         should.exist data
-        # done()
+        done()
 
   describe "#basic RPC use case", ->  
   
@@ -177,3 +177,6 @@ describe "atmosphere", ->
   # #       shouldNotHaveErrors err
   # #       console.log "done!", err, report
   # #       done()
+
+  describe "#do not terminate to allow tests to run to completion", ->
+    it "Control-C to exit", (done) ->

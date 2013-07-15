@@ -65,7 +65,7 @@ exports.init = (cbReady) =>
           console.log "[init] IGNORING #{task} (no period specified)"
     next()
 
-  #[3.] Handle task scheduling
+  #[5.] Handle task scheduling
   brokerTasks = (next) ->
     console.log "[sky]", "IKNIT6", "brokerTasks"
     listen "rainClouds" #monitor rainClouds
@@ -76,10 +76,13 @@ exports.init = (cbReady) =>
       recover snapshot.name() #TODO
     next()
 
-  #[4.] Monitor for dead workers
+  #[6.] Monitor for recovery scenarios (dead workers, rescheduling, etc)
   recoverFailures = (next) ->
     console.log "[sky]", "IKNIT7", "recoverFailures"
-    atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule #try to schedule all unscheduled jobs when new worker comes online
+    #Retry scheduling when a new worker comes online
+    atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule 
+    #Retry scheduling after a worker finishes a job
+    atmosphere.core.refs().skyRef.child("done").on "child_added", reschedule
     #TODO 
     next()
 
@@ -143,7 +146,7 @@ schedule = (rainDropID) ->
         if not workingOn rainCloudID, rainBucket 
           #-- This worker is available to take the job
           candidates.id.push rainCloudID
-          candidates.metric.push Number rainCloudData.status.cpu?[0]
+          candidates.metric.push Number rainCloudData.status.load?[0]
     if candidates.id.length is 0 #no available rainClouds (workers)
       next()
       return

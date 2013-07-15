@@ -35,7 +35,10 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
     #--Register with Sky
     core.refs().rainCloudsRef.child("#{core.rainID()}/status").set 
       rainBuckets: Object.keys rainBuckets  
-      cpu: [0,0,0]  
+      load: [0,0,0]  
+      completed: 0
+    #--Begin Performance Monitoring
+    monitor.system()
     #--Store Callback Functions
     jobWorkers[rainBucket] = cbExecute for rainBucket, cbExecute of rainBuckets
     next()
@@ -180,7 +183,7 @@ exports.doneWith = (ticket, errors, response) =>
           errors: if errors? then errors else null
           response: response
       core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log("stop"), () ->
-        closeRainDrop rainDropID, ticket.type
+        closeRainDrop rainDropID, rainDrop, ticket.type
 
   sanity -> getDrop -> write()
 
@@ -188,13 +191,19 @@ exports.doneWith = (ticket, errors, response) =>
 ###
   Done with this job. Perform closing actions.
 ###
-closeRainDrop = (rainDropID, rainBucket) ->
-  delete currentJob[rainBucket] #done with current job, update state  
+closeRainDrop = (rainDropID, rainDrop) ->
+  if rainDrop?.job?.type?
+    delete currentJob[rainDrop.job.type] #done with current job, update state  
+  else
+    console.log "[atmosphere]", "ENOBUCKET", "rainDrop is missing its rainBucket entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
   monitor.jobComplete()
   #TODO make atomic
   core.refs().skyRef.child("done/#{rainDropID}").set false
   core.refs().skyRef.child("todo/#{rainDropID}").remove() 
-  core.refs().rainCloudsRef.child("todo/#{rainDropID}").remove()  
+  if rainDrop?.log?.assign?.where?
+    core.refs().rainCloudsRef.child("#{rainDrop.log.assign.where}/todo/#{rainDropID}").remove()  
+  else
+    console.log "[atmosphere]", "ENOASSIGN", "rainDrop is missing its assignment log entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
 
 ###
   Report error forward to all remaining jobs in the chain
