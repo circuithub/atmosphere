@@ -140,6 +140,7 @@ exports.doneWith = (ticket, errors, response) =>
 
   #Sanity checking
   sanity = (next) ->
+    console.log "[atmosphere]", "IDONE1", "sanity"
     if not core.ready() 
       #TODO: HANDLE THIS BETTER
       console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe} yet!" 
@@ -152,12 +153,14 @@ exports.doneWith = (ticket, errors, response) =>
 
   #Retrieve the interal state for this job
   getDrop = (next) ->
-    core.refs().rainDropsRef[rainDropID].once "value", (snapshot) ->
-    rainDrop = snapshot.val()
-    next()
+    console.log "[atmosphere]", "IDONE2", "getDrop"
+    core.refs().rainDropsRef.child(rainDropID).once "value", (snapshot) ->
+      rainDrop = snapshot.val()
+      next()
 
   #Write to rainDrop
   write = (next) ->
+    console.log "[atmosphere]", "IDONE3", "write"
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
@@ -171,34 +174,38 @@ exports.doneWith = (ticket, errors, response) =>
           closeRainDrop rainDropID
           return
     else
+      #TODO make atomic
       core.refs().rainDropsRef.child(rainDropID).update
         result:
-          errors: errors
+          errors: if errors? then errors else null
           response: response
-        log:
-          stop: core.log "stop"
-      , () ->
-        closeRainDrop rainDropID
+      core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log("stop"), () ->
+        closeRainDrop rainDropID, ticket.type
+
+  sanity -> getDrop -> write()
+
 
 ###
   Done with this job. Perform closing actions.
 ###
-closeRainDrop = (rainDropID) ->
-  delete currentJob[ticket.type] #done with current job, update state  
+closeRainDrop = (rainDropID, rainBucket) ->
+  delete currentJob[rainBucket] #done with current job, update state  
   monitor.jobComplete()
+  #TODO make atomic
+  core.refs().skyRef.child("done/#{rainDropID}").set false
   core.refs().skyRef.child("todo/#{rainDropID}").remove() 
+  core.refs().rainCloudsRef.child("todo/#{rainDropID}").remove()  
 
 ###
   Report error forward to all remaining jobs in the chain
 ###
 cascadeError = (rainDropID, errors, cbReported) ->
   core.refs().rainDropsRef.child(rainDropID).once "value", (snapshot) ->
-    #--Write error
+    #--Write error (TODO make atomic)
     core.refs().rainDropsRef.child(rainDropID).update
       result:
         errors: errors
-      log:
-        stop: core.log "stop"
+    core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log "stop"
     #--Next
     rainDrop = snapshot.val()
     if not rainDrop.next?

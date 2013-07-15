@@ -56,6 +56,7 @@ exports.submit = (jobChain, cbJobDone) ->
     error = console.log "[atmosphere]", "Not connected to #{core.urlLogSafe} yet!" 
     cbJobDone error if cbJobDone?
     return
+
   #--Format job chain
   if types.type(jobChain) isnt "array"
     jobChain = [jobChain]
@@ -69,6 +70,7 @@ exports.submit = (jobChain, cbJobDone) ->
     else
       foundCB = true if eachJob.callback? and eachJob.callback  
   jobChain[jobChain.length-1].callback = true if not foundCB and cbJobDone? #callback after last job if unspecified  
+  
   #--Link jobs
   for eachJob, i in jobChain
     rainDrop = 
@@ -83,10 +85,13 @@ exports.submit = (jobChain, cbJobDone) ->
       rainDrop.prev = jobChain[i-1].id
     if jobChain.length > 1 and i < jobChain.length-1
       rainDrop.next = jobChain[i+1].id
+
+    #--Callback processing
     if eachJob.callback?        
       rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
       #--Listend for job completion callback
       core.refs().rainDropsRef.child("#{eachJob.id}/log").on "child_added", (snapshot) ->
+        console.log "\n\n\n=-=-=[maker.submit.cb]", snapshot.name(), "\n\n\n" #xxx
         if snapshot.name() is "stop"
           core.refs().rainDropsRef.child(eachJob.id).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
@@ -94,6 +99,7 @@ exports.submit = (jobChain, cbJobDone) ->
     core.refs().rainDropsRef.child(jobChain[0].id).set rainDrop
     #--Submit /sky
     core.refs().skyRef.child("todo/#{jobChain[0].id}").set false
+  
   #--Inform Foreman Job Expected
   jobChain[0].timeout ?= 60 #default to 1 min timeout, if unspecified
   #TODO rainDrops[rainDropID]...
