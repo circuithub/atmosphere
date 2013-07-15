@@ -195,7 +195,7 @@ schedule = (rainDropID) ->
       #No rainCloud available to do the work -- put the job back on the queue
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
       return
-    console.log "[sky]", "IBOSS", "Scheduling a #{rainBucket} job."
+    console.log "[sky]", "IBOSS", "Scheduling #{asignee} <-- #{rainDropID}"
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
     #[2.] /sky: Mark the rainDrop as assigned
