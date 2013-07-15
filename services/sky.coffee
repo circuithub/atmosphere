@@ -69,6 +69,7 @@ exports.init = (cbReady) =>
   brokerTasks = (next) ->
     console.log "[sky]", "IKNIT6", "brokerTasks"
     listen "rainClouds" #monitor rainClouds
+    listen "sky" #monitor sky
     atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
       schedule snapshot.name()
     atmosphere.core.refs().skyRef.child("crashed").on "child_added", (snapshot) ->
@@ -78,7 +79,8 @@ exports.init = (cbReady) =>
   #[4.] Monitor for dead workers
   recoverFailures = (next) ->
     console.log "[sky]", "IKNIT7", "recoverFailures"
-    #TODO    
+    atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule #try to schedule all unscheduled jobs when new worker comes online
+    #TODO 
     next()
 
   connect -> loadWeather -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
@@ -99,6 +101,15 @@ listen = (dataType) =>
     console.log "\n\n\n=-=-=[sky]", "listen", snapshot.val(), "\n\n\n" #xxx
     rain[dataType] = snapshot.val()
  
+
+
+########################################
+## RECOVERY
+########################################
+
+reschedule = () ->
+  if rain.sky?.todo?
+    schedule rainDropID for rainDropID, scheduled of rain.sky.todo when not scheduled
 
 
 ########################################
@@ -147,10 +158,12 @@ schedule = (rainDropID) ->
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
       return
     console.log "[sky]", "IBOSS", "Scheduling a #{rainBucket} job."
-    #[1.] Assigne the rainDrop to the indicated rainCloud
-    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropSnapshot.name()}").update rainDropSnapshot.val()
-    #[2.] Mark the rainDrop as assigned
-    core.log rainDropID, "assign", asignee
+    #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
+    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").update rainDrop
+    #[2.] /sky: Mark the rainDrop as assigned
+    atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").set true
+    #[3.] /rainDrop: Log the assignment
+    atmosphere.core.log rainDropID, "assign", asignee
 
   getDrop -> plan -> assign()
 

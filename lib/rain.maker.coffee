@@ -90,7 +90,7 @@ exports.submit = (jobChain, cbJobDone) ->
           core.refs().rainDropsRef.child(eachJob.id).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
     core.refs().rainDropsRef.child(jobChain[0].id).update rainDrop
-    core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
+    core.refs().skyRef.child("todo/#{jobChain[0].id}").set false
   #--Inform Foreman Job Expected
   jobChain[0].timeout ?= 60 #default to 1 min timeout, if unspecified
   #TODO rainDrops[rainDropID]...
