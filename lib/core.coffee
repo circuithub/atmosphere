@@ -193,5 +193,5 @@ exports.now = () ->
 exports.log = (where) =>
   when: @now()
   who: @rainID()    
-  where: where
+  where: if where? then where else null
 

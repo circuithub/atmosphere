@@ -32,4 +32,5 @@ exports.idletime = () ->
   Write to rainDrop's event log
 ###
 exports.log = (rainDropID, event, where) =>
-  core.refs().rainDropsRef.child("#{rainDropID}/log/#{event}").set core.log where
+  if event? and event.length > 0
+    core.refs().rainDropsRef.child("#{rainDropID}/log/#{event}").set core.log where

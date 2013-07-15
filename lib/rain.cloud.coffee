@@ -53,7 +53,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
   listen = (next) ->
     core.refs().rainCloudsRef.child("#{core.rainID()}/todo").on "child_added", (snapshot) ->
       #--Log start
-      core.refs().rainDropsRef.child("#{snapshot.name()}/log").set {when: core.now(), who: core.rainID()}
+      monitor.log snapshot.name(), "start"
       #--Go get actual RainDrop
       core.refs().rainDropsRef.child("#{snapshot.name()}").once "value", (snapshot) ->
         console.log "\n\n\n=-=-=[cloud.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
@@ -206,6 +206,4 @@ lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
     name: rainDrop.job.name
     id: rainDropID
   jobWorkers[rainBucket] ticket, rainDrop.data
-  #Log
-  monitor.log rainDropID, "start"
   cbDispatched()

@@ -77,7 +77,8 @@ exports.submit = (jobChain, cbJobDone) ->
         type: eachJob.type
       data: eachJob.data
       log: 
-        submit: {when: core.now(), who: core.rainID()}
+        submit: core.log()
+    console.log "\n\n\n=-=-=[maker.submit]", rainDrop, "\n\n\n" #xxx
     if jobChain.length > 1 and i > 0
       rainDrop.prev = jobChain[i-1].id
     if jobChain.length > 1 and i < jobChain.length-1
@@ -89,7 +90,9 @@ exports.submit = (jobChain, cbJobDone) ->
         if snapshot.name() is "stop"
           core.refs().rainDropsRef.child(eachJob.id).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
-    core.refs().rainDropsRef.child(jobChain[0].id).update rainDrop
+    #--Submit /rainDrops
+    core.refs().rainDropsRef.child(jobChain[0].id).set rainDrop
+    #--Submit /sky
     core.refs().skyRef.child("todo/#{jobChain[0].id}").set false
   #--Inform Foreman Job Expected
   jobChain[0].timeout ?= 60 #default to 1 min timeout, if unspecified

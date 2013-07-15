@@ -159,11 +159,11 @@ schedule = (rainDropID) ->
       return
     console.log "[sky]", "IBOSS", "Scheduling a #{rainBucket} job."
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
-    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").update rainDrop
+    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set true
     #[2.] /sky: Mark the rainDrop as assigned
     atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").set true
     #[3.] /rainDrop: Log the assignment
-    atmosphere.core.log rainDropID, "assign", asignee
+    atmosphere.monitor.log rainDropID, "assign", asignee
 
   getDrop -> plan -> assign()
 
