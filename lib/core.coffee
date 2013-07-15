@@ -32,7 +32,9 @@ exports.initReferences = () =>
     rainCloudsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainClouds/"
     rainGaugeRef: new Firebase "#{@firebaseServerURL}atmosphere/rainGauge/"
     skyRef: new Firebase "#{@firebaseServerURL}atmosphere/sky/"
-    baseRef: new Firebase "#{@firebaseServerURL}"
+    weatherRef: new Firebase "#{@firebaseServerURL}atmosphere/weatherPattern/"
+    connectedRef: new Firebase "#{@firebaseServerURL}/.info/connected"
+
 
 
 connectionReady = false

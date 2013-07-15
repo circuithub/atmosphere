@@ -35,7 +35,7 @@ exports.init = (cbReady) =>
   loadWeather = (next) ->
     console.log "[sky]", "IKNIT2", "loadWeather"
     nextStep = next
-    atmosphere.core.refs().baseRef.child("weatherPattern").once "value", loadList
+    atmosphere.core.refs().weatherRef.once "value", loadList
   
   #[2.] Retrieved Weather Pattern
   loadList = (snapshot) ->
@@ -72,7 +72,7 @@ exports.init = (cbReady) =>
     listen "sky" #monitor sky
     atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
       schedule snapshot.name()
-    atmosphere.core.refs().skyRef.child("crashed").on "child_added", (snapshot) ->
+    atmosphere.core.refs().skyRef.child("recover").on "child_added", (snapshot) ->
       recover snapshot.name() #TODO
     next()
 

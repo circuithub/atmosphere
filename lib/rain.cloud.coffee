@@ -27,6 +27,11 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
       if error?
         cbDone error
         return
+      core.refs().connectedRef.on "value", (snap) ->
+        if snap.val() is true #We're connected (or reconnected)
+          onlineRef = core.refs().skyRef.child("recover/#{core.rainID()}")
+          onlineRef.onDisconnect().set core.now()
+          onlineRef.remove()
       next()
 
       
