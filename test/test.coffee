@@ -45,25 +45,25 @@ describe "atmosphere", ->
     #     console.log "[D] Jobs Done", allResults      
     #     done()
 
-    # it "should process only one job of a type at a time", (done) ->
-    #   testFunctions = []
-    #   snap = undefined
-    #   atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
-    #     snap = snapshot
-    #   for i in [0...10]
-    #     #Submit Altium Conversion Job
-    #     testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
-    #   bsync.parallel testFunctions, (allErrors, allResults) ->
-    #     h.shouldNotHaveErrors allErrors                
-    #     log = () -> 
-    #       if snap.val()?
-    #         console.log "--> [#{i}]", Object.keys snap.val()
-    #       else
-    #         console.log "--> [#{i}]", snap.val()
-    #       setTimeout log, 1000
-    #     log()
-    #     console.log "[D] Job Done", allResults
-    #     #done()
+    it "should process only one job of a type at a time", (done) ->
+      testFunctions = []
+      snap = undefined
+      atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
+        snap = snapshot
+      for i in [0...10]
+        #Submit Altium Conversion Job
+        testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
+      bsync.parallel testFunctions, (allErrors, allResults) ->
+        h.shouldNotHaveErrors allErrors                
+        log = () -> 
+          if snap.val()?
+            console.log "--> [#{i}]", Object.keys snap.val()
+          else
+            console.log "--> [#{i}]", snap.val()
+          setTimeout log, 1000
+        log()
+        console.log "[D] Job Done", allResults
+        done()
 
   # describe "#complex RPC use case (job chaining)", ->
         

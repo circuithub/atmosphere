@@ -101,7 +101,7 @@ exports.init = (cbReady) =>
 rain = {}
 listen = (dataType) =>
   atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
-    console.log "\n\n\n=-=-=[sky]", "listen", snapshot.val(), "\n\n\n" #xxx
+    console.log "[listen]", snapshot.name()
     rain[dataType] = snapshot.val()
  
 
@@ -138,10 +138,19 @@ schedule = (rainDropID) ->
       rainBucket = rainDrop.job.type
       next()
   
+  getClouds = (next) ->
+    atmosphere.core.refs().rainCloudsRef.once "value", (snapshot) ->
+      rain.rainClouds = snapshot.val()
+      next()
+
   plan = (next) ->
-    console.log "[sky]", "ISCHEDULE2", "plan"
+    console.log "[sky]", "ISCHEDULE2", "plan"    
+    if not rain.rainClouds?
+      next() #No workers online so no one available for this job... =(
+      return
     candidates = {id:[], metric:[]}
     for rainCloudID, rainCloudData of rain.rainClouds 
+      console.log "[sky][plan]", rainCloudID, rainCloudData, rainCloudData?.todo
       if rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
         if not workingOn rainCloudID, rainBucket 
           #-- This worker is available to take the job
@@ -162,13 +171,13 @@ schedule = (rainDropID) ->
       return
     console.log "[sky]", "IBOSS", "Scheduling a #{rainBucket} job."
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
-    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set true
+    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
     #[2.] /sky: Mark the rainDrop as assigned
     atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").set true
     #[3.] /rainDrop: Log the assignment
     atmosphere.monitor.log rainDropID, "assign", asignee
 
-  getDrop -> plan -> assign()
+  getDrop -> getClouds -> plan -> assign()
 
 
 
@@ -177,8 +186,8 @@ schedule = (rainDropID) ->
 ###
 workingOn = (rainCloudID, rainBucket) ->
   try
-    for workingDropID of rain.rainClouds.rainCloudID.todo
-      return true if rain.rainDrops.workingDropID.job.type is rainBucket 
+    for workingDropID, workingBucket of rain.rainClouds[rainCloudID].todo
+      return true if workingBucket is rainBucket 
   catch e
     console.log "\n\n\n=-=-=[workingOn]", e, "\n\n\n" #xxx
   return false
