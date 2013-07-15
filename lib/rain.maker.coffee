@@ -20,7 +20,6 @@ exports.init = (role, url, token, cbDone) =>
     if err?
       cbDone err
       return    
-    core.refs().rainMakersRef.child("#{core.rainID()}/stats/alive").set true #TODO: unified heartbeating
     @start () ->
       monitor.boot()
       cbDone undefined
@@ -88,11 +87,11 @@ exports.submit = (jobChain, cbJobDone) ->
       if eachJob.callback?        
         rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
         #--Listend for job completion callback
-        core.refs().rainDropsRef[eachJob.id].log.on "child_added", (snapshot) ->
+        core.refs().rainDropsRef.child("#{eachJob.id}/log").on "child_added", (snapshot) ->
           if snapshot.name() is "stop"
-            core.refs().rainDropsRef[eachJob.id].once "value", (snapshot) ->
+            core.refs().rainDropsRef.child(eachJob.id).once "value", (snapshot) ->
               mailman snapshot.name(), snapshot.val()
-      core.refs().rainDropsRef[jobChain[0].id].update rainDrop
+      core.refs().rainDropsRef.child(jobChain[0].id).update rainDrop
       core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
     #[3.] Inform Foreman Job Expected
     jobChain[0].timeout ?= 60
