@@ -199,7 +199,7 @@ schedule = (rainDropID) ->
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
     #[2.] /sky: Mark the rainDrop as assigned
-    atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").set true
+    atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
     #[3.] /rainDrop: Log the assignment
     atmosphere.monitor.log rainDropID, "assign", asignee
 

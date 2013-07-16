@@ -50,7 +50,7 @@ describe "atmosphere", ->
       snap = undefined
       atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
         snap = snapshot
-      for i in [0...10]
+      for i in [0...4]
         #Submit Altium Conversion Job
         testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
       bsync.parallel testFunctions, (allErrors, allResults) ->

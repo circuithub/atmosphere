@@ -97,7 +97,7 @@ exports.submit = (jobChain, cbJobDone) ->
     #--Submit /rainDrops
     core.refs().rainDropsRef.child(jobChain[0].id).set rainDrop
     #--Submit /sky
-    core.refs().skyRef.child("todo/#{jobChain[0].id}").set false
+    core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
   
   #--Inform Foreman Job Expected
   jobChain[0].timeout ?= 60 #default to 1 min timeout, if unspecified

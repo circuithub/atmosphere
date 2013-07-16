@@ -203,8 +203,7 @@ closeRainDrop = (rainDropID, rainDrop) ->
     console.log "[atmosphere]", "ENOBUCKET", "rainDrop is missing its rainBucket entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
   monitor.jobComplete()
   #TODO make atomic
-  core.refs().skyRef.child("done/#{rainDropID}").set false
-  core.refs().skyRef.child("todo/#{rainDropID}").remove() 
+  core.refs().skyRef.child("done/#{rainDropID}").set true
   if rainDrop?.log?.assign?.where?
     core.refs().rainCloudsRef.child("#{rainDrop.log.assign.where}/todo/#{rainDropID}").remove()  
   else
