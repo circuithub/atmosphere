@@ -175,8 +175,7 @@ exports.doneWith = (ticket, errors, response) =>
         result:
           errors: if errors? then errors else null
           response: response
-      core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log("stop"), () ->
-        closeRainDrop rainDropID, rainDrop
+      closeRainDrop rainDropID, rainDrop
 
   sanity -> getDrop -> write()
 
@@ -185,13 +184,14 @@ exports.doneWith = (ticket, errors, response) =>
   Done with this job. Perform closing actions.
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
-  monitor.jobComplete()
-  #TODO make atomic
-  core.refs().skyRef.child("done/#{rainDropID}").set true
-  if rainDrop?.log?.assign?.where?
-    core.refs().rainCloudsRef.child("#{rainDrop.log.assign.where}/todo/#{rainDropID}").remove()  
-  else
-    console.log "[atmosphere]", "ENOASSIGN", "rainDrop is missing its assignment log entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
+  core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(), () ->
+    monitor.jobComplete()
+    #TODO make atomic
+    core.refs().skyRef.child("done/#{rainDropID}").set true
+    if rainDrop?.log?.assign?.where?
+      core.refs().rainCloudsRef.child("#{rainDrop.log.assign.where}/todo/#{rainDropID}").remove()  
+    else
+      console.log "[atmosphere]", "ENOASSIGN", "rainDrop is missing its assignment log entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
 
 ###
   Report error forward to all remaining jobs in the chain

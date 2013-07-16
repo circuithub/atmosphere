@@ -67,48 +67,48 @@ describe "atmosphere", ->
 
   describe "#complex RPC use case (job chaining)", ->
         
-    it "should handle a job->job->job->callback job chain", (done) ->
+    # it "should handle a job->job->job->callback job chain", (done) ->
+    #   job1 = 
+    #     type: "first" #the job type/queue name
+    #     name: "job1" #name for this job
+    #     data: {param1: "initial message"} #arbitrary serializable object
+    #     timeout: 30 #seconds
+    #   job2 = 
+    #     type: "second"        
+    #     data: {param2: "initial message"} #merged with results from job1        
+    #   job3 = 
+    #     type: "third"
+    #     data: {param3: "initial message"} #merged with results from job1
+    #   atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+    #     console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
+    #     h.shouldNotHaveErrors error
+    #     should.exist data
+    #     should.exist data[job3.type]
+    #     should.exist data.input.param3
+    #     should.exist data.input.previous[job2.type].input.param2
+    #     should.exist data.input.previous[job2.type].input.previous[job1.type].input.param1
+    #     done()
+
+    it "should handle a job->job->callback->job chain", (done) ->
       job1 = 
         type: "first" #the job type/queue name
         name: "job1" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
-        timeout: 30 #seconds
+        timeout: 10 #seconds
       job2 = 
-        type: "second"        
-        data: {param2: "initial message"} #merged with results from job1        
+        type: "second"
+        data: {param2: "initial message"} #merged with results from job1
+        callback: true
       job3 = 
         type: "third"
         data: {param3: "initial message"} #merged with results from job1
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-        console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
+        console.log "\n\n\n=-=-=[jjcj]", JSON.stringify(data), "\n\n\n" #xxx
         h.shouldNotHaveErrors error
-        should.exist data
-        should.exist data[job3.type]
-        should.exist data.input.param3
-        should.exist data.input.previous[job2.type].input.param2
-        should.exist data.input.previous[job2.type].input.previous[job1.type].input.param1
+        should.exist data        
+        should.exist data.input.param2
+        should.exist data.input.previous[job1.type].input.param1
         done()
-
-  #   it "should handle a job->job->callback->job chain", (done) ->
-  #     job1 = 
-  #       type: "first" #the job type/queue name
-  #       name: "job1" #name for this job
-  #       data: {param1: "initial message"} #arbitrary serializable object
-  #       timeout: 5 #seconds
-  #     job2 = 
-  #       type: "second"
-  #       data: {param2: "initial message"} #merged with results from job1
-  #       callback: true
-  #     job3 = 
-  #       type: "third"
-  #       data: {param3: "initial message"} #merged with results from job1
-  #     atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-  #       console.log "\n\n\n=-=-=[jjcj]", JSON.stringify(data), "\n\n\n" #xxx
-  #       h.shouldNotHaveErrors error
-  #       should.exist data        
-  #       should.exist data.previous.param2
-  #       should.exist data.previous[job1.type].previous.param1
-  #       done()
 
   #   it "should handle a job->callback->job->job chain", (done) ->
   #     job1 = 

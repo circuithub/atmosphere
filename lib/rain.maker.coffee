@@ -85,13 +85,16 @@ exports.submit = (jobChain, cbJobDone) ->
       rainDrop.next = jobChain[i+1].id
 
     #--Callback processing
-    if eachJob.callback is true    
-      rainDrops[jobChain[i].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
-      #--Listend for job completion callback
-      core.refs().rainDropsRef.child("#{eachJob.id}/log").on "child_added", (snapshot) ->
+    if eachJob.callback is true  
+      #--Inform Foreman Job Expected (default timeout to 1 min if unspecified)
+      rainDrops[jobChain[i].id] = {type: jobChain[i].type, name: jobChain[0].name, timeout: jobChain[0].timeout ? 60, callback: cbJobDone}
+      #--Listen for job completion callback
+      console.log "\n\n\n=-=-=[maker.listenForCB]", eachJob, "\n\n\n" #xxx
+      cbOnRainDropID = eachJob.id #save reference (async execution will corrupt eachJob otherwise)
+      core.refs().rainDropsRef.child("#{cbOnRainDropID}/log").on "child_added", (snapshot) ->
         console.log "\n\n\n=-=-=[maker.submit.cb]", snapshot.name(), "\n\n\n" #xxx
         if snapshot.name() is "stop"
-          core.refs().rainDropsRef.child(eachJob.id).once "value", (snapshot) ->
+          core.refs().rainDropsRef.child(cbOnRainDropID).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
     
     #--Submit /rainDrops
@@ -101,10 +104,7 @@ exports.submit = (jobChain, cbJobDone) ->
   #--Mark chain ready for execution
   core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
   
-  #--Inform Foreman Job Expected
-  jobChain[0].timeout ?= 60 #default to 1 min timeout, if unspecified
-  #TODO rainDrops[rainDropID]...
-    
+
     
 ########################################
 ## INTERNAL OPERATIONS
@@ -120,7 +120,7 @@ mailman = (rainDropID, rainDropVal) ->
     return    
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
   delete rainDrops["#{rainDropID}"] #mark job as completed
-  process.nextTick () -> #release stack frames/memory
+  process.setImmediate () -> #release stack frames/memory
     callback rainDropVal.result.errors, rainDropVal.result.response
 
 ###
@@ -128,6 +128,7 @@ mailman = (rainDropID, rainDropVal) ->
 ###
 foreman = () ->
   for jobID, jobMeta of rainDrops   
+    console.log "\n\n\n=-=-=[foreman]", jobID, jobMeta.timeout, "\n\n\n" #xxx
     jobMeta.timeout = jobMeta.timeout - 1
     if jobMeta.timeout <= 0
       #cache -- necessary to prevent loss of function pointer
