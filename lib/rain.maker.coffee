@@ -120,7 +120,7 @@ mailman = (rainDropID, rainDropVal) ->
     return    
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
   delete rainDrops["#{rainDropID}"] #mark job as completed
-  process.setImmediate () -> #release stack frames/memory
+  setImmediate () -> #release stack frames/memory
     callback rainDropVal.result.errors, rainDropVal.result.response
 
 ###
