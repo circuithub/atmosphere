@@ -187,7 +187,7 @@ schedule = (rainDropID) ->
     candidates = {id:[], metric:[]}
     for rainCloudID, rainCloudData of rain.rainClouds 
       console.log "[sky][plan]", rainCloudID, rainCloudData, rainCloudData?.todo
-      if rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
+      if not rainCloudData.status.rainBuckets? or rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
         if not workingOn rainCloudID, rainBucket 
           #-- This worker is available to take the job
           candidates.id.push rainCloudID
