@@ -101,7 +101,7 @@ exports.init = (cbReady) =>
 rain = {}
 listen = (dataType) =>
   atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
-    console.log "[listen]", snapshot.name()
+    #console.log "[listen]", snapshot.name()
     rain[dataType] = snapshot.val()
  
 
@@ -111,8 +111,9 @@ listen = (dataType) =>
 ########################################
 
 reschedule = () ->
+  console.log "[sky]", "ITRYAGAIN", "Rescheduling..."
   if rain.sky?.todo?
-    schedule rainDropID for rainDropID, scheduled of rain.sky.todo when not scheduled
+    schedule rainDropID for rainDropID of rain.sky.todo
 
 ###
   Recover a failed rainCloud
@@ -149,14 +150,23 @@ recover = (rainCloudID, disconnectedAt) ->
   Schedule the specifed rainDrop
   -- Called when entry added to /sky/todo
 ###
+schedulingNow = false
+toSchedule = []
 schedule = (rainDropID) ->
-  console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}" 
+  console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}", schedulingNow
 
   #--Collect rainDrop data
   rainDrop = undefined
   rainBucket = undefined
   asignee = undefined
   
+  arbitrate = (next) ->
+    if schedulingNow
+      toSchedule.push rainDropID #we're busy scheduling something else, add this to the wait queue
+      return
+    schedulingNow = true
+    next()
+
   getDrop = (next) ->
     console.log "[sky]", "ISCHEDULE1", "getDrop"
     atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
@@ -194,6 +204,7 @@ schedule = (rainDropID) ->
     if not asignee?
       #No rainCloud available to do the work -- put the job back on the queue
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
+      next()
       return
     console.log "[sky]", "IBOSS", "Scheduling #{asignee} <-- #{rainDropID}"
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
@@ -202,8 +213,16 @@ schedule = (rainDropID) ->
     atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
     #[3.] /rainDrop: Log the assignment
     atmosphere.monitor.log rainDropID, "assign", asignee
+    next()
 
-  getDrop -> getClouds -> plan -> assign()
+  anyMore = (next) ->
+    schedulingNow = false
+    if toSchedule.length > 0
+      setImmediate () ->
+        schedule toSchedule.shift()
+
+
+  arbitrate -> getDrop -> getClouds -> plan -> assign -> anyMore()
 
 
 
