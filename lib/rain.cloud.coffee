@@ -167,7 +167,7 @@ exports.doneWith = (ticket, errors, response) =>
       core.refs().rainDropsRef.child("#{rainDrop.next}/data/previous/#{rainDrop.job.type}").set response, () ->
         #-- Schedule next job in chain
         core.refs().skyRef.child("todo/#{rainDrop.next}").set true, () ->
-          closeRainDrop rainDropID
+          closeRainDrop rainDropID, rainDrop
           return
     else
       #TODO make atomic
@@ -176,7 +176,7 @@ exports.doneWith = (ticket, errors, response) =>
           errors: if errors? then errors else null
           response: response
       core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log("stop"), () ->
-        closeRainDrop rainDropID, rainDrop, ticket.type
+        closeRainDrop rainDropID, rainDrop
 
   sanity -> getDrop -> write()
 
