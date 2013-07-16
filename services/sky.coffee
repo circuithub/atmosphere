@@ -160,13 +160,6 @@ schedule = (rainDropID) ->
   rainBucket = undefined
   asignee = undefined
   
-  arbitrate = (next) ->
-    if schedulingNow
-      toSchedule.push rainDropID #we're busy scheduling something else, add this to the wait queue
-      return
-    schedulingNow = true
-    next()
-
   getDrop = (next) ->
     console.log "[sky]", "ISCHEDULE1", "getDrop"
     atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
@@ -206,6 +199,11 @@ schedule = (rainDropID) ->
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
       next()
       return
+    if rain.sky?.todo? and not rain.sky.todo[rainDropID]?
+      #-- Job was assigned out from under us!
+      console.log "[sky]", "WOMORE", "No longer need to schedule #{rainDropID}"
+      next()
+      return
     console.log "[sky]", "IBOSS", "Scheduling #{asignee} <-- #{rainDropID}"
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
@@ -221,8 +219,12 @@ schedule = (rainDropID) ->
       setImmediate () ->
         schedule toSchedule.shift()
 
-
-  arbitrate -> getDrop -> getClouds -> plan -> assign -> anyMore()
+  #Arbitrate (synchronous)
+  if schedulingNow
+    toSchedule.push rainDropID #we're busy scheduling something else, add this to the wait queue
+    return
+  schedulingNow = true
+  getDrop -> getClouds -> plan -> assign -> anyMore()
 
 
 
