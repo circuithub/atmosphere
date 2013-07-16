@@ -30,7 +30,7 @@ exports.init = (role, url, token, cbDone) =>
 _started = false
 exports.start = (cbStarted) =>
   if not _started
-    console.log "[INIT]", core.rainID()
+    console.log "[atmosphere]", "IAM", core.rainID()
     foreman() #start job supervisor (runs asynchronously at 1sec intervals)    
     _started = true
   cbStarted()
@@ -52,7 +52,7 @@ exports.start = (cbStarted) =>
 exports.submit = (jobChain, cbJobDone) ->
   #--Connection alive?
   if not core.ready() 
-    error = console.log "[atmosphere]", "Not connected to #{core.urlLogSafe} yet!" 
+    error = new Error "ENOCONNECT", "[atmosphere] ENOCONNECT Not connected to #{core.urlLogSafe} yet!" 
     cbJobDone error if cbJobDone?
     return
 
@@ -78,7 +78,7 @@ exports.submit = (jobChain, cbJobDone) ->
         type: eachJob.type
       data: eachJob.data
       log: 
-        submit: core.log eachJob.id
+        submit: core.log eachJob.id, "submit"
     if jobChain.length > 1 and i > 0
       rainDrop.prev = jobChain[i-1].id
     if jobChain.length > 1 and i < jobChain.length-1

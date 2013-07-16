@@ -76,7 +76,6 @@ sky.init (err) ->
   if err?
     throw err
   console.log "[atmosphere]", "ICONNECT", "Connected to atmosphere at #{sky.server()}."
-  console.log "[atmosphere]", "ICONNECT", "2"
     
 routes.loadRoutes(app, passport)
 

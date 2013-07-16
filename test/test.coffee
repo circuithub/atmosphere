@@ -92,7 +92,7 @@ describe "atmosphere", ->
     it "should handle a job->job->callback->job chain", (done) ->
       job1 = 
         type: "first" #the job type/queue name
-        name: "job1" #name for this job
+        name: "job2" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 10 #seconds
       job2 = 
@@ -113,7 +113,7 @@ describe "atmosphere", ->
     it "should handle a job->callback->job->job chain", (done) ->
       job1 = 
         type: "first" #the job type/queue name
-        name: "job1" #name for this job
+        name: "job3" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 5 #seconds
         callback: true
@@ -139,7 +139,7 @@ describe "atmosphere", ->
     it "should handle a job->job->job chain (fire-and-forget)", (done) ->
       job1 = 
         type: "first" #the job type/queue name
-        name: "job1" #name for this job
+        name: "job4" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 5 #seconds        
       job2 = 

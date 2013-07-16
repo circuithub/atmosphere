@@ -184,12 +184,12 @@ exports.doneWith = (ticket, errors, response) =>
   Done with this job. Perform closing actions.
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
-  core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID), () ->
+  core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID, "stop"), () ->
     monitor.jobComplete()
     #TODO make atomic
     core.refs().skyRef.child("done/#{rainDropID}").set true
     if rainDrop?.log?.assign?.where?
-      core.refs().rainCloudsRef.child("#{rainDrop.log.assign.where}/todo/#{rainDropID}").remove()  
+      core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove()  
     else
       console.log "[atmosphere]", "ENOASSIGN", "rainDrop is missing its assignment log entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
 
@@ -202,7 +202,7 @@ cascadeError = (rainDropID, errors, cbReported) ->
     core.refs().rainDropsRef.child(rainDropID).update
       result:
         errors: errors
-    core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log rainDropID
+    core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log rainDropID, "stop"
     #--Next
     rainDrop = snapshot.val()
     if not rainDrop.next?

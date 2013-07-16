@@ -192,8 +192,13 @@ exports.now = () ->
 ###
   Generate log format object
 ###
-exports.log = (rainDropID, where) =>
-  when: @now()
-  who: @rainID()    
-  where: if where? then where else null
+exports.log = (rainDropID, event, where) =>
+  logEntry = 
+    what: event
+    when: @now()
+    who: @rainID()    
+    where: if where? then where else null
+  @_ref.rainDropsRef.child("#{rainDropID}/log").push logEntry
+  delete logEntry.what
+  return logEntry
 

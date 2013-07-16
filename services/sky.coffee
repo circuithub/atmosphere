@@ -23,7 +23,6 @@ exports.init = (cbReady) =>
 
   #[1.] Connect to Firebase
   connect = (next) ->
-    console.log "[sky]", "IKNIT1", "connect"
     atmosphere.core.connect nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
@@ -33,19 +32,16 @@ exports.init = (cbReady) =>
 
   #[1.] Load Task List
   loadWeather = (next) ->
-    console.log "[sky]", "IKNIT2", "loadWeather"
     nextStep = next
     atmosphere.core.refs().weatherRef.once "value", loadList
   
   #[2.] Retrieved Weather Pattern
   loadList = (snapshot) ->
-    console.log "[sky]", "IKNIT3", "loadList"
     weather = snapshot.val()
     nextStep()
   
   #[3.] Register as a Rain Maker
   rainInit = (next) ->
-    console.log "[sky]", "IKNIT4", "rainInit"
     atmosphere.rainMaker.init "sky", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
@@ -55,7 +51,6 @@ exports.init = (cbReady) =>
 
   #[4.] Load tasks / Begin monitoring
   registerTasks = (next) ->    
-    console.log "[sky]", "IKNIT5", "registerTasks"
     for task of weather
       if weather[task].type is "dis"
         if weather[task].period > 0
@@ -67,18 +62,16 @@ exports.init = (cbReady) =>
 
   #[5.] Handle task scheduling
   brokerTasks = (next) ->
-    console.log "[sky]", "IKNIT6", "brokerTasks"
     listen "rainClouds" #monitor rainClouds
     listen "sky" #monitor sky
     atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
-      schedule snapshot.name()
+      schedule()
     atmosphere.core.refs().skyRef.child("recover").on "child_added", (snapshot) ->
       recover snapshot.name(), snapshot.val()
     next()
 
   #[6.] Monitor for recovery scenarios (dead workers, rescheduling, etc)
   recoverFailures = (next) ->
-    console.log "[sky]", "IKNIT7", "recoverFailures"
     #Retry scheduling when a new worker comes online
     atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule 
     #Retry scheduling after a worker finishes a job
@@ -112,8 +105,7 @@ listen = (dataType) =>
 
 reschedule = () ->
   console.log "[sky]", "ITRYAGAIN", "Rescheduling..."
-  if rain.sky?.todo?
-    schedule rainDropID for rainDropID of rain.sky.todo
+  schedule()
 
 ###
   Recover a failed rainCloud
@@ -130,7 +122,7 @@ recover = (rainCloudID, disconnectedAt) ->
           atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/assign").remove()
           atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/start").remove()
           atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/stop").remove()
-          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push atmosphere.core.log rainCloudID
+          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push atmosphere.core.log rainCloudID, "recover"
           atmosphere.core.refs().skyRef.child("todo/#{eachJob}").set false
       next()
   record = (next) ->
@@ -152,16 +144,25 @@ recover = (rainCloudID, disconnectedAt) ->
 ###
 schedulingNow = false
 toSchedule = []
-schedule = (rainDropID) ->
-  console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}", schedulingNow
+schedule = () ->
 
   #--Collect rainDrop data
+  rainDropID = undefined
   rainDrop = undefined
   rainBucket = undefined
   asignee = undefined
   
+  getTask = (next) ->
+    atmosphere.core.refs().skyRef.child("todo").once "value", (snapshot) ->
+      rainDropID = Object.keys(snapshot.val())[0] if snapshot.val()?
+      if not rainDropID?
+        console.log "[sky]", "IALLDONE", "Nothing to do..."
+        schedulingNow = false
+        return
+      console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"
+      next()     
+
   getDrop = (next) ->
-    console.log "[sky]", "ISCHEDULE1", "getDrop"
     atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
       rainDrop = rainDropSnapshot.val()
       rainBucket = rainDrop.job.type
@@ -173,13 +174,11 @@ schedule = (rainDropID) ->
       next()
 
   plan = (next) ->
-    console.log "[sky]", "ISCHEDULE2", "plan"    
     if not rain.rainClouds?
       next() #No workers online so no one available for this job... =(
       return
     candidates = {id:[], metric:[]}
     for rainCloudID, rainCloudData of rain.rainClouds 
-      console.log "[sky][plan]", rainCloudID, rainCloudData, rainCloudData?.todo
       if not rainCloudData.status.rainBuckets? or rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
         if not workingOn rainCloudID, rainBucket 
           #-- This worker is available to take the job
@@ -193,7 +192,6 @@ schedule = (rainDropID) ->
     next()
 
   assign = (next) ->
-    console.log "[sky]", "ISCHEDULE3", "assign"
     if not asignee?
       #No rainCloud available to do the work -- put the job back on the queue
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
@@ -204,7 +202,7 @@ schedule = (rainDropID) ->
       console.log "[sky]", "WOMORE", "No longer need to schedule #{rainDropID}"
       next()
       return
-    console.log "[sky]", "IBOSS", "Scheduling #{asignee} <-- #{rainDropID}"
+    console.log "[sky]", "IBOSS", "Scheduling #{rainDropID} --> #{asignee}"
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
     #[2.] /sky: Mark the rainDrop as assigned
@@ -217,14 +215,15 @@ schedule = (rainDropID) ->
     schedulingNow = false
     if toSchedule.length > 0
       setImmediate () ->
-        schedule toSchedule.shift()
+        schedule toSchedule.shift() #decrement and execute schedule loop again
 
   #Arbitrate (synchronous)
   if schedulingNow
-    toSchedule.push rainDropID #we're busy scheduling something else, add this to the wait queue
-    return
+    console.log "[sky]", "INOSCHEDULE", "Defer scheduling..."
+    toSchedule.push true #we're busy scheduling something else, add this to the wait queue
+    return    
   schedulingNow = true
-  getDrop -> getClouds -> plan -> assign -> anyMore()
+  getTask -> getDrop -> getClouds -> plan -> assign -> anyMore()
 
 
 
