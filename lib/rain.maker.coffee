@@ -78,7 +78,7 @@ exports.submit = (jobChain, cbJobDone) ->
         type: eachJob.type
       data: eachJob.data
       log: 
-        submit: core.log()
+        submit: core.log eachJob.id
     if jobChain.length > 1 and i > 0
       rainDrop.prev = jobChain[i-1].id
     if jobChain.length > 1 and i < jobChain.length-1

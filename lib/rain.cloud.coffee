@@ -184,7 +184,7 @@ exports.doneWith = (ticket, errors, response) =>
   Done with this job. Perform closing actions.
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
-  core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(), () ->
+  core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID), () ->
     monitor.jobComplete()
     #TODO make atomic
     core.refs().skyRef.child("done/#{rainDropID}").set true
@@ -202,7 +202,7 @@ cascadeError = (rainDropID, errors, cbReported) ->
     core.refs().rainDropsRef.child(rainDropID).update
       result:
         errors: errors
-    core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log "stop"
+    core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log rainDropID
     #--Next
     rainDrop = snapshot.val()
     if not rainDrop.next?

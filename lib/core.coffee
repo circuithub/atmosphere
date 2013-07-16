@@ -192,7 +192,7 @@ exports.now = () ->
 ###
   Generate log format object
 ###
-exports.log = (where) =>
+exports.log = (rainDropID, where) =>
   when: @now()
   who: @rainID()    
   where: if where? then where else null
