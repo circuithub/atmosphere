@@ -7,7 +7,6 @@ monitor    = require "./monitor"
 rainMaker  = require "./rain.maker"
 
 jobWorkers = {}
-currentJob = {}
 
 
 ########################################
@@ -87,13 +86,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
     function(ticket, data) ->
 ###
 lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
-  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, rainDrop, Object.keys(currentJob)
-  if currentJob[rainBucket]?
-    #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-    cbDispatched new Error  "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", rainBucket, rainDropID, rainDrop
-    return
-  #Hold this information internal to atmosphere
-  currentJob[rainBucket] = rainDropID
+  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, rainDrop
   #Release this information to the work function (dispatch job)
   ticket = 
     type: rainBucket
@@ -142,7 +135,6 @@ exports.routers =
   -- message: the job response data (message body)
 ###
 exports.doneWith = (ticket, errors, response) =>
-  console.log "\n\n\n=-=-=[doneWith](currentJob)", Object.keys(currentJob), "\n\n\n" #xxx
   rainDrop = undefined
   rainDropID = ticket.id
 
@@ -152,11 +144,7 @@ exports.doneWith = (ticket, errors, response) =>
     if not core.ready() 
       #TODO: HANDLE THIS BETTER
       console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe} yet!" 
-      return
-    if not currentJob[ticket.type]?
-      #TODO: HANDLE THIS BETTER
-      console.log "[atmosphere]", "ENOTICKET", "Ticket for #{ticket.type} has no current job pending!", Object.keys currentJob
-      return
+      return    
     next()
 
   #Retrieve the interal state for this job
@@ -197,10 +185,6 @@ exports.doneWith = (ticket, errors, response) =>
   Done with this job. Perform closing actions.
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
-  if rainDrop?.job?.type?
-    delete currentJob[rainDrop.job.type] #done with current job, update state  
-  else
-    console.log "[atmosphere]", "ENOBUCKET", "rainDrop is missing its rainBucket entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
   monitor.jobComplete()
   #TODO make atomic
   core.refs().skyRef.child("done/#{rainDropID}").set true

@@ -84,9 +84,9 @@ describe "atmosphere", ->
         h.shouldNotHaveErrors error
         should.exist data
         should.exist data[job3.type]
-        should.exist data.previous.param3
-        should.exist data.previous[job2.type].previous.param2
-        should.exist data.previous[job2.type].previous[job1.type].previous.param1
+        should.exist data.input.previous.param3
+        should.exist data.input.previous[job2.type].input.previous.param2
+        should.exist data.input.previous[job2.type].input.previous[job1.type].input.previous.param1
         done()
 
   #   it "should handle a job->job->callback->job chain", (done) ->

@@ -83,7 +83,6 @@ exports.init = (cbReady) =>
     atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule 
     #Retry scheduling after a worker finishes a job
     atmosphere.core.refs().skyRef.child("done").on "child_added", reschedule
-    #Retry scheduling once a second (catch any leftovers)
     #TODO 
     next()
 
