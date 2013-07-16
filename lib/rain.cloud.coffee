@@ -157,6 +157,11 @@ exports.doneWith = (ticket, errors, response) =>
   #Write to rainDrop
   write = (next) ->
     console.log "[atmosphere]", "IDONE3", "write"
+    #-- Write results (TODO make atomic)
+    core.refs().rainDropsRef.child(rainDropID).update
+      result:
+        errors: if errors? then errors else null
+        response: response
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
@@ -170,11 +175,6 @@ exports.doneWith = (ticket, errors, response) =>
           closeRainDrop rainDropID, rainDrop
           return
     else
-      #TODO make atomic
-      core.refs().rainDropsRef.child(rainDropID).update
-        result:
-          errors: if errors? then errors else null
-          response: response
       closeRainDrop rainDropID, rainDrop
 
   sanity -> getDrop -> write()

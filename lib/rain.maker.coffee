@@ -94,6 +94,7 @@ exports.submit = (jobChain, cbJobDone) ->
       core.refs().rainDropsRef.child("#{cbOnRainDropID}/log").on "child_added", (snapshot) ->
         console.log "\n\n\n=-=-=[maker.submit.cb]", snapshot.name(), "\n\n\n" #xxx
         if snapshot.name() is "stop"
+          #--Get this rainDrop
           core.refs().rainDropsRef.child(cbOnRainDropID).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
     
