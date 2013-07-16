@@ -83,6 +83,7 @@ exports.init = (cbReady) =>
     atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule 
     #Retry scheduling after a worker finishes a job
     atmosphere.core.refs().skyRef.child("done").on "child_added", reschedule
+    #Retry scheduling once a second (catch any leftovers)
     #TODO 
     next()
 
@@ -130,7 +131,7 @@ recover = (rainCloudID, disconnectedAt) ->
           atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/assign").remove()
           atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/start").remove()
           atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/stop").remove()
-          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push core.log rainCloudID
+          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push atmosphere.core.log rainCloudID
           atmosphere.core.refs().skyRef.child("todo/#{eachJob}").set false
       next()
   record = (next) ->

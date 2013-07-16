@@ -62,7 +62,7 @@ exports.submit = (jobChain, cbJobDone) ->
   foundCB = false
   for eachJob, i in jobChain
     #--Assign ID
-    eachJob.id = core.makeID eachJob.type, eachJob.name
+    eachJob.id = core.makeID eachJob.type, jobChain[0].name
     #--Clarify callback flow (only first callback=true remains)
     if foundCB or (not eachJob.callback?) or (not eachJob.callback) or (not cbJobDone?)
       eachJob.callback = false
@@ -74,30 +74,32 @@ exports.submit = (jobChain, cbJobDone) ->
   for eachJob, i in jobChain
     rainDrop = 
       job:
-        name: eachJob.name
+        name: jobChain[0].name
         type: eachJob.type
       data: eachJob.data
       log: 
         submit: core.log()
-    console.log "\n\n\n=-=-=[maker.submit]", rainDrop, "\n\n\n" #xxx
     if jobChain.length > 1 and i > 0
       rainDrop.prev = jobChain[i-1].id
     if jobChain.length > 1 and i < jobChain.length-1
       rainDrop.next = jobChain[i+1].id
 
     #--Callback processing
-    if eachJob.callback?        
-      rainDrops[jobChain[0].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
+    if eachJob.callback is true    
+      rainDrops[jobChain[i].id] = {type: jobChain[0].type, name: jobChain[0].name, timeout: jobChain[0].timeout, callback: cbJobDone} #record the callback in the chain under the labels of the first job        
       #--Listend for job completion callback
       core.refs().rainDropsRef.child("#{eachJob.id}/log").on "child_added", (snapshot) ->
         console.log "\n\n\n=-=-=[maker.submit.cb]", snapshot.name(), "\n\n\n" #xxx
         if snapshot.name() is "stop"
           core.refs().rainDropsRef.child(eachJob.id).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
+    
     #--Submit /rainDrops
-    core.refs().rainDropsRef.child(jobChain[0].id).set rainDrop
-    #--Submit /sky
-    core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
+    console.log "\n\n\n=-=-=[chain Job #{i}]", jobChain[i], rainDrop, "\n\n\n" #xxx
+    core.refs().rainDropsRef.child(jobChain[i].id).set rainDrop
+  
+  #--Mark chain ready for execution
+  core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
   
   #--Inform Foreman Job Expected
   jobChain[0].timeout ?= 60 #default to 1 min timeout, if unspecified
@@ -114,7 +116,7 @@ exports.submit = (jobChain, cbJobDone) ->
 mailman = (rainDropID, rainDropVal) ->
   console.log "\n\n\n=-=-=[maker.mailman]", "Callback on job #{rainDropID}", rainDropVal, "\n\n\n" #xxx
   if not rainDrops["#{rainDropID}"]?
-    console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainBucket} job: #{rainDropID}."
+    console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainDropVal.job.type} job: #{rainDropID}."
     return    
   callback = rainDrops["#{rainDropID}"].callback #cache function pointer
   delete rainDrops["#{rainDropID}"] #mark job as completed

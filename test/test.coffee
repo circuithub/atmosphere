@@ -22,17 +22,17 @@ describe "atmosphere", ->
         h.shouldNotHaveErrors error
         done()
 
-    it "should submit a job through a maker", (done) ->
-      job = 
-        type: "first"
-        name: "jobName"
-        data: {yes: true, no: false}
-        timeout: 30
-      atmosphere.rainMaker.submit job, (error, data) ->
-        console.log "\n\n\n=-=-=[straight through]", error, data, "\n\n\n" #xxx
-        h.shouldNotHaveErrors error
-        should.exist data
-        done()
+    # it "should submit a job through a maker", (done) ->
+    #   job = 
+    #     type: "first"
+    #     name: "jobName"
+    #     data: {yes: true, no: false}
+    #     timeout: 30
+    #   atmosphere.rainMaker.submit job, (error, data) ->
+    #     console.log "\n\n\n=-=-=[straight through]", error, data, "\n\n\n" #xxx
+    #     h.shouldNotHaveErrors error
+    #     should.exist data
+    #     done()
 
   describe "#basic RPC use case", ->  
   
@@ -45,49 +45,49 @@ describe "atmosphere", ->
     #     console.log "[D] Jobs Done", allResults      
     #     done()
 
-    it "should process only one job of a type at a time", (done) ->
-      testFunctions = []
-      snap = undefined
-      atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
-        snap = snapshot
-      for i in [0...4]
-        #Submit Altium Conversion Job
-        testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
-      bsync.parallel testFunctions, (allErrors, allResults) ->
-        h.shouldNotHaveErrors allErrors                
-        log = () -> 
-          if snap.val()?
-            console.log "--> [#{i}]", Object.keys snap.val()
-          else
-            console.log "--> [#{i}]", snap.val()
-          setTimeout log, 1000
-        log()
-        console.log "[D] Job Done", allResults
-        done()
+    # it "should process only one job of a type at a time", (done) ->
+    #   testFunctions = []
+    #   snap = undefined
+    #   atmosphere.core.refs().rainCloudsRef.child("todo/convertAltium").on "value", (snapshot) ->
+    #     snap = snapshot
+    #   for i in [0...4]
+    #     #Submit Altium Conversion Job
+    #     testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
+    #   bsync.parallel testFunctions, (allErrors, allResults) ->
+    #     h.shouldNotHaveErrors allErrors                
+    #     log = () -> 
+    #       if snap.val()?
+    #         console.log "--> [#{i}]", Object.keys snap.val()
+    #       else
+    #         console.log "--> [#{i}]", snap.val()
+    #       setTimeout log, 1000
+    #     log()
+    #     console.log "[D] Job Done", allResults
+    #     done()
 
-  # describe "#complex RPC use case (job chaining)", ->
+  describe "#complex RPC use case (job chaining)", ->
         
-  #   it "should handle a job->job->job->callback job chain", (done) ->
-  #     job1 = 
-  #       type: "first" #the job type/queue name
-  #       name: "job1" #name for this job
-  #       data: {param1: "initial message"} #arbitrary serializable object
-  #       timeout: 30 #seconds
-  #     job2 = 
-  #       type: "second"        
-  #       data: {param2: "initial message"} #merged with results from job1        
-  #     job3 = 
-  #       type: "third"
-  #       data: {param3: "initial message"} #merged with results from job1
-  #     atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
-  #       console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
-  #       h.shouldNotHaveErrors error
-  #       should.exist data
-  #       should.exist data[job3.type]
-  #       should.exist data.previous.param3
-  #       should.exist data.previous[job2.type].previous.param2
-  #       should.exist data.previous[job2.type].previous[job1.type].previous.param1
-  #       done()
+    it "should handle a job->job->job->callback job chain", (done) ->
+      job1 = 
+        type: "first" #the job type/queue name
+        name: "job1" #name for this job
+        data: {param1: "initial message"} #arbitrary serializable object
+        timeout: 30 #seconds
+      job2 = 
+        type: "second"        
+        data: {param2: "initial message"} #merged with results from job1        
+      job3 = 
+        type: "third"
+        data: {param3: "initial message"} #merged with results from job1
+      atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
+        console.log "\n\n\n=-=-=[jjjc]", JSON.stringify(data), "\n\n\n" #xxx
+        h.shouldNotHaveErrors error
+        should.exist data
+        should.exist data[job3.type]
+        should.exist data.previous.param3
+        should.exist data.previous[job2.type].previous.param2
+        should.exist data.previous[job2.type].previous[job1.type].previous.param1
+        done()
 
   #   it "should handle a job->job->callback->job chain", (done) ->
   #     job1 = 
