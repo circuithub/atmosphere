@@ -129,7 +129,6 @@ mailman = (rainDropID, rainDropVal) ->
 ###
 foreman = () ->
   for jobID, jobMeta of rainDrops   
-    console.log "\n\n\n=-=-=[foreman]", jobID, jobMeta.timeout, "\n\n\n" #xxx
     jobMeta.timeout = jobMeta.timeout - 1
     if jobMeta.timeout <= 0
       #cache -- necessary to prevent loss of function pointer
