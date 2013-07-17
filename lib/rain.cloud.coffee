@@ -161,7 +161,7 @@ exports.doneWith = (ticket, errors, response) =>
     core.refs().rainDropsRef.child(rainDropID).update
       result:
         errors: if errors? then errors else null
-        response: response
+        response: if response? then response else null
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
