@@ -187,12 +187,9 @@ closeRainDrop = (rainDropID, rainDrop) ->
   core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID, "stop"), () ->
     monitor.jobComplete()
     #TODO make atomic
-    core.refs().skyRef.child("done/#{rainDropID}").set true
-    if rainDrop?.log?.assign?.where?
+    core.refs().skyRef.child("done/#{rainDropID}").set true, () ->
       core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove()  
-    else
-      console.log "[atmosphere]", "ENOASSIGN", "rainDrop is missing its assignment log entry. SHOULD NOT HAPPEN.", rainDropID, rainDrop
-
+    
 ###
   Report error forward to all remaining jobs in the chain
 ###
