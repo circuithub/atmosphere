@@ -19,7 +19,6 @@ exports.init = (cbReady) =>
   console.log "[sky]", "IKNIT", "Initializing Sky..."
 
   weather = undefined
-  nextStep = undefined
 
   #[1.] Connect to Firebase
   connect = (next) ->
@@ -29,16 +28,12 @@ exports.init = (cbReady) =>
         cbReady err
         return
       next()
-
-  #[1.] Load Task List
-  loadWeather = (next) ->
-    nextStep = next
-    atmosphere.core.refs().weatherRef.once "value", loadList
   
   #[2.] Retrieved Weather Pattern
-  loadList = (snapshot) ->
-    weather = snapshot.val()
-    nextStep()
+  loadWeather = (next) ->
+    atmosphere.weather.pattern (error, data) ->
+      weather = data
+      next()
   
   #[3.] Register as a Rain Maker
   rainInit = (next) ->

@@ -2,13 +2,12 @@
   "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
   "name": "atmosphere",
   "description": "Integrated Messaging and Data Fabric (Backed by Firebase)",
-  "version": "0.6.0",
+  "version": "0.6.0-alpha",
   "homepage": "http://circuithub.com",
   "engines": {
     "node": ">=0.10.4",
     "npm" : ">= 1.2.18"
   },
-  "private": true,
   "dependencies": {
       "adt-typecheck.js": "git://github.com/circuithub/adt-typecheck.js.git#master"
     , "bsync": "*"    

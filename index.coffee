@@ -7,5 +7,6 @@
 
 exports.rainCloud = require "./lib/rain.cloud"
 exports.rainMaker = require "./lib/rain.maker"
+exports.weather = require "./lib/weather"
 exports.core = require "./lib/core"
 exports.monitor = require "./lib/monitor"
