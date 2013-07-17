@@ -70,7 +70,15 @@ exports.setRole = (role) ->
   _roleID = _roleID + "-" + _rainID
   return _roleID
 
-exports.makeID = (queueName, jobName) ->
+###
+  Escape illegal Firebase characters from names
+###
+exports.escape = (input) ->
+  return input.replace /[ .$\[\]#/]/g, "-"
+
+exports.makeID = (queueName, jobName) =>
+  queueName = @escape queueName
+  jobName = @escape jobName
   candidate = "#{_s.dasherize queueName}_#{jobName}_#{uuid.v4()}"
   candidate = candidate.toLowerCase()
   return candidate

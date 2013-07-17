@@ -56,7 +56,7 @@ exports.submit = (jobChain, cbJobDone) ->
     cbJobDone error if cbJobDone?
     return
 
-  #--Format job chain
+  #--Format the job chain
   if types.type(jobChain) isnt "array"
     jobChain = [jobChain]
   foundCB = false
@@ -74,8 +74,8 @@ exports.submit = (jobChain, cbJobDone) ->
   for eachJob, i in jobChain
     rainDrop = 
       job:
-        name: jobChain[0].name
-        type: eachJob.type
+        name: core.escape jobChain[0].name #escape illegal Firebase characters
+        type: core.escape eachJob.type
       data: eachJob.data
       log: 
         submit: core.log eachJob.id, "submit"
