@@ -52,7 +52,7 @@ exports.start = (cbStarted) =>
 exports.submit = (jobChain, cbJobDone) ->
   #--Connection alive?
   if not core.ready() 
-    error = new Error "ENOCONNECT", "[atmosphere] ENOCONNECT Not connected to #{core.urlLogSafe} yet!" 
+    error = new Error "ENOCONNECT", "[atmosphere] ENOCONNECT Not connected to #{core.urlLogSafe()} yet!" 
     cbJobDone error if cbJobDone?
     return
 

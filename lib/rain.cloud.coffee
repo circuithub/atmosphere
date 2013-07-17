@@ -143,7 +143,7 @@ exports.doneWith = (ticket, errors, response) =>
     console.log "[atmosphere]", "IDONE1", "sanity"
     if not core.ready() 
       #TODO: HANDLE THIS BETTER
-      console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe} yet!" 
+      console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe()} yet!" 
       return    
     next()
 

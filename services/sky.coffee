@@ -13,7 +13,7 @@ nconf      = require "nconf"
   The URL of the server we're connected to
 ###
 exports.server = () ->
-  return atmosphere.core.urlLogSafe
+  return atmosphere.core.urlLogSafe()
 
 exports.init = (cbReady) =>
   console.log "[sky]", "IKNIT", "Initializing Sky..."

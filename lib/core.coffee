@@ -21,7 +21,8 @@ exports.setFirebaseURL = (url) =>
   @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
   @firebaseServerURL += "/" if not _s.endsWith @firebaseServerURL, "/"
 
-exports.urlLogSafe = @firebaseServerURL
+exports.urlLogSafe = () =>
+  @firebaseServerURL
 
 exports.refs = () =>
   return @_ref

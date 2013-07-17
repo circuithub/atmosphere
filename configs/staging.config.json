@@ -1,5 +1,0 @@
-{
-  "GITHUB_CLIENT_ID"   : "1d2eb1fd4a0526b5c47d",
-  "GITHUB_CLIENT_KEY"  : "378d661f6c8440ff52e59e5262536f87d81a9386",
-  "GITHUB_CALLBACK_URL": "http://kue-staging.herokuapp.com/auth/github/callback"
-}  
