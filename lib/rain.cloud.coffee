@@ -63,7 +63,6 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
       monitor.log snapshot.name(), "start"
       #--Go get actual RainDrop
       core.refs().rainDropsRef.child("#{snapshot.name()}").once "value", (snapshot) ->
-        console.log "\n\n\n=-=-=[cloud.listen]2", snapshot.name(), snapshot.val(), "\n\n\n" #xxx
         #Execute job
         lightning snapshot.val().job?.type, snapshot.name(), snapshot.val(), (error) ->
           if error?
@@ -86,7 +85,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
     function(ticket, data) ->
 ###
 lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
-  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, rainDrop
+  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID
   #Release this information to the work function (dispatch job)
   ticket = 
     type: rainBucket

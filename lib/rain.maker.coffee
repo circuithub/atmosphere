@@ -89,17 +89,14 @@ exports.submit = (jobChain, cbJobDone) ->
       #--Inform Foreman Job Expected (default timeout to 1 min if unspecified)
       rainDrops[jobChain[i].id] = {type: jobChain[i].type, name: jobChain[0].name, timeout: jobChain[0].timeout ? 60, callback: cbJobDone}
       #--Listen for job completion callback
-      console.log "\n\n\n=-=-=[maker.listenForCB]", eachJob, "\n\n\n" #xxx
       cbOnRainDropID = eachJob.id #save reference (async execution will corrupt eachJob otherwise)
       core.refs().rainDropsRef.child("#{cbOnRainDropID}/log").on "child_added", (snapshot) ->
-        console.log "\n\n\n=-=-=[maker.submit.cb]", snapshot.name(), "\n\n\n" #xxx
         if snapshot.name() is "stop"
           #--Get this rainDrop
           core.refs().rainDropsRef.child(cbOnRainDropID).once "value", (snapshot) ->
             mailman snapshot.name(), snapshot.val()
     
     #--Submit /rainDrops
-    console.log "\n\n\n=-=-=[chain Job #{i}]", jobChain[i], rainDrop, "\n\n\n" #xxx
     core.refs().rainDropsRef.child(jobChain[i].id).set rainDrop
   
   #--Mark chain ready for execution
@@ -115,7 +112,7 @@ exports.submit = (jobChain, cbJobDone) ->
   Assigns incoming messages to rainDrops awaiting a response
 ###
 mailman = (rainDropID, rainDropVal) ->
-  console.log "\n\n\n=-=-=[maker.mailman]", "Callback on job #{rainDropID}", rainDropVal, "\n\n\n" #xxx
+  console.log "[atmosphere]", "IPHONE", "Callback on job #{rainDropID}.", (if rainDropVal.result?.errors? then rainDropVal.result.errors else "No errors reported.")
   if not rainDrops["#{rainDropID}"]?
     console.log "[atmosphere]","WEXPIRED", "Received response for expired #{rainDropVal.job.type} job: #{rainDropID}."
     return    

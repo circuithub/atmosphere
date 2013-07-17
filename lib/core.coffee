@@ -104,8 +104,10 @@ exports.connect = (_firebaseServerURL, @firebaseServerToken, cbConnected) =>
     #--Already connected
     cbConnected undefined
     return
+
+  console.log "[atmosphere]", "ICONNECT", "Connecting to Firebase at #{@firebaseServerURL}..."
   dataRef = new Firebase @firebaseServerURL  
-  
+
   #--Authentication is not required for dev mode
   if @firebaseServerURL.toLowerCase().indexOf("-demo") isnt -1 #Skip authenication if using Firebase demo mode
     console.log "[atmosphere]", "NOAUTH", "Running in demo mode (skipping authenication)"
