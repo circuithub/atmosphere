@@ -181,14 +181,19 @@ exports.doneWith = (ticket, errors, response) =>
 
 ###
   Done with this job. Perform closing actions.
+  #-- TODO make atomic
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
+  console.log "[atmosphere]", "IDONE4" #xxx
   core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID, "stop"), () ->
+    console.log "[atmosphere]", "IDONE5" #xxx
     monitor.jobComplete()
-    #TODO make atomic
+    console.log "[atmosphere]", "IDONE6" #xxx
     core.refs().skyRef.child("done/#{rainDropID}").set true, () ->
-      core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove()  
-    
+    console.log "[atmosphere]", "IDONE7" #xxx
+      core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove () ->  
+        console.log "[atmosphere]", "IDONE8" #xxx
+
 ###
   Report error forward to all remaining jobs in the chain
 ###
