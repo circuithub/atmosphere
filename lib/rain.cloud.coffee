@@ -190,7 +190,7 @@ closeRainDrop = (rainDropID, rainDrop) ->
     monitor.jobComplete()
     console.log "[atmosphere]", "IDONE6" #xxx
     core.refs().skyRef.child("done/#{rainDropID}").set true, () ->
-    console.log "[atmosphere]", "IDONE7" #xxx
+      console.log "[atmosphere]", "IDONE7" #xxx
       core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove () ->  
         console.log "[atmosphere]", "IDONE8" #xxx
 
