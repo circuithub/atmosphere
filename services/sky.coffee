@@ -71,7 +71,11 @@ exports.init = (cbReady) =>
     atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule 
     #Retry scheduling after a worker finishes a job
     atmosphere.core.refs().skyRef.child("done").on "child_added", reschedule
-    #TODO 
+    #Retry scheduling periodically (fail-safe)
+    #-- TODO: investigate and remove
+    setTimeout () ->
+      reschedule()
+    , 1000
     next()
 
   connect -> loadWeather -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
