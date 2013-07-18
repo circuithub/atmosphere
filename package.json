@@ -9,10 +9,10 @@
     "npm" : ">= 1.2.18"
   },
   "dependencies": {
-      "adt-typecheck.js": "git://github.com/circuithub/adt-typecheck.js.git#master"
+      "adt-typecheck.js": "git+http://github.com/circuithub/adt-typecheck.js.git#master"
     , "bsync": "*"    
     , "objects": "*"   
-    , "passport-github": "git://github.com/lyatiss/passport-github.git#useragent"
+    , "passport-github": "git+http://github.com/lyatiss/passport-github.git#useragent"
     
     , "coffee-script": "*"    
     , "express": "*"

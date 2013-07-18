@@ -137,5 +137,5 @@ foreman = () ->
       
       #release stack frames/memory
       process.nextTick () -> 
-        callback console.log "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
+        callback new Error "jobTimeout", "A response to job #{job.type}-#{job.name} was not received in time."
   setTimeout(foreman, 1000)
