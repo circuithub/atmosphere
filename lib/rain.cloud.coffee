@@ -1,6 +1,7 @@
 _          = require "underscore"
 nconf      = require "nconf"
 bsync      = require "bsync"
+objects    = require "objects"
 
 core       = require "./core"
 monitor    = require "./monitor"
@@ -159,8 +160,8 @@ exports.doneWith = (ticket, errors, response) =>
     #-- Write results (TODO make atomic)
     core.refs().rainDropsRef.child(rainDropID).update
       result:
-        errors: if errors? then errors else null
-        response: if response? then response else null
+        errors: if errors? then objects.purgeFunctions(errors) else null
+        response: if response? then objects.purgeFunctions(response) else null
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
