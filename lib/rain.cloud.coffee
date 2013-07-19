@@ -160,8 +160,8 @@ exports.doneWith = (ticket, errors, response) =>
     #-- Write results (TODO make atomic)
     core.refs().rainDropsRef.child(rainDropID).update
       result:
-        errors: if errors? then objects.purgeFunctions(errors) else null
-        response: if response? then objects.purgeFunctions(response) else null
+        errors: if errors? then objects.onlyData(errors) else null
+        response: if response? then objects.onlyData(response) else null
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
