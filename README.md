@@ -62,30 +62,17 @@ You can control how work is distributed in the atmosphere by understanding the r
 
 # Installation & Usage
 
-Atmosphere is tested and supported in node.js v.0.10.x and above.
+Atmosphere is tested and supported in node.js v.0.10.8 and above.
 
 ```npm install atmosphere```
 
-## Installing RabbitMQ
+## Configuration
 
-Installing RabbitMQ
-```
-brew update
-brew install rabbitmq
-```
+(TODO: Add Firebase and GitHub setup instructions)
 
-```PATH=$PATH:/usr/local/sbin``` to your ```.bash_profile``` or ```.profile``` 
+# Monitoring
 
-### Running
-
-* You can start RabbitMQ with ```/usr/local/sbin/rabbitmq-server```
-* If you amend your path, the server can then be started with ```rabbitmq-server```. 
-* All scripts run under your own user account. Sudo is not required.
-
-### Monitoring
-
-* The web UI is located at: [http://localhost:15672/](http://localhost:15672/) (User and Password are "guest")
-* The HTTP API and its documentation are both located at: http://localhost:15672/api/.
+The Atmosphere monitoring GUI (Weather Station) is available, by default, at: http://localhost:3000/
 
 
 # Hello World!
