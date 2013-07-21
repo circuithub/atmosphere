@@ -1,8 +1,7 @@
 _          = require "underscore"
 atmosphere = require "../index"
-{check}    = require "validator"
 nconf      = require "nconf"
-
+spark      = require "./spark"
 
 
 ########################################
@@ -49,8 +48,8 @@ exports.init = (cbReady) =>
     for task of weather
       if weather[task].type is "dis"
         if weather[task].period > 0
-          console.log "[init] Will EXECUTE #{task}", JSON.stringify weather[task]
-          #guiltySpark task, weather[task].data, weather[task].timeout, weather[task].period
+          console.log "[init] Will EXECUTE #{task} every #{weather[task].period} SECONDS"
+          spark.register task, weather[task].data, weather[task].timeout, weather[task].period
         else
           console.log "[init] IGNORING #{task} (no period specified)"
     next()
