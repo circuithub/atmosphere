@@ -2,7 +2,7 @@
   "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
   "name": "atmosphere",
   "description": "Integrated Messaging and Data Fabric (Backed by Firebase)",
-  "version": "0.6.12-alpha",
+  "version": "0.6.13-alpha",
   "homepage": "http://circuithub.com",
   "engines": {
     "node": ">=0.10.4",

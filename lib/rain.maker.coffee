@@ -1,11 +1,13 @@
-uuid = require "node-uuid"
-types = require "./types"
-core = require "./core"
-monitor = require "./monitor"
+uuid               = require "node-uuid"
+types              = require "./types"
+core               = require "./core"
+monitor            = require "./monitor"
+objects            = require "objects"
 
-rainDrops = {} #indexed by "rainDropID" as "job.id"
-
+rainDrops          = {} #indexed by "rainDropID" as "job.id"
 exports._rainDrops = rainDrops
+
+
 
 ########################################
 ## SETUP
@@ -97,7 +99,7 @@ exports.submit = (jobChain, cbJobDone) ->
             mailman snapshot.name(), snapshot.val()
     
     #--Submit /rainDrops
-    core.refs().rainDropsRef.child(jobChain[i].id).set rainDrop
+    core.refs().rainDropsRef.child(jobChain[i].id).set objects.onlyData rainDrop
   
   #--Mark chain ready for execution
   core.refs().skyRef.child("todo/#{jobChain[0].id}").set true
