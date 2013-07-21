@@ -158,7 +158,7 @@ schedule = () ->
       rainDropID = Object.keys(snapshot.val())[0] if snapshot.val()?
       if not rainDropID?
         console.log "[sky]", "IALLDONE", "Nothing to do..."
-        schedulingNow = false
+        anyMore()
         return
       console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"
       next()     
