@@ -162,14 +162,16 @@ exports.doneWith = (ticket, errors, response) =>
       result:
         errors: if errors? then objects.onlyData(errors) else null
         response: if response? then objects.onlyData(response) else null
+    console.log "[atmosphere]", "IDONE3.1", "write"
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
         #-- errors occurred, report forward through all remaining jobs
+        console.log "[atmosphere]", "IDONE3.2", "write", errors
         cascadeError rainDropID, errors, () ->
         return
       #-- No errors occurred, report forward
-      core.refs().rainDropsRef.child("#{rainDrop.next}/data/previous/#{rainDrop.job.type}").set response, () ->
+      core.refs().rainDropsRef.child("#{rainDrop.next}/data/previous/#{rainDrop.job.type}").set objects.onlyData(response), () ->
         #-- Schedule next job in chain
         core.refs().skyRef.child("todo/#{rainDrop.next}").set true, () ->
           closeRainDrop rainDropID, rainDrop
