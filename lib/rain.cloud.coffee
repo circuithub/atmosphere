@@ -15,15 +15,22 @@ jobWorkers = {}
 ########################################
 
 ###
-  jobTypes -- object with jobType values and worker function callbacks as keys; { jobType1: cbDoJobType1, jobType2: .. }
-  -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
-  --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
+  Initialize Rain Cloud
+  >> Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
+  -- role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
+  -- options: 
+     -- url: Firebase URL (slash terminated). Ex. https://atmosphere.firebaseio-demo.com/
+     -- token: Firebase server authentication token (from Forge, Auth tab)
+     -- exclusive: This rain cloud will only process one job at a time
+  -- rainBuckets: object with jobType values and worker function callbacks as keys; { jobType1: cbDoJobType1, jobType2: .. }
 ###
-exports.init = (role, url, token, rainBuckets, cbDone) =>    
-
+exports.init = (role, options, rainBuckets, cbDone) =>    
+  #[0.] Default Options
+  options.exclusive ?= false
+  
   #[1.] Connect  
   connect = (next) ->
-    core.init role, "rainCloud", url, token, (error) =>
+    core.init role, "rainCloud", options.url, options.token, (error) =>
       if error?
         cbDone error
         return
@@ -42,6 +49,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
       rainBuckets: Object.keys rainBuckets  
       load: [0,0,0]  
       completed: 0
+      exclusive: options.exclusive
     #--Store Callback Functions
     jobWorkers[rainBucket] = cbExecute for rainBucket, cbExecute of rainBuckets
     next()

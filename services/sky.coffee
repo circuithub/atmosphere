@@ -267,6 +267,7 @@ schedule = () ->
 ###
 workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
+    return true if rainClouds[rainCloudID].status.exclusive and rainClouds[rainCloudID].todo?.length > 0 #only work on one job at a time in exclusive mode
     for workingDropID, workingBucket of rainClouds[rainCloudID].todo
       return true if workingBucket is rainBucket
   catch e
