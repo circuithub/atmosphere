@@ -146,7 +146,7 @@ exports.doneWith = (ticket, errors, response) =>
 
   #Sanity checking
   sanity = (next) ->
-    console.log "[atmosphere]", "IDONE1", "sanity"
+    console.log "[atmosphere]", "IDONE1", "sanity", rainDropID
     if not core.ready() 
       #TODO: HANDLE THIS BETTER
       console.log "[atmosphere]", "ENOFIRE", "Not connected to #{core.urlLogSafe()} yet!" 
@@ -155,25 +155,26 @@ exports.doneWith = (ticket, errors, response) =>
 
   #Retrieve the interal state for this job
   getDrop = (next) ->
-    console.log "[atmosphere]", "IDONE2", "getDrop"
+    console.log "[atmosphere]", "IDONE2", "getDrop", rainDropID
     core.refs().rainDropsRef.child(rainDropID).once "value", (snapshot) ->
+      console.log "[atmosphere]", "IDONE2.1", "getDrop", rainDropID
       rainDrop = snapshot.val()
       next()
 
   #Write to rainDrop
   write = (next) ->
-    console.log "[atmosphere]", "IDONE3", "write"
+    console.log "[atmosphere]", "IDONE3", "write", rainDropID
     #-- Write results (TODO make atomic)
     core.refs().rainDropsRef.child(rainDropID).update
       result:
         errors: if errors? then objects.onlyData(errors) else null
         response: if response? then objects.onlyData(response) else null
-    console.log "[atmosphere]", "IDONE3.1", "write"
+    console.log "[atmosphere]", "IDONE3.1", "write", rainDropID
     if rainDrop.next?
       #-- jobChain, write results forward
       if errors?
         #-- errors occurred, report forward through all remaining jobs
-        console.log "[atmosphere]", "IDONE3.2", "write", errors
+        console.log "[atmosphere]", "IDONE3.2", "write", rainDropID, errors
         cascadeError rainDropID, errors, () ->
         return
       #-- No errors occurred, report forward
@@ -193,15 +194,15 @@ exports.doneWith = (ticket, errors, response) =>
   #-- TODO make atomic
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
-  console.log "[atmosphere]", "IDONE4" #xxx
+  console.log "[atmosphere]", "IDONE4", rainDropID #xxx
   core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID, "stop"), () ->
-    console.log "[atmosphere]", "IDONE5" #xxx
+    console.log "[atmosphere]", "IDONE5", rainDropID #xxx
     monitor.jobComplete()
-    console.log "[atmosphere]", "IDONE6" #xxx
+    console.log "[atmosphere]", "IDONE6", rainDropID #xxx
     core.refs().skyRef.child("done/#{rainDropID}").set true, () ->
-      console.log "[atmosphere]", "IDONE7" #xxx
+      console.log "[atmosphere]", "IDONE7", rainDropID #xxx
       core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove () ->  
-        console.log "[atmosphere]", "IDONE8" #xxx
+        console.log "[atmosphere]", "IDONE8", rainDropID #xxx
 
 ###
   Report error forward to all remaining jobs in the chain

@@ -184,6 +184,7 @@ schedule = () ->
     next = plan
     atmosphere.core.refs().rainCloudsRef.once "value", (snapshot) ->
       rainClouds = snapshot.val()
+      console.log "\n\n\n=-=-=[rainClouds]", JSON.stringify(rainClouds), "\n\n\n" #xxx
       next()
 
   plan = () ->
@@ -267,7 +268,11 @@ schedule = () ->
 ###
 workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
-    return true if rainClouds[rainCloudID].status.exclusive and rainClouds[rainCloudID].todo?.length > 0 #only work on one job at a time in exclusive mode
+    if rainClouds[rainCloudID].status.exclusive 
+      console.log "\n\n\n=-=-=[EXCLUSIVE MODE]", message, "\n\n\n" #xxx
+      if rainClouds[rainCloudID].todo? and rainClouds[rainCloudID].todo.length > 0 #only work on one job at a time in exclusive mode
+        console.log "\n\n\n=-=-=[EXCLUSIVE MODE]", message, "\n\n\n" #xxx
+        return true
     for workingDropID, workingBucket of rainClouds[rainCloudID].todo
       return true if workingBucket is rainBucket
   catch e
