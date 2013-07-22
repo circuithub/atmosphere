@@ -14,7 +14,7 @@ rainMaker = require "../lib/rain.maker"
   -- jobTimeout: in seconds
   -- repeatPeriod: in seconds. Repeats job this many seconds *after* job completes.
 ###
-exports.register = (jobName, jobData, jobTimeout, repeatPeriod) ->
+exports.register = (jobName, jobData, jobTimeout, repeatPeriod) =>
   #Make atmosphere request
   console.log "[WAKE]", "Making request", jobName
   rainMaker.submit {type: jobName, name: jobName, data: jobData, timeout: jobTimeout}, (err, data) =>
@@ -32,5 +32,5 @@ exports.register = (jobName, jobData, jobTimeout, repeatPeriod) ->
     #Recycle
     console.log "[SLEEP]", "#{jobName} resting for #{repeatPeriod} seconds."
     setTimeout () => 
-      guiltySpark jobName, jobData, jobTimeout, repeatPeriod
+      @register jobName, jobData, jobTimeout, repeatPeriod
     , repeatPeriod * 1000

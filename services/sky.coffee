@@ -91,6 +91,7 @@ reschedule = () ->
   -- disconnectedAt - UNIX epoch time, milliseconds
 ###
 recover = (rainCloudID, disconnectedAt) ->
+  return #xxx
   rainCloud = undefined
   getCloud = (next) ->
     atmosphere.core.refs().rainCloudsRef.child("#{rainCloudID}").once "value", (snapshot) ->
@@ -157,15 +158,18 @@ schedule = () ->
   getTasks = () ->
     next = getTask
     atmosphere.core.refs().skyRef.child("todo").once "value", (snapshot) ->
+      console.log "\n\n\n=-=-=[getTasks]", atmosphere.core.refs().skyRef.child("todo").toString(), snapshot.name(), snapshot.val(), "\n\n\n" #xxx
       if not snapshot.val()?
         next()
         return
       todoRainDropIDs = Object.keys snapshot.val()
+      console.log "\n\n\n=-=-=[GET TASKS!!!]", todoRainDropIDs.length, "\n\n\n" #xxx
       next()
 
   getTask = () ->
     next = getDrop
     rainDropID = todoRainDropIDs.shift()
+    console.log "\n\n\n=-=-=[GET TASK !!!]", rainDropID, "\n\n\n" #xxx
     if not rainDropID?
       console.log "[sky]", "IALLDONE", "Nothing to do..."
       anyMore()
@@ -175,6 +179,7 @@ schedule = () ->
 
   getDrop = () ->
     next = getClouds
+    console.log "\n\n\n=-=-=[GET DROP]", rainDropID, "\n\n\n" #xxx
     atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
       rainDrop = rainDropSnapshot.val()
       rainBucket = rainDrop.job.type
@@ -182,12 +187,16 @@ schedule = () ->
   
   getClouds = () ->
     next = plan
+    console.log "\n\n\n=-=-=[getClouds1]", rainDropID, "\n\n\n" #xxx
     atmosphere.core.refs().rainCloudsRef.once "value", (snapshot) ->
+      console.log "\n\n\n=-=-=[getClouds2]", rainDropID, "\n\n\n" #xxx
       rainClouds = snapshot.val()
       next()
 
   plan = () ->
     next = assign
+    asignee = undefined #reset
+    console.log "\n\n\n=-=-=[PLAN]", rainDropID, "\n\n\n" #xxx
     if not rainClouds?
       next() #No workers online so no one available for this job... =(
       return
@@ -221,7 +230,7 @@ schedule = () ->
         return undefined if eachBucket is rainBucket
       #All good, let's make changes
       rainCloud.todo = {} if not rainCloud.todo?
-      rainCloud.todo.rainDropID = rainBucket
+      rainCloud.todo[rainDropID] = rainBucket
       return rainCloud
     onComplete = (error, committed, snapshot) ->
       if error?
@@ -232,15 +241,16 @@ schedule = () ->
         console.log "[sky]", "ELATE", "Transaction scheduling #{rainDropID} --> #{asignee} failed rainCloud is busy or offline!"
         next()
         return
+      console.log "\n\n\n=-=-=[TRANSACTION!!!]", rainDropID, asignee, "\n\n\n" #xxx
       #[2.] /sky: Mark the rainDrop as assigned
       atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
       #[3.] /rainDrop: Log the assignment
       atmosphere.monitor.log rainDropID, "assign", asignee
+      #[4.] Get next drop and repeat
+      next()
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child(asignee).transaction updateFunction, onComplete, false
-    #Get next drop and repeat
-    next()
-
+    
   nextDrop = () ->
     #-- LOOP until we've attempted to schedule all pending jobs
     setImmediate () ->
