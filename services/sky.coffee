@@ -154,7 +154,8 @@ schedule = () ->
   
   todoRainDropIDs = []
 
-  getTasks = (next) ->
+  getTasks = () ->
+    next = getTask
     atmosphere.core.refs().skyRef.child("todo").once "value", (snapshot) ->
       if not snapshot.val()?
         next()
@@ -162,7 +163,8 @@ schedule = () ->
       todoRainDropIDs = Object.keys snapshot.val()
       next()
 
-  getTask = (next) ->
+  getTask = () ->
+    next = getDrop
     rainDropID = todoRainDropIDs.shift()
     if not rainDropID?
       console.log "[sky]", "IALLDONE", "Nothing to do..."
@@ -171,22 +173,21 @@ schedule = () ->
     console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"
     next()     
 
-  getDrop = (next) ->
+  getDrop = () ->
+    next = getClouds
     atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
-      console.log "\n\n\n=-=-=[getDrop]", 1, "\n\n\n" #xxx
       rainDrop = rainDropSnapshot.val()
       rainBucket = rainDrop.job.type
-      console.log "\n\n\n=-=-=[getDrop]", rainBucket, rainDrop, "\n\n\n" #xxx
       next()
   
-  getClouds = (next) ->
-    console.log "\n\n\n=-=-=[getClouds]", 1, "\n\n\n" #xxx
+  getClouds = () ->
+    next = plan
     atmosphere.core.refs().rainCloudsRef.once "value", (snapshot) ->
-      console.log "\n\n\n=-=-=[getClouds]", snapshot, "\n\n\n" #xxx
       rainClouds = snapshot.val()
       next()
 
-  plan = (next) ->
+  plan = () ->
+    next = assign
     if not rainClouds?
       next() #No workers online so no one available for this job... =(
       return
@@ -204,14 +205,14 @@ schedule = () ->
     asignee = candidates.id[_.indexOf candidates.metric, mostIdle]
     next()
 
-  assign = (next) ->
+  assign = () ->
+    next = nextDrop
     if not asignee?
       #No rainCloud available to do the work -- put the job back on the queue
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
       next()
       return
     console.log "[sky]", "IBOSS", "Scheduling #{rainDropID} --> #{asignee}"
-    console.log "\n\n\n=-=-=[assign]", rainBucket, rainDropID, asignee, "\n\n\n" #xxx
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
     #[2.] /sky: Mark the rainDrop as assigned
@@ -224,8 +225,7 @@ schedule = () ->
   nextDrop = () ->
     #-- LOOP until we've attempted to schedule all pending jobs
     setImmediate () ->
-      console.log "\n\n\n=-=-=[nextDrop]", getTask, getDrop, "\n\n\n" #xxx
-      getTask getDrop
+      getTask()
 
   anyMore = (next) ->
     schedulingNow = false
@@ -239,7 +239,7 @@ schedule = () ->
     toSchedule.push true #we're busy scheduling something else, add this to the wait queue
     return    
   schedulingNow = true
-  getTasks -> getTask -> getDrop -> getClouds -> plan -> assign -> nextDrop()
+  getTasks()
 
 
 
