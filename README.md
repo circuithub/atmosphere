@@ -6,6 +6,8 @@
 ```
 Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://firebase.com)
 
+![Atmosphere Schema Diagram](/docs/atmosphere.png)
+
 # Features
 
 * Robust: timeouts, retries, error-handling, auto-reconnect, etc
@@ -19,7 +21,12 @@ Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://
 
 Atmosphere is a flexible jobs queue. It can support three basic use cases:
 
-1. Simple Remote Procedure Call (S-RPC) -- A job is submitted, executed by one of several remote listening workers, and a callback function is invoked when the work is complete or the timeout expires.
+## Simple Remote Procedure Call (S-RPC) 
+
+![Atmosphere Schema Diagram](/docs/srpc.png)
+
+A job is submitted, executed by one of several remote listening workers, and a callback function is invoked when the work is complete or the timeout expires.
+
 2. Complex Remote Procedure Call (C-RPC) -- A chain of jobs are submitted and execution in sequence is desired. Data is passed from one job to the next. The callback may be invoked at any specified point along the chain... or at the end if unspecified.
 3. Message Passing for Logging (MP-L) -- A job is submitted with no expectation for a response. Used for monitoring/logging applications.
 
