@@ -49,7 +49,7 @@ exports.init = (role, url, token, cbDone) =>
 _started = false
 exports.start = (cbStarted) =>
   if not _started
-    console.log "[atmosphere]", "IAM", core.rainID()
+    console.log "[atmosphere]", "IAM", core.rainType(), core.rainID()
     foreman() #start job supervisor (runs asynchronously at 1sec intervals)    
     _started = true
   cbStarted()
