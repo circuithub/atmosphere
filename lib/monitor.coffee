@@ -50,14 +50,18 @@ exports.system = () ->
 
 cpuPrevious = undefined
 cpuUsage = () ->
-  cpus = os.cpus
+  cpus = os.cpus()
+  timestamp = (new Date()).getTime()
   total = 
     user: 0
     nice: 0
     sys: 0
     idle: 0
     irq: 0
-  total[eachParam] += eachValue if total[eachParam]? for eachParam, eachValue of eachCPU for eachCPU in cpus
+  for eachCPU in cpus
+    for eachParam, eachValue of eachCPU.times 
+      if total[eachParam]? 
+        total[eachParam] += eachValue 
   if not cpuPrevious?
     cpuPrevious = 
       timestamp: (new Date()).getTime()
@@ -73,7 +77,12 @@ cpuUsage = () ->
     #convert to percent
     for eachParam of total
       delta[eachParam] = delta[eachParam]/delta.total
-    core.refs().thisTypeRef.child("#{core.rainID()}/status/cpu").set delta
+    #update prior state
+    cpuPrevious = 
+      timestamp: timestamp
+      total: total
+    #write to database
+    core.refs().thisTypeRef.child("#{core.rainID()}/status/cpu").set delta   
 
 exports.stats = () =>
   s = 
