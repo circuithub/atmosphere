@@ -213,12 +213,31 @@ schedule = () ->
       next()
       return
     console.log "[sky]", "IBOSS", "Scheduling #{rainDropID} --> #{asignee}"
+    updateFunction = (rainCloud) ->
+      #Do we still exist?
+      return undefined if not rainCloud?.log?.start?
+      #Are we already working in this bucket?
+      for eachDrop, eachBucket of rainCloud?.todo
+        return undefined if eachBucket is rainBucket
+      #All good, let's make changes
+      rainCloud.todo = {} if not rainCloud.todo?
+      rainCloud.todo.rainDropID = rainBucket
+      return rainCloud
+    onComplete = (error, committed, snapshot) ->
+      if error?
+        console.log "[sky]", "EGATZ", "Transaction scheduling #{rainDropID} --> #{rainCloudID} failed abnormally!", error
+        next()
+        return
+      if not committed
+        console.log "[sky]", "ELATE", "Transaction scheduling #{rainDropID} --> #{rainCloudID} failed rainCloud is busy or offline!"
+        next()
+        return
+      #[2.] /sky: Mark the rainDrop as assigned
+      atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
+      #[3.] /rainDrop: Log the assignment
+      atmosphere.monitor.log rainDropID, "assign", asignee
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
-    atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
-    #[2.] /sky: Mark the rainDrop as assigned
-    atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
-    #[3.] /rainDrop: Log the assignment
-    atmosphere.monitor.log rainDropID, "assign", asignee
+    atmosphere.core.refs().rainCloudsRef.child(asignee).transaction updateFunction, onComplete, false
     #Get next drop and repeat
     next()
 
@@ -249,7 +268,7 @@ schedule = () ->
 workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
     for workingDropID, workingBucket of rainClouds[rainCloudID].todo
-      return true if workingBucket is rainBucket 
+      return true if workingBucket is rainBucket
   catch e
     console.log "\n\n\n=-=-=[workingOn]", e, "\n\n\n" #xxx
   return false
