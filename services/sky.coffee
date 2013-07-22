@@ -136,8 +136,10 @@ remove = (rainMakerID, disconnectedAt) ->
 ########################################
   
 ###
-  Schedule the specifed rainDrop
-  -- Called when entry added to /sky/todo
+  Schedule
+  -- Called when new job posted to queue
+  -- Called when new worker comes online
+  -- Called when first booted
 ###
 schedulingNow = false
 toSchedule = []
@@ -146,38 +148,52 @@ schedule = () ->
   #--Collect rainDrop data
   rainDropID = undefined
   rainDrop = undefined
+  rainClouds = undefined
   rainBucket = undefined
   asignee = undefined
   
-  getTask = (next) ->
+  todoRainDropIDs = []
+
+  getTasks = (next) ->
     atmosphere.core.refs().skyRef.child("todo").once "value", (snapshot) ->
-      rainDropID = Object.keys(snapshot.val())[0] if snapshot.val()?
-      if not rainDropID?
-        console.log "[sky]", "IALLDONE", "Nothing to do..."
-        anyMore()
+      if not snapshot.val()?
+        next()
         return
-      console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"
-      next()     
+      todoRainDropIDs = Object.keys snapshot.val()
+      next()
+
+  getTask = (next) ->
+    rainDropID = todoRainDropIDs.shift()
+    if not rainDropID?
+      console.log "[sky]", "IALLDONE", "Nothing to do..."
+      anyMore()
+      return
+    console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"
+    next()     
 
   getDrop = (next) ->
     atmosphere.core.refs().rainDropsRef.child(rainDropID).once "value", (rainDropSnapshot) ->
+      console.log "\n\n\n=-=-=[getDrop]", 1, "\n\n\n" #xxx
       rainDrop = rainDropSnapshot.val()
       rainBucket = rainDrop.job.type
+      console.log "\n\n\n=-=-=[getDrop]", rainBucket, rainDrop, "\n\n\n" #xxx
       next()
   
   getClouds = (next) ->
+    console.log "\n\n\n=-=-=[getClouds]", 1, "\n\n\n" #xxx
     atmosphere.core.refs().rainCloudsRef.once "value", (snapshot) ->
-      rain.rainClouds = snapshot.val()
+      console.log "\n\n\n=-=-=[getClouds]", snapshot, "\n\n\n" #xxx
+      rainClouds = snapshot.val()
       next()
 
   plan = (next) ->
-    if not rain.rainClouds?
+    if not rainClouds?
       next() #No workers online so no one available for this job... =(
       return
     candidates = {id:[], metric:[]}
-    for rainCloudID, rainCloudData of rain.rainClouds 
+    for rainCloudID, rainCloudData of rainClouds 
       if not rainCloudData.status.rainBuckets? or rainBucket in rainCloudData.status.rainBuckets #This cloud handles this type of job
-        if not workingOn rainCloudID, rainBucket 
+        if not workingOn rainCloudID, rainClouds, rainBucket 
           #-- This worker is available to take the job
           candidates.id.push rainCloudID
           candidates.metric.push Number rainCloudData.status.load?[0]
@@ -194,19 +210,22 @@ schedule = () ->
       console.log "[sky]", "INOONE", "No worker available for #{rainBucket} job."         
       next()
       return
-    if rain.sky?.todo? and not rain.sky.todo[rainDropID]?
-      #-- Job was assigned out from under us!
-      console.log "[sky]", "WOMORE", "No longer need to schedule #{rainDropID}"
-      next()
-      return
     console.log "[sky]", "IBOSS", "Scheduling #{rainDropID} --> #{asignee}"
+    console.log "\n\n\n=-=-=[assign]", rainBucket, rainDropID, asignee, "\n\n\n" #xxx
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child("#{asignee}/todo/#{rainDropID}").set rainBucket
     #[2.] /sky: Mark the rainDrop as assigned
     atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
     #[3.] /rainDrop: Log the assignment
     atmosphere.monitor.log rainDropID, "assign", asignee
+    #Get next drop and repeat
     next()
+
+  nextDrop = () ->
+    #-- LOOP until we've attempted to schedule all pending jobs
+    setImmediate () ->
+      console.log "\n\n\n=-=-=[nextDrop]", getTask, getDrop, "\n\n\n" #xxx
+      getTask getDrop
 
   anyMore = (next) ->
     schedulingNow = false
@@ -220,16 +239,16 @@ schedule = () ->
     toSchedule.push true #we're busy scheduling something else, add this to the wait queue
     return    
   schedulingNow = true
-  getTask -> getDrop -> getClouds -> plan -> assign -> anyMore()
+  getTasks -> getTask -> getDrop -> getClouds -> plan -> assign -> nextDrop()
 
 
 
 ###
   Is the specified rainCloud already working on a job (drop) of this type (bucket)
 ###
-workingOn = (rainCloudID, rainBucket) ->
+workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
-    for workingDropID, workingBucket of rain.rainClouds[rainCloudID].todo
+    for workingDropID, workingBucket of rainClouds[rainCloudID].todo
       return true if workingBucket is rainBucket 
   catch e
     console.log "\n\n\n=-=-=[workingOn]", e, "\n\n\n" #xxx
