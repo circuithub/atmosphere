@@ -91,7 +91,6 @@ reschedule = () ->
   -- disconnectedAt - UNIX epoch time, milliseconds
 ###
 recover = (rainCloudID, disconnectedAt) ->
-  return #xxx
   rainCloud = undefined
   getCloud = (next) ->
     atmosphere.core.refs().rainCloudsRef.child("#{rainCloudID}").once "value", (snapshot) ->
