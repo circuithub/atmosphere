@@ -106,4 +106,4 @@ exports.idletime = () ->
 ###
 exports.log = (rainDropID, event, where) =>
   if event? and event.length > 0
-    core.refs().thisTypeRef.child("#{rainDropID}/log/#{event}").set core.log rainDropID, event, where
+    core.refs().rainDropsRef.child("#{rainDropID}/log/#{event}").set core.log rainDropID, event, where
