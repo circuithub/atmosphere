@@ -36,7 +36,8 @@ exports.initReferences = () =>
     skyRef: new Firebase "#{@firebaseServerURL}atmosphere/sky/"
     weatherRef: new Firebase "#{@firebaseServerURL}atmosphere/weatherPattern/"
     connectedRef: new Firebase "#{@firebaseServerURL}/.info/connected"
-  switch @rainType()
+  console.log "\n\n\n=-=-=[initReferences]", exports.rainType(), "\n\n\n" #xxx
+  switch exports.rainType()
     when "rainMaker"
       @_ref.thisTypeRef = @_ref.rainMakersRef
     when "rainCloud"
