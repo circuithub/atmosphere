@@ -19,9 +19,9 @@ exports.init = (cbReady) =>
 
   weather = undefined
 
-  #[1.] Connect to Firebase
-  connect = (next) ->
-    atmosphere.core.connect nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->
+  #[1.] Register as a Rain Maker
+  rainInit = (next) ->
+    atmosphere.rainMaker.init "sky", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
         cbReady err
@@ -32,15 +32,6 @@ exports.init = (cbReady) =>
   loadWeather = (next) ->
     atmosphere.weather.pattern (error, data) ->
       weather = data
-      next()
-  
-  #[3.] Register as a Rain Maker
-  rainInit = (next) ->
-    atmosphere.rainMaker.init "sky", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
-      if err?
-        console.log "[ECONNECT]", "Could not connect to atmosphere.", err
-        cbReady err
-        return
       next()
 
   #[4.] Load tasks / Begin monitoring
@@ -55,13 +46,16 @@ exports.init = (cbReady) =>
     next()
 
   #[5.] Handle task scheduling
-  brokerTasks = (next) ->
-    listen "rainClouds" #monitor rainClouds
-    listen "sky" #monitor sky
+  brokerTasks = (next) ->    
+    #Listen for new jobs
     atmosphere.core.refs().skyRef.child("todo").on "child_added", (snapshot) ->
       schedule()
+    #Listen for crashed rainClouds (and recover them)
     atmosphere.core.refs().skyRef.child("recover").on "child_added", (snapshot) ->
-      recover snapshot.name(), snapshot.val()
+      recover snapshot.name(), snapshot.val()    
+    #Listen for dead rainMakers (and remove them)
+    atmosphere.core.refs().skyRef.child("remove").on "child_added", (snapshot) ->
+      remove snapshot.name(), snapshot.val()
     next()
 
   #[6.] Monitor for recovery scenarios (dead workers, rescheduling, etc)
@@ -79,24 +73,8 @@ exports.init = (cbReady) =>
     monitor()
     next()
 
-  connect -> loadWeather -> rainInit -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
+  rainInit -> loadWeather -> registerTasks -> brokerTasks -> recoverFailures -> cbReady()
 
-
-
-########################################
-## STATE MANAGEMENT
-########################################
-
-###
-  Attach (and maintain) current state of specified atmosphere data type
-  -- Keeps data.dataType up to date
-###
-rain = {}
-listen = (dataType) =>
-  atmosphere.core.refs()["#{dataType}Ref"].on "value", (snapshot) -> 
-    #console.log "[listen]", snapshot.name()
-    rain[dataType] = snapshot.val()
- 
 
 
 ########################################
@@ -132,6 +110,25 @@ recover = (rainCloudID, disconnectedAt) ->
     atmosphere.core.refs().rainCloudsRef.child(rainCloudID).remove()
     atmosphere.core.refs().skyRef.child("recover/#{rainCloudID}").remove()
   getCloud -> record -> cleanup()
+
+###
+  Remove a failed rainMaker
+  -- rainMakerID
+###
+remove = (rainMakerID, disconnectedAt) ->
+  rainMaker = undefined
+  getMaker = (next) ->
+    atmosphere.core.refs().rainMakersRef.child("#{rainMakerID}").once "value", (snapshot) ->
+      rainMaker = snapshot.val()
+      next()
+  record = (next) ->
+    #TODO
+    next()
+  cleanup = (next) ->
+    atmosphere.core.refs().rainMakersRef.child(rainMakerID).remove()
+    atmosphere.core.refs().skyRef.child("remove/#{rainMakerID}").remove()
+  getMaker -> record -> cleanup()
+
 
 
 ########################################

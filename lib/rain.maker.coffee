@@ -18,13 +18,29 @@ exports._rainDrops = rainDrops
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
 exports.init = (role, url, token, cbDone) =>
-  core.init role, "rainMaker", url, token, (err) =>
-    if err?
-      cbDone err
-      return    
+  connect = (next) =>
+    core.init role, "rainMaker", url, token, (err) =>
+      if err?
+        cbDone err
+        return    
+      next()
+  begin = (next) =>
     @start () ->
       monitor.boot()
-      cbDone undefined
+      next()
+
+  cleanup = (next) ->
+    core.refs().connectedRef.on "value", (snap) ->
+      if snap.val() is true #We're connected (or reconnected)
+        onlineRef = core.refs().skyRef.child("remove/#{core.rainID()}")
+        onlineRef.onDisconnect().set core.now()
+        onlineRef.remove()
+    next()
+
+  callback = () ->
+    cbDone undefined
+
+  connect -> begin -> cleanup -> callback()
 
 ###
   start internal machinery for job submission process
