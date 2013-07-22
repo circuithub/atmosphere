@@ -17,18 +17,28 @@ Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://
 * "Fixes" Heroku Routing: You control how and when Atmosphere distributes work
 * Proven: Backed by Firebase, used in production
 
-# Usage Model
+# Usage Models
 
-Atmosphere is a flexible jobs queue. It can support three basic use cases:
+Atmosphere is a flexible jobs queue. It can support any arbitrary control flow among jobs. The final callback is optional.
 
-## Simple Remote Procedure Call (S-RPC) 
+## The Simplest Case
 
 ![Atmosphere Schema Diagram](/docs/srpc.png)
 
 A job is submitted, executed by one of several remote listening workers, and a callback function is invoked when the work is complete or the timeout expires.
 
-2. Complex Remote Procedure Call (C-RPC) -- A chain of jobs are submitted and execution in sequence is desired. Data is passed from one job to the next. The callback may be invoked at any specified point along the chain... or at the end if unspecified.
-3. Message Passing for Logging (MP-L) -- A job is submitted with no expectation for a response. Used for monitoring/logging applications.
+## Chaining Jobs
+
+![Atmosphere Schema Diagram](/docs/crpc.png)
+
+A chain of jobs are submitted and execution in sequence is desired. Data is passed from one job to the next. The callback may be invoked at any specified point along the chain... or at the end if unspecified.
+
+## Jobs Calling Jobs (Recursing)
+
+![Atmosphere Schema Diagram](/docs/recursive.png)
+
+Jobs can call other jobs internally, that is, Rain Clouds are also Rain Makers. All combinations of chains and recursions are supported.
+
 
 # Jobs Model
 
