@@ -261,10 +261,9 @@ schedule = () ->
   schedulingNow = true
   getTasks()
 
-
-
 ###
   Is the specified rainCloud already working on a job (drop) of this type (bucket)
+  TODO -- Investigate if this is performing correctly
 ###
 workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
