@@ -1,16 +1,20 @@
-_            = require "underscore"
-should       = require "should"
-atmosphere   = require "../index"
-bsync        = require "bsync"
-h            = require "./helpers"
+_               = require "underscore"
+should          = require "should"
+atmosphere      = require "../index"
+bsync           = require "bsync"
+h               = require "./helpers"
+nconf           = require "nconf"
 
-firebaseTestURL = "https://atmosphere.firebaseio-demo.com/"  
+nconf.env()
+
+firebaseTestURL = nconf.get("FIREBASE_URL")
 
 
 ###############################
 ## RAINCLOUD Config
 
 altiumCounter = 0
+workTimeMs = 1500
 
 workerDoAltium = (ticket, data) ->
   console.log "[W] ALTIUM", ticket, data 
@@ -26,19 +30,25 @@ worker1 = (ticket, data) ->
   console.log "[W] FIRST", ticket, data 
   count()
   data2 = {input: data, first: "results from worker 1"}
-  atmosphere.rainCloud.doneWith ticket, undefined, data2
+  setTimeout () ->
+    atmosphere.rainCloud.doneWith ticket, undefined, data2
+  , workTimeMs
 
 worker2 = (ticket, data) ->
   console.log "[W] SECOND", ticket, data 
   count()
   data2 = {input: data, second: "results from worker 2"}
-  atmosphere.rainCloud.doneWith ticket, undefined, data2
+  setTimeout () ->
+    atmosphere.rainCloud.doneWith ticket, undefined, data2
+  , workTimeMs
 
 worker3 = (ticket, data) ->
   console.log "[W] THIRD", ticket, data 
   count()
   data2 = {input: data, third: "results from worker 3"}
-  atmosphere.rainCloud.doneWith ticket, undefined, data2
+  setTimeout () ->
+    atmosphere.rainCloud.doneWith ticket, undefined, data2
+  , workTimeMs
 
 workerJobJob = (ticket, data) ->
   console.log "[W] JOB-JOB", ticket, data
@@ -71,6 +81,6 @@ count = () ->
 
 do ->
   #Init Cloud (Worker Server)
-  atmosphere.rainCloud.init "Cloud", firebaseTestURL, undefined, jobTypes, (err) ->
+  atmosphere.rainCloud.init "Cloud", {url: firebaseTestURL}, jobTypes, (err) ->
     h.shouldNotHaveErrors err
     console.log "[I] Initialized RAINCLOUD", err

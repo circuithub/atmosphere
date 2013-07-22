@@ -160,6 +160,9 @@ exports.doneWith = (ticket, errors, response) =>
       console.log "[atmosphere]", "IDONE2.1", "getDrop", rainDropID
       rainDrop = snapshot.val()
       next()
+    , (something) ->
+      console.log "\n\n\n=-=-=[IDONE2 ERROR]", something, "\n\n\n" #xxx
+      process.exit 44
 
   #Write to rainDrop
   write = (next) ->

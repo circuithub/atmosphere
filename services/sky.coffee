@@ -21,6 +21,7 @@ exports.init = (cbReady) =>
 
   #[1.] Register as a Rain Maker
   rainInit = (next) ->
+    console.log "\n\n\n=-=-=[sky.init]", nconf.get("FIREBASE_URL"), "\n\n\n" #xxx
     atmosphere.rainMaker.init "sky", nconf.get("FIREBASE_URL"), nconf.get("FIREBASE_SECRET"), (err) ->      
       if err?
         console.log "[ECONNECT]", "Could not connect to atmosphere.", err
@@ -66,7 +67,7 @@ exports.init = (cbReady) =>
     atmosphere.core.refs().skyRef.child("done").on "child_added", reschedule
     #Debug Investigation Monitor -- #xxx
     monitor = () ->
-      console.log "=-=-=[monitor]", toSchedule.length #xxx
+      #console.log "=-=-=[monitor]", toSchedule.length #xxx
       setTimeout () ->
         monitor() 
       , 1000
@@ -184,7 +185,6 @@ schedule = () ->
     next = plan
     atmosphere.core.refs().rainCloudsRef.once "value", (snapshot) ->
       rainClouds = snapshot.val()
-      console.log "\n\n\n=-=-=[rainClouds]", JSON.stringify(rainClouds), "\n\n\n" #xxx
       next()
 
   plan = () ->

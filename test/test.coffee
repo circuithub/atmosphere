@@ -14,6 +14,13 @@ console.log "=-=-=[START]", "Make sure that 'coffee server.coffee' is running...
 ## RUN ME! Yay! Tests!
 
 describe "atmosphere", ->
+
+  describe "#swarmTest", ->
+    it "should initialize as a trouble maker", (done) ->
+      atmosphere.rainMaker.init "swarmGenerator", firebaseTestURL, undefined, (error) ->
+        h.shouldNotHaveErrors error
+        done()
+
   
   describe "#rainMaker", ->
 
