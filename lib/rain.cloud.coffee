@@ -84,7 +84,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
     function(ticket, data) ->
 ###
 lightning = (rainBucket, rainDropID, rainDrop, cbDispatched) =>
-  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID
+  console.log "[atmosphere]", "ISTRIKE", rainBucket, rainDropID, JSON.stringify rainDrop
   #Release this information to the work function (dispatch job)
   ticket = 
     type: rainBucket

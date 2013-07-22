@@ -225,11 +225,11 @@ schedule = () ->
       return rainCloud
     onComplete = (error, committed, snapshot) ->
       if error?
-        console.log "[sky]", "EGATZ", "Transaction scheduling #{rainDropID} --> #{rainCloudID} failed abnormally!", error
+        console.log "[sky]", "EGATZ", "Transaction scheduling #{rainDropID} --> #{asignee} failed abnormally!", error
         next()
         return
       if not committed
-        console.log "[sky]", "ELATE", "Transaction scheduling #{rainDropID} --> #{rainCloudID} failed rainCloud is busy or offline!"
+        console.log "[sky]", "ELATE", "Transaction scheduling #{rainDropID} --> #{asignee} failed rainCloud is busy or offline!"
         next()
         return
       #[2.] /sky: Mark the rainDrop as assigned
