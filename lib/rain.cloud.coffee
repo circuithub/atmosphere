@@ -23,7 +23,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
 
   #[1.] Connect  
   connect = (next) ->
-    core.init role, url, token, (error) =>
+    core.init role, "rainCloud", url, token, (error) =>
       if error?
         cbDone error
         return
@@ -42,8 +42,6 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
       rainBuckets: Object.keys rainBuckets  
       load: [0,0,0]  
       completed: 0
-    #--Begin Performance Monitoring
-    monitor.system()
     #--Store Callback Functions
     jobWorkers[rainBucket] = cbExecute for rainBucket, cbExecute of rainBuckets
     next()
@@ -54,7 +52,7 @@ exports.init = (role, url, token, rainBuckets, cbDone) =>
       if error?
         cbDone error
         return
-      monitor.boot() #log boot time
+      monitor.boot() #log boot time; start system monitoring
       next()
 
   #[4.] Listen for new jobs

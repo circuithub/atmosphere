@@ -13,8 +13,8 @@ FirebaseTokenGenerator = require "firebase-token-generator"
 ## STATE MANAGEMENT
 ########################################
 
-exports.init = (role, _firebaseServerURL, _firebaseServerToken, cbInitialized) =>
-  @setRole role
+exports.init = (role, roleType, _firebaseServerURL, _firebaseServerToken, cbInitialized) =>
+  @setRole role, roleType
   @connect _firebaseServerURL, _firebaseServerToken, cbInitialized
 
 exports.setFirebaseURL = (url) =>
@@ -31,10 +31,18 @@ exports.initReferences = () =>
   @_ref = 
     rainDropsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainDrops/"
     rainCloudsRef: new Firebase "#{@firebaseServerURL}atmosphere/rainClouds/"
+    rainMakersRef: new Firebase "#{@firebaseServerURL}atmosphere/rainMakers/"
     rainGaugeRef: new Firebase "#{@firebaseServerURL}atmosphere/rainGauge/"
     skyRef: new Firebase "#{@firebaseServerURL}atmosphere/sky/"
     weatherRef: new Firebase "#{@firebaseServerURL}atmosphere/weatherPattern/"
     connectedRef: new Firebase "#{@firebaseServerURL}/.info/connected"
+  switch @rainType()
+    when "rainMaker"
+      @_ref.thisTypeRef = @_ref.rainMakersRef
+    when "rainCloud"
+      @_ref.thisTypeRef = @_ref.rainCloudsRef
+    else
+      @_ref.thisTypeRef = @_ref.rainCloudsRef
 
 
 
@@ -49,8 +57,9 @@ listeners = {}
 ## IDENTIFICATION
 ########################################
 
-_rainID = uuid.v4() #Unique ID of this process/machine
-_roleID = undefined
+_rainID   = uuid.v4() #Unique ID of this process/machine
+_roleID   = undefined
+_roleType = undefined #rainMaker or rainCloud
 
 ###
   ID of this machine
@@ -59,9 +68,17 @@ exports.rainID = () ->
   return if _roleID? then _roleID else _rainID
 
 ###
+  Atmosphere role type of this machine
+  -- "rainMaker", "rainCloud"
+###
+exports.rainType = () ->
+  return if _roleType? then _roleType else "rainCloud"
+
+###
   Format machine prefix
 ###
-exports.setRole = (role) ->
+exports.setRole = (role, type) ->
+  _roleType = type
   _roleID = _s.humanize role
   _roleID = _roleID.replace " ", "_"
   _roleID = _s.truncate _roleID, 8

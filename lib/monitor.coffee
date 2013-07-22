@@ -7,11 +7,17 @@ perfMon =
   startTime: undefined #time stamp exited initialization
   idleAt: undefined #last job completed at (timestamp)
 
+
+
+########################################
+## STATE MESSAGES
+########################################
 ###
   RainCloud: Just booted
 ###
-exports.boot = () ->
-  core.refs().rainCloudsRef.child("#{core.rainID()}/log/start").set core.now()
+exports.boot = () =>
+  core.refs().thisTypeRef.child("#{core.rainID()}/log/start").set core.now()
+  @system() #Begin system monitoring
 
 ###
   RainCloud: Finished another job
@@ -24,7 +30,12 @@ exports.jobComplete = () ->
       console.log "[monitor]", "ECOUNTER", "Could not increment rainCloud #{core.rainID()}'s job completion counter.", error
       return
     console.log "[monitor]", "IDOSTUFZ", "This rainCloud has finished #{snapshot.val()} jobs to date."
-  core.refs().rainCloudsRef.child("#{core.rainID()}/status/completed").transaction updateFunction, onComplete
+  core.refs().thisTypeRef.child("#{core.rainID()}/status/completed").transaction updateFunction, onComplete
+
+
+########################################
+## PROPRIOCEPTION
+########################################
 
 ###
   RainCloud: Monitor and report system load metrics
@@ -32,8 +43,37 @@ exports.jobComplete = () ->
 ###
 exports.system = () ->
   if core.ready()
-    core.refs().rainCloudsRef.child("#{core.rainID()}/status/load").set os.loadavg()
+    #system tasks running (exponentially weighted average)
+    core.refs().thisTypeRef.child("#{core.rainID()}/status/load").set os.loadavg()
+    cpuUsage()
   setTimeout exports.system, 1000
+
+cpuPrevious = undefined
+cpuUsage = () ->
+  cpus = os.cpus
+  total = 
+    user: 0
+    nice: 0
+    sys: 0
+    idle: 0
+    irq: 0
+  total[eachParam] += eachValue if total[eachParam]? for eachParam, eachValue of eachCPU for eachCPU in cpus
+  if not cpuPrevious?
+    cpuPrevious = 
+      timestamp: (new Date()).getTime()
+      total: total
+  else
+    delta =
+      milliseconds: (new Date()).getTime() - cpuPrevious.timestamp #time delta in milliseconds (sample window)
+      total: 0
+    #collect raw time metrics
+    for eachParam of total
+      delta[eachParam] = total[eachParam] - cpuPrevious.total[eachParam] 
+      delta.total += delta[eachParam]    
+    #convert to percent
+    for eachParam of total
+      delta[eachParam] = delta[eachParam]/delta.total
+    core.refs().thisTypeRef.child("#{core.rainID()}/status/cpu").set delta
 
 exports.stats = () =>
   s = 
@@ -57,4 +97,4 @@ exports.idletime = () ->
 ###
 exports.log = (rainDropID, event, where) =>
   if event? and event.length > 0
-    core.refs().rainDropsRef.child("#{rainDropID}/log/#{event}").set core.log rainDropID, event, where
+    core.refs().thisTypeRef.child("#{rainDropID}/log/#{event}").set core.log rainDropID, event, where

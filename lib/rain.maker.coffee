@@ -18,11 +18,12 @@ exports._rainDrops = rainDrops
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
 exports.init = (role, url, token, cbDone) =>
-  core.init role, url, token, (err) =>
+  core.init role, "rainMaker", url, token, (err) =>
     if err?
       cbDone err
       return    
     @start () ->
+      monitor.boot()
       cbDone undefined
 
 ###
