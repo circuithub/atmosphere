@@ -269,9 +269,9 @@ schedule = () ->
 workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
     if rainClouds[rainCloudID].status.exclusive 
-      console.log "\n\n\n=-=-=[EXCLUSIVE MODE]", message, "\n\n\n" #xxx
+      console.log "\n\n\n=-=-=[EXCLUSIVE MODE]", "\n\n\n" #xxx
       if rainClouds[rainCloudID].todo? and rainClouds[rainCloudID].todo.length > 0 #only work on one job at a time in exclusive mode
-        console.log "\n\n\n=-=-=[EXCLUSIVE MODE]", message, "\n\n\n" #xxx
+        console.log "\n\n\n=-=-=[EXCLUSIVE MODE2]", "\n\n\n" #xxx
         return true
     for workingDropID, workingBucket of rainClouds[rainCloudID].todo
       return true if workingBucket is rainBucket
