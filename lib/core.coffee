@@ -36,7 +36,6 @@ exports.initReferences = () =>
     skyRef: new Firebase "#{@firebaseServerURL}atmosphere/sky/"
     weatherRef: new Firebase "#{@firebaseServerURL}atmosphere/weatherPattern/"
     connectedRef: new Firebase "#{@firebaseServerURL}/.info/connected"
-  console.log "\n\n\n=-=-=[initReferences]", exports.rainType(), "\n\n\n" #xxx
   switch exports.rainType()
     when "rainMaker"
       @_ref.thisTypeRef = @_ref.rainMakersRef
@@ -117,7 +116,6 @@ exports.ready = () ->
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
 exports.connect = (_firebaseServerURL, @firebaseServerToken, cbConnected) =>
-  console.log "\n\n\n=-=-=[connect1]", _roleType, @rainType(), "\n\n\n" #xxx
   @setFirebaseURL _firebaseServerURL
   if connectionReady
     #--Already connected
@@ -131,7 +129,6 @@ exports.connect = (_firebaseServerURL, @firebaseServerToken, cbConnected) =>
   if @firebaseServerURL.toLowerCase().indexOf("-demo") isnt -1 #Skip authenication if using Firebase demo mode
     console.log "[atmosphere]", "NOAUTH", "Running in demo mode (skipping authenication)"
     connectionReady = true
-    console.log "\n\n\n=-=-=[connect2]", _roleType, @rainType(), "\n\n\n" #xxx
     @initReferences()
     cbConnected undefined
     return
@@ -148,7 +145,6 @@ exports.connect = (_firebaseServerURL, @firebaseServerToken, cbConnected) =>
         console.log "[atmosphere]", "EAUTH", "Login failed!", error
     else
       connectionReady = true 
-      console.log "\n\n\n=-=-=[connect3]", _roleType, @rainType(), "\n\n\n" #xxx
       @initReferences()
       console.log "[atmosphere]", "SCONNECT", "Connected to Firebase!"      
     cbConnected error
