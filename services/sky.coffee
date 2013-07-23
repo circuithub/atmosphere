@@ -54,7 +54,7 @@ exports.init = (cbReady) =>
       schedule()
     #Listen for crashed rainClouds (and recover them)
     atmosphere.core.refs().skyRef.child("recover").on "child_added", (snapshot) ->
-      recover snapshot.name(), snapshot.val()    
+      recover snapshot.name(), snapshot.val()
     #Listen for dead rainMakers (and remove them)
     atmosphere.core.refs().skyRef.child("remove").on "child_added", (snapshot) ->
       remove snapshot.name(), snapshot.val()

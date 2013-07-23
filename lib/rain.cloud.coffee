@@ -198,15 +198,28 @@ exports.doneWith = (ticket, errors, response) =>
   #-- TODO make atomic
 ###
 closeRainDrop = (rainDropID, rainDrop) ->
-  console.log "[atmosphere]", "IDONE4", rainDropID #xxx
-  core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID, "stop"), () ->
+  a = (next) ->
+    console.log "[atmosphere]", "IDONE4", rainDropID #xxx
+    core.refs().rainDropsRef.child("#{rainDropID}/log/stop").set core.log(rainDropID, "stop"), next
+  b = (next) ->
     console.log "[atmosphere]", "IDONE5", rainDropID #xxx
     monitor.jobComplete()
+    next()
+  c = (next) ->
     console.log "[atmosphere]", "IDONE6", rainDropID #xxx
-    core.refs().skyRef.child("done/#{rainDropID}").set true, () ->
-      console.log "[atmosphere]", "IDONE7", rainDropID #xxx
-      core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove () ->  
-        console.log "[atmosphere]", "IDONE8", rainDropID #xxx
+    core.refs().rainCloudsRef.child("#{core.rainID()}/done/#{rainDropID}").set true, next
+  d = (next) ->
+    console.log "[atmosphere]", "IDONE7", rainDropID #xxx
+    core.refs().rainCloudsRef.child("#{core.rainID()}/todo/#{rainDropID}").remove next  
+  e = (next) ->
+    console.log "[atmosphere]", "IDONE8", rainDropID #xxx
+    core.refs().skyRef.child("done/#{rainDropID}").set true, next
+  f = (next) ->
+    console.log "[atmosphere]", "IDONE9", rainDropID #xxx
+    core.refs().rainCloudsRef.child("#{core.rainID()}/done/#{rainDropID}").remove next
+  g = () ->  
+    console.log "[atmosphere]", "IDONE10", rainDropID #xxx
+  a -> b -> c -> d -> e -> f -> g()
 
 ###
   Report error forward to all remaining jobs in the chain
