@@ -1,4 +1,5 @@
 _          = require "underscore"
+_s         = require "underscore.string"
 nconf      = require "nconf"
 bsync      = require "bsync"
 objects    = require "objects"
@@ -46,7 +47,7 @@ exports.init = (role, options, rainBuckets, cbDone) =>
   register = (next) ->
     #--Register with Sky
     core.refs().rainCloudsRef.child("#{core.rainID()}/status").set 
-      rainBuckets: Object.keys rainBuckets  
+      rainBuckets: _.map Object.keys(rainBuckets), (eachBucket) -> _s.dasherize(eachBucket).toLowerCase()
       load: [0,0,0]  
       completed: 0
       exclusive: options.exclusive

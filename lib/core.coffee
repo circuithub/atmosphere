@@ -100,6 +100,18 @@ exports.makeID = (queueName, jobName) =>
   candidate = candidate.toLowerCase()
   return candidate
 
+###
+  Extracts rainBucket from rainDropID
+  -- fallback when not specified
+###
+exports.getBucket = (rainDropID) ->
+  candidate = rainDropID.match(/^[A-Za-z0-9-]+_/)?[0]
+  if candidate?
+    candidate = _s.dasherize(candidate[0...candidate.length-1]).toLowerCase()
+  return candidate
+
+
+
 ########################################
 ## CONNECT
 ########################################
