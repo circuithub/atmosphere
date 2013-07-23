@@ -176,6 +176,7 @@ schedule = () ->
       next(allSnapshots) if cbCounter is 2
   
   gotState = (allSnapshots) ->
+    console.log "\n\n\n=-=-=[GOT STATE]", JSON.stringify(allSnapshots.clouds.val()), "\n\n\n" #xxx
     next = getTask
     if not allSnapshots?.drops?
       console.log "[sky]", "IALLDONE1", "Nothing to do..."
@@ -232,6 +233,9 @@ schedule = () ->
       next()
       return
     console.log "[sky]", "IBOSS", "Scheduling #{rainDropID} --> #{asignee}"
+    #[0.] /rainCould: Prematurely (latency-compensation) log the assignment in local cache (we'll detect failures in the next scheduler pass)
+    rainClouds[asignee].todo ?= {}
+    rainClouds[asignee].todo[rainDropID] = rainBucket
     updateFunction = (rainCloud) ->
       #Do we still exist?
       return undefined if not rainCloud?.log?.start?
@@ -255,10 +259,7 @@ schedule = () ->
       atmosphere.core.refs().skyRef.child("todo/#{rainDropID}").remove()
       #[3.] /rainDrop: Log the assignment (Firebase)
       atmosphere.monitor.log rainDropID, "assign", asignee
-      #[4.] /rainCould: Log the assignment in local cache (this is strictly a performance optimization)
-      rainClouds[asignee].todo ?= {}
-      rainClouds[asignee].todo[rainDropID] = rainBucket
-      #[5.] Get next drop and repeat
+      #[4.] Get next drop and repeat
       next()
     #[1.] /rainCloud: Assign the rainDrop to the indicated rainCloud
     atmosphere.core.refs().rainCloudsRef.child(asignee).transaction updateFunction, onComplete, false
@@ -291,7 +292,7 @@ schedule = () ->
 workingOn = (rainCloudID, rainClouds, rainBucket) ->
   try
     if rainClouds[rainCloudID].status.exclusive 
-      if rainClouds[rainCloudID].todo? and rainClouds[rainCloudID].todo.length > 0 #only work on one job at a time in exclusive mode
+      if rainClouds[rainCloudID].todo? and Object.keys(rainClouds[rainCloudID].todo).length > 0 #only work on one job at a time in exclusive mode
         return true
     for workingDropID, workingBucket of rainClouds[rainCloudID].todo
       return true if workingBucket.toLowerCase() is rainBucket.toLowerCase()
