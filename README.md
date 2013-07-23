@@ -1,10 +1,4 @@
-```
- _______ _______ _______  _____  _______  _____  _     _ _______  ______ _______
- |_____|    |    |  |  | |     | |______ |_____] |_____| |______ |_____/ |______
- |     |    |    |  |  | |_____| ______| |       |     | |______ |    \_ |______
-
-```
-Flexible Robust RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://firebase.com)
+ATMOSPHERE -- Flexible Complete RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://firebase.com)
 
 ![Atmosphere Schema Diagram](/docs/atmosphere.png)
 

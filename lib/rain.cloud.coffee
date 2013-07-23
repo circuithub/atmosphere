@@ -79,7 +79,12 @@ exports.init = (role, options, rainBuckets, cbDone) =>
             return
     next()
 
-  connect -> register -> submit -> listen -> cbDone()
+  #[5.] I'm online (start scheduling me)
+  online = (next) ->
+    core.refs().skyRef.child("online/#{core.rainID()}").set true
+    next()
+
+  connect -> register -> submit -> listen -> online -> cbDone()
     
 
 

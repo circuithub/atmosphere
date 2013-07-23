@@ -63,7 +63,9 @@ exports.init = (cbReady) =>
   #[6.] Monitor for recovery scenarios (dead workers, rescheduling, etc)
   recoverFailures = (next) ->
     #Retry scheduling when a new worker comes online
-    atmosphere.core.refs().rainCloudsRef.on "child_added", reschedule 
+    atmosphere.core.refs().skyRef.child("online").on "child_added", (snapshot) ->
+      atmosphere.core.refs().skyRef.child("online").child(snapshot.name()).remove()
+      reschedule()
     #Retry scheduling after a worker finishes a job
     atmosphere.core.refs().skyRef.child("done").on "child_added", reschedule
     #Debug Investigation Monitor -- #xxx
