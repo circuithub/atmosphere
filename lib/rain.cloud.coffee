@@ -27,7 +27,7 @@ jobWorkers = {}
 ###
 exports.init = (role, options, rainBuckets, cbDone) =>    
   #[0.] Default Options
-  options.exclusive ?= false
+  options.exclusive ?= true
   
   #[1.] Connect  
   connect = (next) ->

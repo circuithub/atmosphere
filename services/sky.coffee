@@ -97,14 +97,18 @@ recover = (rainCloudID, disconnectedAt) ->
   getCloud = (next) ->
     atmosphere.core.refs().rainCloudsRef.child("#{rainCloudID}").once "value", (snapshot) ->
       rainCloud = snapshot.val()
-      if rainCloud.todo?
-        for eachJob of rainCloud.todo
-          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/assign").remove()
-          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/start").remove()
-          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/stop").remove()
-          atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push atmosphere.core.log rainCloudID, "recover"
-          atmosphere.core.refs().skyRef.child("todo/#{eachJob}").set false
+      toRecover =[]
+      toRecover.push eachJob for eachJob of rainCloud.todo if rainCloud.todo?
+      toRecover.push eachJob for eachJob of rainCloud.done if rainCloud.done?
+      toRecover = _.uniq toRecover #remove duplicates (handle edge case)
+      retry eachJob for eachJob in toRecover
       next()
+  retry = (eachJob) ->
+    atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/assign").remove()
+    atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/start").remove()
+    atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log/stop").remove()
+    atmosphere.core.refs().rainDropsRef.child("#{eachJob}/log").push atmosphere.core.log rainCloudID, "recover"
+    atmosphere.core.refs().skyRef.child("todo/#{eachJob}").set false
   record = (next) ->
     #TODO
     next()
