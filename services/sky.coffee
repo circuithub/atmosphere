@@ -182,10 +182,10 @@ schedule = () ->
       next(allSnapshots) if cbCounter is 2
   
   gotState = (allSnapshots) ->
-    console.log "\n\n\n=-=-=[GOT STATE]", JSON.stringify(allSnapshots.clouds.val()), "\n\n\n" #xxx
+    #console.log "\n\n\n=-=-=[GOT STATE]", JSON.stringify(allSnapshots.clouds.val()), "\n\n\n" #xxx
     next = getTask
     if not allSnapshots?.drops?
-      console.log "[sky]", "IALLDONE1", "Nothing to do..."
+      console.log "[sky]", "IALLDONE2", "Nothing to do..."
       return
     if not allSnapshots?.clouds?
       console.log "[sky]", "INOONE1", "No workers online."         
@@ -201,10 +201,10 @@ schedule = () ->
     next = plan    
     rainDropID = todoRainDropIDs.shift()
     if not rainDropID?
-      console.log "[sky]", "IALLDONE2", "Nothing to do..."
+      console.log "[sky]", "IALLDONE", "Nothing to do..."
       anyMore()
       return
-    console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"    
+    #console.log "[sky]", "ISCHEDULE", "Scheduling #{rainDropID}"    
     rainDropGroup = rainDrops[rainDropID].group
     rainBucket = rainDrops[rainDropID].type
     rainDropGroup ?= "main" #default to everything in one group
@@ -235,7 +235,7 @@ schedule = () ->
   assign = () ->
     next = nextDrop
     if not asignee?
-      console.log "[sky]", "INOONE2", "No worker available for #{rainBucket} job."         
+      #console.log "[sky]", "INOONE2", "No worker available for #{rainBucket} job."         
       next()
       return
     console.log "[sky]", "IBOSS", "Scheduling #{rainDropID} --> #{asignee}"
