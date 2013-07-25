@@ -66,16 +66,15 @@ Atmosphere consists of two entities: ```rainMaker``` and ```rainCloud```
 You can control how work is distributed in the atmosphere by understanding the routing rules:
 
 1. ```rainClouds``` register for the job types they want to handle by specifying which types and which functions should be invoked when work is received for that job type.
-2. Atmosphere distributes jobs among all ```rainClouds``` registered for that job in a round-robin fashion (least recently tasked gets the next job). 
-3. ```rainClouds``` can only process one job *of each job type* at a time. If you have I/O intensive tasks this works extremely well. If you have compute intensive tasks this does not. See the section at the end on compute intensive tasking to learn how to employ atmosphere effectively with CPU-heavy workloads.
-4. Atmosphere does not distribute jobs to busy ```rainClouds```. A cloud is busy if it is currently processing a job of the *same type* as the job trying to be scheduled.
+2. Atmosphere distributes jobs among all ```rainClouds``` registered for that job in a least-loaded fashion (load being determined by the operating system -- number of processes). 
+3. ```rainClouds``` can only process one job at a time (exclusive mode). Other modes will be available in future versions.
+4. Atmosphere does not distribute jobs to busy ```rainClouds```. A cloud is busy if it is currently processing a job (exclusive mode).
 5. If a ```rainCloud``` crashes or is shutdown, any tasks that have not yet completed are re-queued and go the next available cloud following the rules above. This happens automatically (no action is necessary on the part of the developer).
-
 
 
 # Installation & Usage
 
-Atmosphere is tested and supported in node.js v.0.10.8 and above.
+Atmosphere is tested and supported in node.js v.0.10.12 and above.
 
 ```npm install atmosphere```
 
@@ -199,7 +198,6 @@ atmosphere.init "responder", (err) ->
 		return
 	#All set now we're waiting for jobs to arrive
 ```
-
 
 
 
@@ -334,42 +332,17 @@ You could, of course, use the normal callback syntax and simply ignore (empty fu
 	atmosphere.submit [job1, job2], undefined # <-- NOTE THIS!
 ```
 
-## Logging/Monitoring
-
-
-
-# Stuff
-
-From original code file:
-1. worker functions in rain cloud apps get called like this:
-  your_function(ticket, jobData)
-2. When done, call doneWith(..) and give the ticket back along with any response data (must serialize to JSON)...
-  atmosphere.thunder ticket, responseData
-  
-## Initialize (Connect to Server)
-
-```coffeescript
-#Init Cloud (Worker Server -- ex. EDA Server)
-atmosphere.init.rainCloud jobTypes, (err) ->
-```
-  
-```coffeescript
-#Init Rainmaker (App Server)
-atmosphere.init.rainMaker (err) ->
-```
-
-
 
 # Architecture
 ```coffeescript
 rainMaker.submit(job, callback)
-	--> RabbitMQ -->
+	--> Firebase -->
 		rainCloud.lightning(..)
 			envelope
 				external.function(ticket, data)
 			envelope
 		rainCloud.doneWith(..)
-	<-- RabbitMQ <--
+	<-- Firebase <--
 callback(errors, data)
 ```
 
@@ -377,12 +350,6 @@ callback(errors, data)
 # Data Structures & Formats
 
 ## External
-
-### Current Job State
-
-```coffeescript
-    message = {data: {}, next: [job2, job3, job4, ...]}
-```
 
 ### Job Ticket
 
@@ -395,49 +362,4 @@ ticket =
 
 ## Internal 
 
-### jobChain (payload.next)
-
-```
-next = [
-	{
-		type: "remoteFunction" #the job type/queue name
-		name: "special job" #name for this job
-		data: {msg: "useful"} #arbitrary serializable object
-		timeout: 30 #seconds
-		callback: true #optional
-	},
-	{
-		type: "remoteFunction" #the job type/queue name
-		name: "special job" #name for this job
-		data: {msg: "useful"} #arbitrary serializable object
-		timeout: 30 #seconds
-		callback: false #optional
-	}
-]
-```
-
-### rainMaker: Current Jobs (jobs)
-```coffeescript
-jobs[job.id] = 
-	type: job.type
-	name: job.name
-	timeout: job.timeout
-	callback: cbJobDone
-```
-
-
-### rainCloud: Current Jobs (currentJob)
-
-```coffeescript
-currentJob[deliveryInfo.queue] = {
-    type: deliveryInfo.queue
-    job: {name:, id:}    
-    returnQueue: headers.returnQueue
-    next: message.next
-}
-```
-
-### Firebase Notes
-
-*. Writing an empty object, ```{}```, deletes the current location
 

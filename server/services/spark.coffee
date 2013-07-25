@@ -1,4 +1,4 @@
-rainMaker = require "../lib/rain.maker"
+rainMaker = require "../../lib/rain.maker"
 {check}    = require "validator"
 
 ########################################

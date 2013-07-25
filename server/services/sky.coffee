@@ -1,5 +1,5 @@
 _          = require "underscore"
-atmosphere = require "../index"
+atmosphere = require "../../index"
 nconf      = require "nconf"
 spark      = require "./spark"
 

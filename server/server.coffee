@@ -1,3 +1,4 @@
+coffee = require "coffee-script"
 objects  = require "objects"
 nconf    = require "nconf"
 urlParse = require("url").parse
@@ -5,10 +6,13 @@ express  = require "express"
 http = require "http"
 app      = express()
 
+console.log "\n\n\n=-=-=[coffee]", coffee, "\n\n\n" #xxx
+
+process.exit 42
 nconf
   .argv()
   .env()
-  .file({file: __dirname + "/configs/" + app.settings.env + ".config.json"})
+  .file({file: __dirname + "/../configs/" + app.settings.env + ".config.json"})
   .defaults({
     "PORT": 3000
   })
@@ -54,7 +58,7 @@ passport.use new GitHubStrategy {
 
 app.use express.logger()
 app.use express.cookieParser()
-app.set 'views', __dirname + '/views'
+app.set 'views', __dirname + '/../client/index'
 app.set 'view engine', 'jade'
 app.set "view options", {layout: false}
 app.use(require('stylus').middleware(__dirname + '/public'));
