@@ -5,7 +5,7 @@ http     = require "http"
 nconf    = require "nconf"
 objects  = require "objects"
 urlParse = require("url").parse
-
+_s = require "underscore.string"
 app      = express()
 
 
@@ -86,21 +86,38 @@ passport.use new GitHubStrategy {
 ## Express Middleware
 #################################
 
+dirUp = (path) -> _s.strLeftBack path, "/"
+
 app.use express.logger()
 app.use express.cookieParser()
-app.set 'views', __dirname + '/../client/app'
+app.set 'views', dirUp(__dirname) + "/client/app"
 app.set 'view engine', 'jade'
 app.set "view options", {layout: false}
-app.use require('stylus').middleware
-  src: __dirname + '/../client/app'
-  dest: __dirname + "public/stylesheets"
+
+compile = (str, path) ->
+  console.log "\n\n\n=-=-=[stylus-compile]", str, path, "\n\n\n" #xxx
+  stylus(str)
+
+app.use require("stylus").middleware
+  serve: true
+  force: true
+  debug: true
+  src: dirUp(__dirname) + "/client/app"
+  dest: __dirname + "/public"
+  # compile: compile
+
+console.log "\n\n\n=-=-=[hi]", dirUp(__dirname) + "/client/app/stylesheets", "\n\n\n" #xxx
+console.log "\n\n\n=-=-=[world]", __dirname + "/public/stylesheets"
+
 app.use express.bodyParser()
 # app.use express.methodOverride()
 app.use express.session({ secret: "the super secret blahmooquack", key: "spark.sid" })
 app.use passport.initialize()
 app.use passport.session()
 app.use app.router
+
 app.use express.static __dirname + "/public"
+
 
 app.configure "development", () ->
   app.use express.errorHandler { dumpExceptions: true, showStack: true }
@@ -114,10 +131,10 @@ app.configure "production", () ->
 ## Sky (Scheduling/Recovery)
 #################################
 
-sky.init (err) ->
-  if err?
-    throw err
-  console.log "[atmosphere]", "ICONNECT", "Connected to atmosphere at #{sky.server()}."
+# sky.init (err) ->
+#   if err?
+#     throw err
+#   console.log "[atmosphere]", "ICONNECT", "Connected to atmosphere at #{sky.server()}."
 
 
 
