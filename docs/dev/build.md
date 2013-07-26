@@ -26,3 +26,7 @@ npm module coffee-toaster is applied as middleware to watch to the /client/app
 Due to limitations in the stylus middleware's watching ability, all stylus files must be referenced (imported) into ```/client/app/stylesheets/app.styl```.
 
 Place your Stylus file in the appropriate component directory and add an import statement for it in ```app.styl```.
+
+## Routing
+
+Routes are handled here: ```/server/routes/index.coffee```
