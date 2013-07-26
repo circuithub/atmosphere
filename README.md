@@ -1,6 +1,6 @@
 ATMOSPHERE -- Flexible Complete RPC/Jobs Queue for Node.JS Web Apps Backed By [Firebase](http://firebase.com)
 
-![Atmosphere Schema Diagram](/docs/atmosphere.png)
+![Atmosphere Schema Diagram](/docs/figures/atmosphere.png)
 
 # Features
 
@@ -19,19 +19,19 @@ Atmosphere is a flexible jobs queue. It can support any arbitrary control flow a
 
 ## The Simplest Case
 
-![Atmosphere Schema Diagram](/docs/srpc.png)
+![Atmosphere Schema Diagram](/docs/figures/srpc.png)
 
 A job is submitted, executed by one of several remote listening workers, and a callback function is invoked when the work is complete or the timeout expires.
 
 ## Chaining Jobs
 
-![Atmosphere Schema Diagram](/docs/crpc.png)
+![Atmosphere Schema Diagram](/docs/figures/crpc.png)
 
 A chain of jobs are submitted and execution in sequence is desired. Data is passed from one job to the next. The callback may be invoked at any specified point along the chain... or at the end if unspecified.
 
 ## Jobs Calling Jobs (Recursing)
 
-![Atmosphere Schema Diagram](/docs/recursive.png)
+![Atmosphere Schema Diagram](/docs/figures/recursive.png)
 
 Jobs can call other jobs internally, that is, Rain Clouds are also Rain Makers. All combinations of chains and recursions are supported.
 
