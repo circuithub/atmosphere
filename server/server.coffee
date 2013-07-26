@@ -1,14 +1,19 @@
-coffee = require "coffee-script"
-objects  = require "objects"
-nconf    = require "nconf"
-urlParse = require("url").parse
+coffee   = require "coffee-script"
+Toaster  = require( "coffee-toaster" ).Toaster
 express  = require "express"
-http = require "http"
+http     = require "http"
+nconf    = require "nconf"
+objects  = require "objects"
+urlParse = require("url").parse
+
 app      = express()
 
-console.log "\n\n\n=-=-=[coffee]", coffee, "\n\n\n" #xxx
 
-process.exit 42
+
+#################################
+## Environment
+#################################
+
 nconf
   .argv()
   .env()
@@ -17,10 +22,29 @@ nconf
     "PORT": 3000
   })
 
+new Toaster "#{__dirname}/../client",
+  w: true
+  d: true #build debug version as well? (remove key if undesired)
+  config:
+    exclude: [".DS_Store"] # excluded items (will be used as a regex)
+    vendors: [
+      "client/vendors/angularfire.min.js"
+      #"client/vendors/jquery-1.9.1.min.js"
+      "client/vendors/moment.js" 
+    ]
+    minify: false
+    release: "../server/public/javascripts/app.js"
+    debug: "../server/public/javascripts/app-debug.js"
+
 routes  = require "./routes"
 sky     = require "./services/sky"
 
-# auth
+
+
+#################################
+## Authentication
+#################################
+
 passport       = require "passport"
 GitHubStrategy = require("passport-github").Strategy
 
@@ -56,12 +80,20 @@ passport.use new GitHubStrategy {
         else
           done null, null
 
+
+
+#################################
+## Express Middleware
+#################################
+
 app.use express.logger()
 app.use express.cookieParser()
-app.set 'views', __dirname + '/../client/index'
+app.set 'views', __dirname + '/../client/app'
 app.set 'view engine', 'jade'
 app.set "view options", {layout: false}
-app.use(require('stylus').middleware(__dirname + '/public'));
+app.use require('stylus').middleware
+  src: __dirname + '/../client/app'
+  dest: __dirname + "public/stylesheets"
 app.use express.bodyParser()
 # app.use express.methodOverride()
 app.use express.session({ secret: "the super secret blahmooquack", key: "spark.sid" })
@@ -76,14 +108,24 @@ app.configure "development", () ->
 app.configure "production", () ->
   app.use express.errorHandler()
 
+
+
+#################################
+## Sky (Scheduling/Recovery)
+#################################
+
 sky.init (err) ->
   if err?
     throw err
   console.log "[atmosphere]", "ICONNECT", "Connected to atmosphere at #{sky.server()}."
-    
+
+
+
+#################################
+## Weather Station (GUI)
+#################################
+
 routes.loadRoutes(app, passport)
-
 server = http.createServer app
-
 server.listen nconf.get("PORT"), () ->
   console.log "\n\n-=< Express server listening on port #{server.address().port} in #{app.settings.env} mode >=-\n\n" 

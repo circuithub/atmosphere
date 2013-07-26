@@ -1,0 +1,106 @@
+head
+  title Spark by CircuitHub
+  link(rel="StyleSheet", href="stylesheets/style.css", type="text/css", media="screen")
+  script(type="text/javascript", src="javascripts/app.js")
+  script(type="text/javascript", src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js")
+  script(type="text/javascript", src="https://cdn.firebase.com/v0/firebase.js")
+body
+
+  h1(onclick="hi();") Spark
+  span.subtitle By CircuitHub
+
+  h2 Current Status
+  div.allWorkers
+    - each worker, workerName in dashboard.workers
+      div.eachWorker
+        table.worker
+          //Title
+          tr
+            td(colspan=2).name 
+              | #{worker.name}
+          //CPU
+          tr
+            td 
+              p.number #{worker.cpu[0].toFixed(2)}%
+              p.label CPU Load 
+              p.label (1 minute)
+            td 
+              p.number #{worker.cpu[2].toFixed(2)}%
+              p.label CPU Load 
+              p.label (15 minutes)
+          //Memory
+          tr 
+            td 
+              p.number #{worker.mem.rss}MB
+              p.label Used by node.exe
+            td 
+              p.number #{worker.mem.heapPercent}% 
+              p.label Allocated heap in use
+          tr
+            td
+              p.number #{worker.mem.heapUsed}MB
+              p.label Heap in use
+            td 
+              p.number #{worker.mem.heapTotal}MB
+              p.label Heap allocated
+          //Jobs
+          tr
+            td
+              p.number #{worker.stats.running} Jobs
+              p.label Running
+            td
+              p.number #{worker.stats.complete} Jobs
+              p.label Completed
+          tr
+            td 
+              p.number #{worker.stats.uptime} minutes
+              p.label Up Time
+            td
+              p.number #{worker.stats.idleTime}ms
+              p.label Time Idle
+          //Current Jobs
+          - each job, jobName in worker.jobs
+            tr   
+              td(colspan=2).job.newJob
+                p.jobType #{job.class.type}
+                p.jobName #{job.class.name}
+                p.jobStep #{job.class.step}
+            tr
+              td
+                p.status #{job.msg.level}
+                p.percent #{job.progress.percent}% 
+              td
+                p.status.date.label(data=job.when.toString())
+            tr
+              td(colspan=2).small #{job.msg.message}
+
+  h2 Job Reports
+  table
+    - each report, reportName in dashboard.reports
+      tr
+        td #{report.when}
+        td.job
+          p.jobType #{report.class.type}
+          p.jobName #{report.class.name}
+          p.jobStep #{report.class.step}
+        td 
+          if report.url
+            a(href="#{report.url}", target = "_blank") View Report
+          else
+            | No report filed
+        td #{report.msg.message}
+
+  h2 Message Statistics
+  table
+    - each count, level in dashboard.stats
+      tr
+        td.status #{level}
+        td #{count}
+
+  h2 Latest Activity
+  table
+    - each message in dashboard.messages
+      tr
+        td #{message.when}
+        td.status #{message.msg.level}
+        td #{message.msg.message}
