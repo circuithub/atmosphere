@@ -8,7 +8,7 @@ urlParse = require("url").parse
 _s = require "underscore.string"
 app      = express()
 
-
+dirUp = (path) -> _s.strLeftBack path, "/"
 
 #################################
 ## Environment
@@ -17,20 +17,22 @@ app      = express()
 nconf
   .argv()
   .env()
-  .file({file: __dirname + "/../configs/" + app.settings.env + ".config.json"})
+  .file({file: dirUp(__dirname) + "/configs/" + app.settings.env + ".config.json"})
   .defaults({
     "PORT": 3000
   })
 
-new Toaster "#{__dirname}/../client",
+new Toaster "#{dirUp(__dirname)}/client",
   w: true
   d: true #build debug version as well? (remove key if undesired)
   config:
     exclude: [".DS_Store"] # excluded items (will be used as a regex)
     vendors: [
       "client/vendors/angularfire.min.js"
-      #"client/vendors/jquery-1.9.1.min.js"
+      #"client/vendors/jquery-1.9.1.min.js" #try to avoid using jquery in angular
       "client/vendors/moment.js" 
+      "client/vendors/ui-bootstrap-0.4.0.min.js"
+      "client/vendors/ui-bootstrap-tpls-0.4.0.min.js"
     ]
     minify: false
     release: "../server/public/javascripts/app.js"
@@ -85,8 +87,6 @@ passport.use new GitHubStrategy {
 #################################
 ## Express Middleware
 #################################
-
-dirUp = (path) -> _s.strLeftBack path, "/"
 
 app.use express.logger()
 app.use express.cookieParser()

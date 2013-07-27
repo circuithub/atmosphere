@@ -1,11 +1,34 @@
+doctype 5
+
+html(ng-app)
+
 head
   title Spark by CircuitHub
   link(rel="StyleSheet", href="stylesheets/app.css", type="text/css", media="screen")
+  link(rel="stylesheet", href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css")
   script(type="text/javascript", src="https://cdn.firebase.com/v0/firebase.js")
   script(type="text/javascript", src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js")
   script(type="text/javascript", src="javascripts/app.js")
 
-body(ng-app)
+body
 
   h1(onclick="hi();") Spark
   span.subtitle By CircuitHub
+
+
+  div(ng-controller='TabsDemoCtrl')
+    | Select a tab by setting active binding to true:
+    br
+    button.btn.btn-small(ng-click='tabs[0].active = true') Select second tab
+    button.btn.btn-small(ng-click='tabs[1].active = true') Select third tab
+    button.btn.btn-small(ng-click='tabs[1].disabled = ! tabs[1].disabled') Enable / Disable third tab
+    hr
+    tabset
+      tab(heading='Static title') Static content
+      tab(ng-repeat='tab in tabs', heading='{{tab.title}}', active='tab.active', disabled='tab.disabled')
+        | {{tab.content}}
+      tab(select='alertMe()')
+        tab-heading
+          i.icon-bell
+          | Select me for alert!
+        | I've got an HTML heading, and a select callback. Pretty cool!
