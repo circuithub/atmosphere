@@ -1,11 +1,10 @@
-exports.blah = () ->
-  alert "hi"
-
 angular.module "myModule", ["ui.bootstrap"]
+
+console.log "\n\n\n=-=-=[hello world!]", "dev.coffee", "\n\n\n" #xxx
 
 TabsDemoCtrl = ($scope) ->
   $scope.tabs = [
-    title: "Dynamic Title 1"
+    title: "Dynamic Title 1-hi"
     content: "Dynamic content 1"
   ,
     title: "Dynamic Title 2"

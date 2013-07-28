@@ -5,8 +5,11 @@ http     = require "http"
 nconf    = require "nconf"
 objects  = require "objects"
 urlParse = require("url").parse
-_s = require "underscore.string"
+_s       = require "underscore.string"
 app      = express()
+fs = require "fs"
+sys = require('sys')
+exec = require('child_process').exec;
 
 dirUp = (path) -> _s.strLeftBack path, "/"
 
@@ -14,6 +17,7 @@ dirUp = (path) -> _s.strLeftBack path, "/"
 ## Environment
 #################################
 
+# -- Load System Environment
 nconf
   .argv()
   .env()
@@ -22,22 +26,32 @@ nconf
     "PORT": 3000
   })
 
-new Toaster "#{dirUp(__dirname)}/client",
+# -- Vendor Files (Javascript)
+new Toaster "#{dirUp(__dirname)}/client/app",
   w: true
-  d: true #build debug version as well? (remove key if undesired)
+  d: false #build debug version as well? (remove key if undesired)
   config:
     exclude: [".DS_Store"] # excluded items (will be used as a regex)
     vendors: [
       "client/vendors/angularfire.min.js"
-      #"client/vendors/jquery-1.9.1.min.js" #try to avoid using jquery in angular
+      #"client/vendor/jquery-1.9.1.min.js" #try to avoid using jquery in angular
       "client/vendors/moment.js" 
       "client/vendors/ui-bootstrap-0.4.0.min.js"
       "client/vendors/ui-bootstrap-tpls-0.4.0.min.js"
     ]
     minify: false
-    release: "../server/public/javascripts/app.js"
-    debug: "../server/public/javascripts/app-debug.js"
+    release: "../../server/public/javascripts/vendor.js"
+    debug: "../../server/public/javascripts/vendor-debug.js"
 
+# -- Application Files (Coffeescript)
+coffeeCompile = "coffee -o server/public/javascripts -j app.js -cwb client"
+exec coffeeCompile, {cwd: dirUp(__dirname)}, (error, stdout, stderr) ->
+  if error?
+    console.log "\n\n\n=-=-=[Error]", error, stderr, stdout, "\n\n\n" #xxx
+    process.exit 42
+  console.log "Compiled Application (app.js)"
+
+# -- Routes and Services
 routes  = require "./routes"
 sky     = require "./services/sky"
 
@@ -94,17 +108,12 @@ app.set 'views', dirUp(__dirname) + "/client/app"
 app.set 'view engine', 'jade'
 app.set "view options", {layout: false}
 
-compile = (str, path) ->
-  console.log "\n\n\n=-=-=[stylus-compile]", str, path, "\n\n\n" #xxx
-  stylus(str)
-
 app.use require("stylus").middleware
   serve: true
   force: true
   debug: true
   src: dirUp(__dirname) + "/client/app"
   dest: __dirname + "/public"
-  # compile: compile
 
 console.log "\n\n\n=-=-=[hi]", dirUp(__dirname) + "/client/app/stylesheets", "\n\n\n" #xxx
 console.log "\n\n\n=-=-=[world]", __dirname + "/public/stylesheets"

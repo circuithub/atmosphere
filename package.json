@@ -25,6 +25,7 @@
     , "octonode": "*"
     , "passport": "*"
     , "should": "*"
+    , "stitch": "*"
     , "stylus": "*"
     , "underscore": "*"
     , "underscore.string": "*"
