@@ -1,4 +1,4 @@
-angular.module "myModule", ["ui.bootstrap"]
+angular.module "atmosphereWeatherStation", ["ui.bootstrap"]
 
 console.log "\n\n\n=-=-=[hello world!]", "dev.coffee", "\n\n\n" #xxx
 
@@ -11,6 +11,7 @@ TabsDemoCtrl = ($scope) ->
     content: "Dynamic content 2"
     disabled: true
   ]
+
   $scope.alertMe = ->
     setTimeout ->
       alert "You've selected the alert tab!"

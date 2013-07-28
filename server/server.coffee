@@ -31,12 +31,13 @@ new Toaster "#{dirUp(__dirname)}/client/app",
   w: true
   d: false #build debug version as well? (remove key if undesired)
   config:
+    bare: true
+    packaging: false
     exclude: [".DS_Store"] # excluded items (will be used as a regex)
     vendors: [
       "client/vendors/angularfire.min.js"
       #"client/vendor/jquery-1.9.1.min.js" #try to avoid using jquery in angular
       "client/vendors/moment.js" 
-      "client/vendors/ui-bootstrap-0.4.0.min.js"
       "client/vendors/ui-bootstrap-tpls-0.4.0.min.js"
     ]
     minify: false
