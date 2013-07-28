@@ -1,8 +1,11 @@
+###
+  Perform AJAX HTTP GET request (sans jQuery)
+###
 ajax = (url, cbResponse) ->
   xmlhttp = new XMLHttpRequest()
   xmlhttp.onreadystatechange = () ->
     if xmlhttp.readyState is 4 and xmlhttp.status is 200
-      cbResponse undefined, xmlhttp.responseText
+      cbResponse undefined, JSON.parse xmlhttp.responseText
       return
     else
       cbResponse "Error", xmlhttp.readyState, xmlhttp.status
@@ -10,6 +13,9 @@ ajax = (url, cbResponse) ->
   xmlhttp.open "GET", url, true
   xmlhttp.send()
 
+###
+  Firebase access encapsulation
+###
 class _fire
   
   dataRef = undefined
@@ -34,6 +40,7 @@ class _fire
           return
         firebaseToken = res.token
         firebaseServer = res.server
+        console.log "\n\n\n=-=-=[fire.init]", res, firebaseServer, firebaseToken, "\n\n\n" #xxx
         next()
     connect = (next) ->
       dataRef = new Firebase "#{firebaseServer}"    
@@ -61,6 +68,8 @@ class _fire
 
   refs: () -> _refs
 
+###
+  Connect to Firebase
+###
 fire = new _fire
-
 fire.init()
