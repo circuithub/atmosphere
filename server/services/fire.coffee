@@ -1,39 +1,12 @@
 Firebase                = require "firebase"
 FirebaseTokenGenerator  = require "firebase-token-generator"
 
-moment = require "moment"
 nconf = require "nconf"
 
 firebaseServer = nconf.get "FIREBASE_URL"
 firebaseSyncRoot = "/sync"
 
 ready = false # Note: this mechanism isn't used at present, but might be required in future due to changes in firebase library. Currently unauthenticated requests just print warning to console and continue.
-
-###
- Realtime interactions with the user
- -- currently built on Firebase
-
-running = true/false
-started = date
-stopped = date
-ready = true/false -- are we idle?
-
-/users/<user>/sync/status = "..."
-/users/<user>/sync/todo
-   /<type>/<creator>/<name> = example: symbol/DrFriedParts/d6hhy
-   (handles de-dup)
-/users/<user>/sync/waiting
-   /<type>/<creator>/<name> = example: symbol/DrFriedParts/d6hhy
-   (handles de-dup)
-###
-
-
-
-###
-  Generate the firebase data path for sync messaging to the specified user
-###
-firebasePath = (username) -> 
-  return firebaseServer + "/users/#{username}" + firebaseSyncRoot
 
 ###
   Authenticate (login) this server with Firebase
@@ -66,7 +39,7 @@ exports.generateServerToken = () ->
 exports.generateUserToken = (user) ->
   secret = nconf.get "FIREBASE_SECRET"
   tokenGenerator = new FirebaseTokenGenerator secret
-  token = tokenGenerator.createToken {}, options
+  token = tokenGenerator.createToken {}
   return token
 
 ###

@@ -1,4 +1,5 @@
 sky = require "../services/sky"
+fire = require "../services/fire"
 
 exports.loadRoutes = (app, passport) ->
 
@@ -9,19 +10,11 @@ exports.loadRoutes = (app, passport) ->
       res.redirect "/"
     
   ###
-    GET Authentication token for Firebase
-  ###
-  app.get "/auth/firebase", auth, (req, res) ->
-    res.setHeader "Content-Type", "application/json"
-    res.write "{a:'blahmooquack', b:'hello world'}"
-    res.end
-
-  ###
-   GET home page.
+   GET Main dashboard (Single Page App)
   ###
   app.get "/dashboard", auth, (req, res) ->
-    res.render 'graph/dev', 
-      title: "Spark by CircuitHub"
+    res.render 'dashboard/dashboard', 
+      title: "This value isn't used"
       # dashboard: sky.dashboard()
 
   app.get "/status", auth, (req, res) ->
@@ -48,8 +41,23 @@ exports.loadRoutes = (app, passport) ->
   app.get "/auth/github/callback", 
     passport.authenticate("github", { failureRedirect: "/auth/github" }),
     (req, res) ->
+      console.log "\n\n\n=-=-=[github response]", res, "\n\n\n" #xxx
       res.redirect "/dashboard"
 
+  ###
+    GET Authentication token for Firebase
+  ###
+  app.get "/auth/firebase", auth, (req, res) ->
+    #update Firebase token if n query parameter (new) is specified
+    if req.query.n?
+      req.session.user ?= {}
+      req.session.user.firebaseToken = fire.generateUserToken req.session.user
+    res.setHeader "Content-Type", "application/json"
+    res.send {token: req.session.user.firebaseToken, server: fire.getServer()}
+
+  ###
+    GET Logout
+  ###
   app.get "/logout", (req, res) ->
     req.logout()
     res.redirect "/"
