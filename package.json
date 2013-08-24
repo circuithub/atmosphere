@@ -9,8 +9,8 @@
   },
   "private": true,
   "dependencies": {
-    "adt-typecheck.js": "git+https://8d574059eae93019e9884cd6c7622e6c7d8ed9a3:x-oauth-basic@github.com/circuithub/adt-typecheck.js.git#master",
-    "elma":  "git+https://8d574059eae93019e9884cd6c7622e6c7d8ed9a3:x-oauth-basic@github.com/circuithub/elma.git#master",
+    "adt-typecheck.js": "git+ssh://git@github.com/circuithub/adt-typecheck.js.git#master",
+    "elma":  "git+ssh://git@github.com/circuithub/elma.git#master",
     "nconf": "0.6.7",
     "node-uuid": "*",
     "underscore.string": "*",
