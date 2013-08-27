@@ -30,5 +30,5 @@ exports.submit = (type, ticket, task, cbSubmitted) =>
     return
   #[1.] Submit Task Message
   fromName = if nconf.get("PS")? then nconf.get("PS") else ""
-  core.publish type, task, {task: ticket, fromID: core.rainID(rainCloud.roleID()), fromName: fromName}
+  core.publish type, task, {task: ticket, fromID: core.rainID(rainCloud.getRole()), fromName: fromName}
   cbSubmitted()
