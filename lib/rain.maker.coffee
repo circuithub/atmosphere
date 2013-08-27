@@ -20,8 +20,8 @@ exports._jobs = jobs
 ###
 exports.init = (role, cbDone) =>
   #core.setRole(role)
-  if makerRoleID?
-    throw "Rain maker has already been initialized"
+  # if makerRoleID?
+  #   throw "Rain maker has already been initialized"
   makerRoleID = core.generateRoleID role
   core.connect (err) =>
     if err?
