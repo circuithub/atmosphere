@@ -6,6 +6,7 @@ core = require "./core"
 monitor = require "./monitor"
 
 jobs = {} #indexed by "headers.job.id"
+makerRoleID = undefined
 
 exports._jobs = jobs
 
@@ -18,7 +19,10 @@ exports._jobs = jobs
   --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
 ###
 exports.init = (role, cbDone) =>
-  core.setRole(role)
+  #core.setRole(role)
+  if makerRoleID?
+    throw "Rain maker has already been initialized"
+  makerRoleID = core.generateRoleID role
   core.connect (err) =>
     if err?
       cbDone err
@@ -27,10 +31,12 @@ exports.init = (role, cbDone) =>
       monitor.boot()
       cbDone undefined
 
+exports.getRole = => makerRoleID
+
 exports.start = (cbStarted) ->
-  console.log "[INIT]", core.rainID()
+  console.log "[INIT]", core.rainID(makerRoleID)
   foreman() #start job supervisor (runs asynchronously at 1sec intervals)
-  exports.listen core.rainID(), mailman, cbStarted
+  exports.listen core.rainID(makerRoleID), mailman, cbStarted
 
 ########################################
 ## API
@@ -85,7 +91,7 @@ exports.submit = (jobChain, cbJobDone) ->
       job: 
         name: job.name
         id:   job.id
-      returnQueue: core.rainID()
+      returnQueue: core.rainID(makerRoleID)
     core.submit job.type, payload, headers
 
 ###

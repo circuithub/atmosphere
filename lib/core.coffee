@@ -18,6 +18,7 @@ _urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip pass
 exports.urlLogSafe = _urlLogSafe
 
 conn = undefined
+connectionStarted = false
 connectionReady = false
 
 queues = {}
@@ -30,20 +31,21 @@ listeners = {}
 ########################################
 
 _rainID = uuid.v4() #Unique ID of this process/machine
-_roleID = undefined
-exports.rainID = () ->
-  return if _roleID? then _roleID else _rainID
+# _roleID = undefined
+# exports.rainID = () ->
+#   return if _roleID? then _roleID else _rainID
+exports.rainID = (roleID=null) ->
+  if roleID? then "#{roleID}-#{_rainID}" else _rainID
 
 ###
   Format machine prefix
 ###
-exports.setRole = (role) ->
+exports.generateRoleID = (role) ->
   _roleID = _s.humanize role
   _roleID = _roleID.replace " ", "_"
   _roleID = _s.truncate _roleID, 8
   _roleID = _s.truncate _roleID, 7 if _roleID[7] is "_"
-  _roleID = _roleID.replace "...", ""
-  _roleID = _roleID + "-" + _rainID
+  # _roleID = _roleID + "-" + _rainID
   return _roleID
 
 
@@ -123,7 +125,7 @@ exports.submit = types.fn (-> [
   @String()
   @Object {data: @Object(), next: @Array()}
   @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String(), callback: @Boolean()}
-  ]),  
+  ]),
   (type, payload, headers) => 
     return exports.publish type, payload, headers
 

@@ -5,10 +5,10 @@ bsync = require "bsync"
 
 core = require "./core"
 monitor = require "./monitor"
-rainMaker = require "./rain.maker"
 
 jobWorkers = {}
 currentJob = {}
+cloudRoleID = undefined
 
 
 ########################################
@@ -22,7 +22,9 @@ currentJob = {}
 ###
 exports.init = (role, jobTypes, cbDone) ->    
   #[0.] Initialize
-  core.setRole role
+  if cloudRoleID?
+    throw "Rain cloud has already been initialized"
+  cloudRoleID = core.generateRoleID role
   #[1.] Connect to message server    
   core.connect (err) ->      
     if err?
@@ -38,20 +40,17 @@ exports.init = (role, jobTypes, cbDone) ->
       if allErrors?
         cbDone allErrors
         return
-      #[3.] Register to submit jobs (so workers can submit jobs)
-      rainMaker.start () -> 
-        monitor.boot() #log boot time
-        cbDone undefined
+      monitor.boot() #log boot time
+      cbDone undefined
 
-      
-
+exports.getRole = => cloudRoleID
 
 ########################################
 ## API
 ########################################
 
 _callbackMQ = (theJob, ticket, errors, result) ->
-  header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID()}
+  header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID(cloudRoleID)}
   message = 
     errors: errors
     data: result
