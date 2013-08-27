@@ -25,7 +25,7 @@ exports.init = (role, jobTypes, cbDone) ->
   if cloudRoleID?
     throw "Rain cloud has already been initialized"
   cloudRoleID = core.generateRoleID role
-  #[1.] Connect to message server    
+  #[1.] Connect to message server
   core.connect (err) ->      
     if err?
       cbDone err

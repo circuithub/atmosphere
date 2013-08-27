@@ -1,4 +1,5 @@
 amqp = require "amqp"
+_ = require "underscore"
 _s = require "underscore.string"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
@@ -18,7 +19,6 @@ _urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip pass
 exports.urlLogSafe = _urlLogSafe
 
 conn = undefined
-connectionStarted = false
 connectionReady = false
 
 queues = {}
@@ -66,6 +66,13 @@ exports.ready = () ->
   -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
+# See lodash-ext.coffee for deferUntil implementation
+deferUntil = (condFn, fn, args...) ->
+  if condFn()
+    fn args...
+  else
+    _.defer -> deferUntil condFn, fn, args...
+
 exports.connect = (cbConnected) ->
   if not conn?
     elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
@@ -81,7 +88,7 @@ exports.connect = (cbConnected) ->
       connectionReady = true
       cbConnected undefined
   else
-    cbConnected undefined
+    deferUntil exports.ready, cbConnected, undefined
 
 
 
@@ -157,7 +164,6 @@ exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
       subscribeDomain = domain.create()
       subscribeDomain.on "error", (err) -> 
         cbListening err
-        return
       subscribeDomain.run () ->
         queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
       cbListening undefined
