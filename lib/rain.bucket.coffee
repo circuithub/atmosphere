@@ -7,7 +7,7 @@ core = require "./core"
 ## BUCKET JOBS (receive and log)
 ########################################
 
-exports = (atmosphere) ->
+module.exports = (atmosphere) ->
   api = {}
 
   ###

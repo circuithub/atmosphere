@@ -6,7 +6,7 @@ bsync = require "bsync"
 core = require "./core"
 monitor = require "./monitor"
 
-exports = -> 
+module.exports = -> 
   cloudRoleID = undefined
   jobWorkers = {}
   currentJob = {}

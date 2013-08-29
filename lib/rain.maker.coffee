@@ -5,7 +5,7 @@ types = require "./types"
 core = require "./core"
 monitor = require "./monitor"
 
-exports = ->
+module.exports = ->
   jobs = {} #indexed by "headers.job.id"
   makerRoleID = undefined
   api = {}
