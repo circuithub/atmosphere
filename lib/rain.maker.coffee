@@ -28,7 +28,7 @@ module.exports = ->
       if err?
         cbDone err
         return    
-      @start () ->
+      api.start () ->
         monitor.boot()
         cbDone undefined
 
