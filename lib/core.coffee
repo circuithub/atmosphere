@@ -8,7 +8,12 @@ bsync = require "bsync"
 domain = require "domain"
 types = require "./types"
 
-
+# See lodash-ext.coffee for deferUntil implementation
+deferUntil = (condFn, fn, args...) ->
+  if condFn()
+    fn args...
+  else
+    _.defer -> deferUntil condFn, fn, args...
 
 ########################################
 ## STATE MANAGEMENT
@@ -66,13 +71,6 @@ exports.ready = () ->
   -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-# See lodash-ext.coffee for deferUntil implementation
-deferUntil = (condFn, fn, args...) ->
-  if condFn()
-    fn args...
-  else
-    _.defer -> deferUntil condFn, fn, args...
-
 exports.connect = (cbConnected) ->
   if not conn?
     elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
