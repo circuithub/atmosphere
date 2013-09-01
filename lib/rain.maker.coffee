@@ -52,48 +52,48 @@ module.exports = ->
             use for fire-and-forget dispatching
   ###
   api.submit = (jobChain, cbJobDone) ->
-      if not core.ready() 
-        error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
-        cbJobDone error if cbJobDone?
-        return
+    if not core.ready() 
+      error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      cbJobDone error if cbJobDone?
+      return
 
-      #[1.] Array Prep (job chaining)
-      #--Format
-      if types.type(jobChain) isnt "array"
-        jobChain = [jobChain]
-      #--Clarify callback flow (only first callback=true remains)
-      foundCB = false
-      for eachJob in jobChain
-        if foundCB or (not eachJob.callback?) or (not eachJob.callback) or (not cbJobDone?)
-          eachJob.callback = false
-        else
-          foundCB = true if eachJob.callback? and eachJob.callback  
-      jobChain[jobChain.length-1].callback = true if not foundCB and cbJobDone? #callback after last job if unspecified
-      #--Look at first job
-      job = jobChain.shift()
+    #[1.] Array Prep (job chaining)
+    #--Format
+    if types.type(jobChain) isnt "array"
+      jobChain = [jobChain]
+    #--Clarify callback flow (only first callback=true remains)
+    foundCB = false
+    for eachJob in jobChain
+      if foundCB or (not eachJob.callback?) or (not eachJob.callback) or (not cbJobDone?)
+        eachJob.callback = false
+      else
+        foundCB = true if eachJob.callback? and eachJob.callback  
+    jobChain[jobChain.length-1].callback = true if not foundCB and cbJobDone? #callback after last job if unspecified
+    #--Look at first job
+    job = jobChain.shift()
 
-      #[2.] Inform Foreman Job Expected
-      job.timeout ?= 60
-      job.id = uuid.v4()
-      if jobs[job.id]?
-        error = elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
-        cbJobDone error if cbJobDone?
-        return
-      #If callback is desired listen for it
-      if cbJobDone? 
-        jobs[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}    
-      
-      #[3.] Submit Job
-      payload = 
-        data: job.data ?= {}
-        next: jobChain
-      headers =
-        callback: job.callback
-        job: 
-          name: job.name
-          id:   job.id
-        returnQueue: core.rainID(makerRoleID)
-      core.submit job.type, payload, headers
+    #[2.] Inform Foreman Job Expected
+    job.timeout ?= 60
+    job.id = uuid.v4()
+    if jobs[job.id]?
+      error = elma.error "jobAlreadyExistsError", "Job #{jobs[job.id].type}-#{jobs[job.id].name} Already Pending"
+      cbJobDone error if cbJobDone?
+      return
+    #If callback is desired listen for it
+    if cbJobDone? 
+      jobs[job.id] = {type: job.type, name: job.name, timeout: job.timeout, callback: cbJobDone}
+    
+    #[3.] Submit Job
+    payload = 
+      data: job.data ?= {}
+      next: jobChain
+    headers =
+      callback: job.callback
+      job: 
+        name: job.name
+        id:   job.id
+      returnQueue: core.rainID(makerRoleID)
+    core.submit job.type, payload, headers
 
   ###
     Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
@@ -138,7 +138,7 @@ module.exports = ->
     Implements timeouts for jobs-in-progress
   ###
   foreman = () ->
-    for jobID, jobMeta of jobs   
+    for jobID, jobMeta of jobs
       jobMeta.timeout = jobMeta.timeout - 1
       if jobMeta.timeout <= 0
         #cache -- necessary to prevent loss of function pointer

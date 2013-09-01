@@ -163,11 +163,15 @@ exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
       subscribeDomain.on "error", (err) -> 
         cbListening err
       subscribeDomain.run () ->
-        queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag)
+        queue
+          .subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute)
+          .addCallback((ok) -> listeners[type] = ok.consumerTag)
       cbListening undefined
   else
     if not listeners[type]? #already listening?
-      queue.subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute).addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
+      queues[type]
+        .subscribe({ack: useAcks, prefetchCount: 1, exclusive: exclusive}, cbExecute)
+        .addCallback((ok) -> listeners[type] = ok.consumerTag) # subscribe to the `type`-defined queue and listen for jobs one-at-a-time
     cbListening undefined
 
 
