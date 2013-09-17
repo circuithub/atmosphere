@@ -18,6 +18,6 @@
     "should": "*",
     "underscore": "*",
     "bsync": "*",
-    "amqp": "*"
+    "amqp": "git+ssh://git@github.com:postwait/node-amqp.git#master"
   }
 }
