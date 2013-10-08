@@ -1,3 +1,14 @@
+atmosphereModule = angular.module "atmosphere", []
+
+atmosphereModule.factory "fire", ["$window", (win) ->
+  msgs = []
+  (msg) ->
+    msgs.push msg
+    if msgs.length is 3
+      win.alert msgs.join("\n")
+      msgs = []
+]
+
 ###
   Perform AJAX HTTP GET request (sans jQuery)
 ###

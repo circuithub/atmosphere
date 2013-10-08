@@ -41,7 +41,7 @@ exports.loadRoutes = (app, passport) ->
   app.get "/auth/github/callback", 
     passport.authenticate("github", { failureRedirect: "/auth/github" }),
     (req, res) ->
-      console.log "\n\n\n=-=-=[github response]", res, "\n\n\n" #xxx
+      #console.log "\n\n\n=-=-=[github response]", res, "\n\n\n" #xxx
       res.redirect "/dashboard"
 
   ###
