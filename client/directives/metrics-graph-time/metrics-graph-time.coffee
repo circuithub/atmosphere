@@ -1,7 +1,7 @@
-angular.module("directives").directive "graph", () ->
-  restrict: "E"
+angular.module("directives").directive "metricsGraphTime", () ->
+  restrict: "A"
   scope: 
-    shouts: "="
-  templateUrl: "dev.html"
+    metricsGraphTime: "="
+  templateUrl: "metrics-graph-time.html"
   controller: ($scope) ->
     console.log "running!"
