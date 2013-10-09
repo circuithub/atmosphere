@@ -81,5 +81,6 @@ exports.loadRoutes = (app, passport) ->
           cache: true
           user: if req.session.user?.id then req.session.user
         }, appLocals
-      jade.renderFile "#{__dirname}/../../client/app/dashboard/dashboard.jade", options, (error, html) -> res.send html
+      res.render("dashboard", options)
+      #jade.renderFile "#{__dirname}/../../client/app/dashboard/dashboard.jade", options, (error, html) -> res.send html
 

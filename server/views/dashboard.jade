@@ -1,0 +1,15 @@
+doctype 5
+
+html(ng-app="atmosphereWeatherStation")
+
+head
+  title Weather Station (Atmosphere)
+  link(rel="stylesheet", href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css")
+  link(rel="StyleSheet", href="stylesheets/app.css", type="text/css", media="screen")
+  script(type="text/javascript", src="https://cdn.firebase.com/v0/firebase.js")
+  script(type="text/javascript", src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js")
+  script(type="text/javascript", src="javascripts/vendor.js")
+  // script(type="text/javascript", src="javascripts/ui-bootstrap-tpls-0.4.0.min.js")
+  script(type="text/javascript", src="javascripts/app.js")
+
+body(ng-view)

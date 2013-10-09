@@ -63,6 +63,8 @@ passport.use new GitHubStrategy {
       octonode = new github.client accessToken
       circuithubOrg = octonode.org "circuithub"
       circuithubOrg.members (err, members) ->
+        console.log members
+        console.log profile.username
         if err?
           done null, null
         orgMember = objects.find members, "login", profile.username
@@ -79,10 +81,10 @@ passport.use new GitHubStrategy {
 
 app.use express.logger()
 app.use express.cookieParser()
-app.set 'views', dirUp(__dirname) + "/client/app"
+app.set 'views', __dirname + "/views"
 app.set 'view engine', 'jade'
 app.set "view options", {layout: false}
-
+###
 app.use require("stylus").middleware
   serve: true
   force: true
@@ -92,7 +94,7 @@ app.use require("stylus").middleware
 
 console.log "\n\n\n=-=-=[hi]", dirUp(__dirname) + "/client/app/stylesheets", "\n\n\n" #xxx
 console.log "\n\n\n=-=-=[world]", __dirname + "/public/stylesheets"
-
+###
 app.use express.bodyParser()
 # app.use express.methodOverride()
 app.use express.session({ secret: "the super secret blahmooquack", key: "spark.sid" })

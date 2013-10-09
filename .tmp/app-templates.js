@@ -1,4 +1,4 @@
-angular.module('templates-app', ['app/dashboard/controls.html', 'app/dashboard/dashboard.html', 'app/dashboard/drops.html', 'app/dashboard/status.html', 'app/graph/dev.html', 'directives/metrics-graph-time/metrics-graph-time.html']);
+angular.module('templates-app', ['app/dashboard/controls.html', 'app/dashboard/dashboard.html', 'app/dashboard/drops.html', 'app/dashboard/status.html', 'directives/metrics-graph-time/metrics-graph-time.html']);
 
 angular.module("app/dashboard/controls.html", []).run(["$templateCache", function($templateCache) {
   $templateCache.put("app/dashboard/controls.html",
@@ -18,11 +18,6 @@ angular.module("app/dashboard/drops.html", []).run(["$templateCache", function($
 angular.module("app/dashboard/status.html", []).run(["$templateCache", function($templateCache) {
   $templateCache.put("app/dashboard/status.html",
     "<div ng-controller=\"StatusCtrl\"><p ng-repeat=\"(rainCloudID, rainCloud) in rainClouds\"><h3>{{rainCloudID}}</h3><h4>{{rainCloud}}</h4><br/><div metrics-graph-time=\"metrics-graph-time\" class=\"boom\"></div></p></div>");
-}]);
-
-angular.module("app/graph/dev.html", []).run(["$templateCache", function($templateCache) {
-  $templateCache.put("app/graph/dev.html",
-    "<p>dev.coffee</p><p>This is a test of template insertion in a directive </p>");
 }]);
 
 angular.module("directives/metrics-graph-time/metrics-graph-time.html", []).run(["$templateCache", function($templateCache) {
