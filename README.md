@@ -2,6 +2,12 @@ ATMOSPHERE -- Flexible Complete RPC/Jobs Queue for Node.JS Web Apps Backed By [F
 
 ![Atmosphere Schema Diagram](/docs/figures/atmosphere.png)
 
+# NOTE: Major v.2 Release Coming Soon!
+
+The monitoring/management GUI is currently being overhauled and built in Angular.js. We're doing this in the master branch to promote visibility. npm releases and prior ```rabbitmq``` branch releases should remain stable during this transition. 
+
+Expected release date: Oct. 10th, 2013.
+
 # Features
 
 * Robust: timeouts, retries, error-handling, auto-reconnect, etc
