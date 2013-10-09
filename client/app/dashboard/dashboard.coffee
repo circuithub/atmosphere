@@ -1,4 +1,5 @@
-angular.module "atmosphereWeatherStation", ["ui.bootstrap"]
+angular.module "directives", []
+angular.module "atmosphereWeatherStation", ["ui.bootstrap", "directives"]
 
 
 console.log "\n\n\n=-=-=[hello world!]", "dev.coffee", "\n\n\n" #xxx
