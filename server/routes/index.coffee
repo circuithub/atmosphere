@@ -75,12 +75,11 @@ exports.loadRoutes = (app, passport) ->
   # Render application page => single page application.
   for route in appRoutes
     ### GET single page app routes ###
-    #app.get route, auth, (req, res) ->
-    app.get route, (req, res) ->
+    app.get route, auth, (req, res) ->
       options = _.extend {
           cache: true
           user: if req.session.user?.id then req.session.user
         }, appLocals
-      res.render("dashboard", options)
+      res.render("index", options)
       #jade.renderFile "#{__dirname}/../../client/app/dashboard/dashboard.jade", options, (error, html) -> res.send html
 
