@@ -91,6 +91,20 @@ The Atmosphere monitoring GUI (Weather Station) is available, by default, at: ht
 
 Welcome to life in an atmosphere... breathe in... breathe out... =)
 
+Atmosphere consists of several parts. To get started you only need to know two of them: the library and the server. 
+
+The node library module contains the connection and submission machinery while the server contains the scheduling, recovering, and monitoring machinery.
+
+The library module is available using npm:
+
+```atmosphere = require atmosphere```
+
+The server is launched as follows:
+
+```<project>/node_modules/atmosphere $> coffee server/server.coffee```
+
+Which will launch node.js, start the broker, and listen for management GUI login requests on port 3000.
+
 Let's use our job queue to do some simple remote-procedure-call-style work. We submit a job and print out the result when it's done. 
 
 Atmosphere looks and behaves like any other locally executing node.js asynchronous function, but the work is being done on one of many remote servers or local cores.
