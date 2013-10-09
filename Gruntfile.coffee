@@ -26,7 +26,7 @@ module.exports = (grunt) ->
     yeoman:
       client: require("./bower.json").appPath
       server: "./server/server"
-      dist: "./dist"
+      dist: "./server/public/dist/"
       fallback: "./server/public"
 
     watch:
