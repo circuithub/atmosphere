@@ -1,5 +1,10 @@
-sky = require "../services/sky"
-fire = require "../services/fire"
+sky   = require "../services/sky"
+fire  = require "../services/fire"
+nconf = require "nconf"
+_     = require "lodash"
+jade = require "jade"
+
+
 
 exports.loadRoutes = (app, passport) ->
 
@@ -8,14 +13,6 @@ exports.loadRoutes = (app, passport) ->
       next()
     else
       res.redirect "/"
-    
-  ###
-   GET Main dashboard (Single Page App)
-  ###
-  app.get "/dashboard", auth, (req, res) ->
-    res.render 'dashboard/dashboard', 
-      title: "This value isn't used"
-      # dashboard: sky.dashboard()
 
   app.get "/status", auth, (req, res) ->
     res.setHeader "Content-Type", "application/json"
@@ -27,22 +24,20 @@ exports.loadRoutes = (app, passport) ->
   #   request.  The first step in GitHub authentication will involve redirecting
   #   the user to github.com.  After authorization, GitHub will redirect the user
   #   back to this application at /auth/github/callback
-  app.get "/auth/github",
-    passport.authenticate("github"),
-    (req, res) ->
-      # The request will be redirected to GitHub for authentication, so this
-      # function will not be called.
+  app.get "/auth/github", passport.authenticate("github"), (req, res) ->
+    # The request will be redirected to GitHub for authentication, so this
+    # function will not be called.
 
   # GET /auth/github/callback
   #   Use passport.authenticate() as route middleware to authenticate the
   #   request.  If authentication fails, the user will be redirected back to the
   #   login page.  Otherwise, the primary route function function will be called,
   #   which, in this example, will redirect the user to the home page.
-  app.get "/auth/github/callback", 
-    passport.authenticate("github", { failureRedirect: "/auth/github" }),
+  app.get "/auth/github/callback",
+    passport.authenticate("github", { failureRedirect: "/" }),
     (req, res) ->
-      #console.log "\n\n\n=-=-=[github response]", res, "\n\n\n" #xxx
-      res.redirect "/dashboard"
+      console.log "\n\n\n=-=-=[github response]", res, "\n\n\n" #xxx
+      res.redirect "/"
 
   ###
     GET Authentication token for Firebase
@@ -61,3 +56,30 @@ exports.loadRoutes = (app, passport) ->
   app.get "/logout", (req, res) ->
     req.logout()
     res.redirect "/"
+
+  # Set up local variables to use for rendering
+  appLocals =
+    mode              : nconf.get "NODE_ENV"
+    appName           : nconf.get "APP_NAME"
+    version           : commit : nconf.get "COMMIT_HASH"
+    appJsFilePath     : nconf.get "APP_JS_FILEPATH"
+    vendorJsFilePath  : nconf.get "VENDOR_JS_FILEPATH"
+    appCSSFilePath    : nconf.get "APP_CSS_FILEPATH"
+    vendorCSSFilePath : nconf.get "VENDOR_CSS_FILEPATH"
+
+  # AngularJS routes
+  appRoutes = [
+    "/dashboard"
+  ]
+
+  # Render application page => single page application.
+  for route in appRoutes
+    ### GET single page app routes ###
+    #app.get route, auth, (req, res) ->
+    app.get route, (req, res) ->
+      options = _.extend {
+          cache: true
+          user: if req.session.user?.id then req.session.user
+        }, appLocals
+      jade.renderFile "#{__dirname}/../../client/app/dashboard/dashboard.jade", options, (error, html) -> res.send html
+

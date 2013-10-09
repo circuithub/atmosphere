@@ -1,0 +1,27 @@
+{
+  "name": "angular-fire",
+  "version": "0.3.1",
+  "main": [
+    "./angularFire.js",
+    "./angularfire.min.js"
+  ],
+  "ignore": [
+    "Gruntfile.js",
+    "package.js",
+    "tests",
+    "README.md",
+    ".travis.yml"
+  ],
+  "dependencies": {
+    "angular": "1.0.8"
+  },
+  "gitHead": "33e2ae20090f05f24d6ee93ea83a641a260e2f50",
+  "readme": "AngularFire\n===========\nAngularFire is an officially supported [AngularJS](http://angularjs.org/) binding\nfor [Firebase](http://www.firebase.com/?utm_medium=web&utm_source=angularFire).\nFirebase is a full backend so you don't need servers to build your Angular app!\n\n*Please visit [AngularFire.com](http://angularfire.com) for a\n[tutorial](http://angularfire.com/tutorial),\n[a quickstart guide](http://angularfire.com/quickstart.html),\n[documentation](http://angularfire.com/documentation.html) and more!*\n\nDevelopment\n-----------\n[![Build Status](https://travis-ci.org/firebase/angularFire.png)](https://travis-ci.org/firebase/angularFire)\n\nIf you'd like to hack on AngularFire itself, you'll need\n[node.js](http://nodejs.org/download/) and\n[CasperJS](https://github.com/n1k0/casperjs):\n\n```bash\nbrew install casperjs\nnpm install\n```\n\nUse grunt to build and test the code:\n\n```bash\n# Default task - validates with jshint, minifies source and then runs unit tests\ngrunt\n\n# Watch for changes and run unit test after each change\ngrunt watch\n\n# Run tests\ngrunt test\n\n# Minify source\ngrunt build\n```\n\nLicense\n-------\n[MIT](http://firebase.mit-license.org).\n",
+  "readmeFilename": "README.md",
+  "_id": "angular-fire@0.3.1",
+  "description": "AngularFire =========== AngularFire is an officially supported [AngularJS](http://angularjs.org/) binding for [Firebase](http://www.firebase.com/?utm_medium=web&utm_source=angularFire). Firebase is a full backend so you don't need servers to build your Angular app!",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/firebase/angularFire.git"
+  }
+}
