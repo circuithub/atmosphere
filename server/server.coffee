@@ -1,5 +1,4 @@
 coffee   = require "coffee-script"
-Toaster  = require( "coffee-toaster" ).Toaster
 express  = require "express"
 http     = require "http"
 nconf    = require "nconf"
@@ -102,7 +101,7 @@ app.use passport.initialize()
 app.use passport.session()
 app.use app.router
 
-app.use("/static", express.static(__dirname + "/public"))
+app.use express.static __dirname + "/public"
 
 
 app.configure "development", () ->
