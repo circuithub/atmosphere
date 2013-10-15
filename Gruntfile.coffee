@@ -178,6 +178,7 @@ module.exports = (grunt) ->
           "angular-bootstrap/ui-bootstrap-tpls"
           "angular-sanitize/angular-sanitize"
           "angular-slider/angular-slider"
+          "angular-fire/angularFire"
           "json3/lib/json3"
           "lodash/lodash"
         ].map((s) -> "components/#{s}.js").concat [
