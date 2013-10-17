@@ -2,4 +2,8 @@ app.js
 app-debug.js
 app.css
 vendor.js
+.*.*.swp
+.*.*.swo
+.tmp
+/.tmp
 /node_modules

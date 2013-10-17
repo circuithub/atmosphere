@@ -1,0 +1,15 @@
+{
+  "name": "cubism",
+  "homepage": "https://github.com/square/cubism",
+  "version": "1.2.2",
+  "_release": "1.2.2",
+  "_resolution": {
+    "type": "version",
+    "tag": "v1.2.2",
+    "commit": "d9bb0e69735e80c8c260eb99588040d0a7ddb44e"
+  },
+  "_source": "git://github.com/square/cubism.git",
+  "_target": "~1.2.2",
+  "_originalSource": "cubism",
+  "_direct": true
+}

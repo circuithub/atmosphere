@@ -1,8 +1,13 @@
-angular.module('templates-app', ['app/dashboard/controls.html', 'app/dashboard/dashboard.html', 'app/dashboard/drops.html', 'app/dashboard/status.html', 'directives/metrics-graph-time/metrics-graph-time.html']);
+angular.module('templates-app', ['app/dashboard/controls.html', 'app/dashboard/cubismTest.html', 'app/dashboard/dashboard.html', 'app/dashboard/drops.html', 'app/dashboard/status.html', 'directives/metrics-graph/template.html']);
 
 angular.module("app/dashboard/controls.html", []).run(["$templateCache", function($templateCache) {
   $templateCache.put("app/dashboard/controls.html",
     "This is the control panel");
+}]);
+
+angular.module("app/dashboard/cubismTest.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("app/dashboard/cubismTest.html",
+    "<!DOCTYPE html><html ng-app=\"cubismTest\"></html><head></head><body><div metricsGraph=\"metricsOptions\" class=\"cubismtest\"></div></body>");
 }]);
 
 angular.module("app/dashboard/dashboard.html", []).run(["$templateCache", function($templateCache) {
@@ -20,7 +25,7 @@ angular.module("app/dashboard/status.html", []).run(["$templateCache", function(
     "<div ng-controller=\"StatusCtrl\"><p ng-repeat=\"(rainCloudID, rainCloud) in rainClouds\"><h3>{{rainCloudID}}</h3><h4>{{rainCloud}}</h4><br/><div metrics-graph-time=\"metrics-graph-time\" class=\"boom\"></div></p></div>");
 }]);
 
-angular.module("directives/metrics-graph-time/metrics-graph-time.html", []).run(["$templateCache", function($templateCache) {
-  $templateCache.put("directives/metrics-graph-time/metrics-graph-time.html",
-    "<p>dev.coffee</p><p>This is a test of template insertion in a directive </p>");
+angular.module("directives/metrics-graph/template.html", []).run(["$templateCache", function($templateCache) {
+  $templateCache.put("directives/metrics-graph/template.html",
+    "");
 }]);

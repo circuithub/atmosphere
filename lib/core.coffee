@@ -7,8 +7,6 @@ types                  = require "./types"
 Firebase               = require "firebase"
 FirebaseTokenGenerator = require "firebase-token-generator"
 
-
-
 ########################################
 ## STATE MANAGEMENT
 ########################################
@@ -18,7 +16,7 @@ exports.init = (role, roleType, _firebaseServerURL, _firebaseServerToken, cbInit
   @connect _firebaseServerURL, _firebaseServerToken, cbInitialized
 
 exports.setFirebaseURL = (url) =>
-  @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"  
+  @firebaseServerURL = if url? then url else "https://atmosphere.firebaseio-demo.com/"
   @firebaseServerURL += "/" if not _s.endsWith @firebaseServerURL, "/"
 
 exports.urlLogSafe = () =>
