@@ -1,10 +1,4 @@
-angular.module("directives", []);
-
-angular.module("atmosphereWeatherStation", ["ui.bootstrap", "directives"]);
-
-console.log("\n\n\n=-=-=[hello world!]", "dev.coffee", "\n\n\n");
-
-angular.module("atmosphereWeatherStation").controller("TabsDemoCtrl", [
+angular.module("atmosphere", ["ui.bootstrap"]).controller("TabsDemoCtrl", [
   "$scope", function($scope) {
     $scope.tabs = [
       {

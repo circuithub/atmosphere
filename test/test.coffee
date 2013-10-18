@@ -30,7 +30,7 @@ describe "atmosphere", ->
         done()
 
     it "should submit a job through a maker", (done) ->
-      job = 
+      job =
         type: "first"
         name: "jobName"
         data: {yes: true, no: false}
@@ -41,15 +41,15 @@ describe "atmosphere", ->
         should.exist data
         done()
 
-  describe "#basic RPC use case", ->  
+  describe "#basic RPC use case", ->
   
     it "should process two different job types simultaneously", (done) ->
-      testFunctions = 
-        job1: bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
-        job2: bsync.apply atmosphere.rainMaker.submit, {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+      testFunctions =
+        job1: bsync.apply atmosphere.rainMaker.submit {type: "convertAltium", name: "job-altium1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
+        job2: bsync.apply atmosphere.rainMaker.submit {type: "convertOrCAD", name: "job-orcad1", data: {jobID: "1", a:"hi",b:"world"}, timeout: 60}
       bsync.parallel testFunctions, (allErrors, allResults) ->
         h.shouldNotHaveErrors allErrors
-        console.log "[D] Jobs Done", allResults      
+        console.log "[D] Jobs Done", allResults
         done()
 
     it "should process only one job of a type at a time", (done) ->
@@ -61,8 +61,8 @@ describe "atmosphere", ->
         #Submit Altium Conversion Job
         testFunctions.push bsync.apply atmosphere.rainMaker.submit, {type: "convertAltium", name: "job-altium-loop#{i}", data: {jobID: i, a:"hi",b:"world"}, timeout: 60}
       bsync.parallel testFunctions, (allErrors, allResults) ->
-        h.shouldNotHaveErrors allErrors                
-        log = () -> 
+        h.shouldNotHaveErrors allErrors
+        log = () ->
           if snap.val()?
             console.log "--> [#{i}]", Object.keys snap.val()
           else
@@ -75,15 +75,15 @@ describe "atmosphere", ->
   describe "#complex RPC use case (job chaining)", ->
         
     it "should handle a job->job->job->callback job chain", (done) ->
-      job1 = 
+      job1 =
         type: "first" #the job type/queue name
         name: "job1" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 30 #seconds
-      job2 = 
-        type: "second"        
+      job2 =
+        type: "second"
         data: {param2: "initial message"} #merged with results from job1        
-      job3 = 
+      job3 =
         type: "third"
         data: {param3: "initial message"} #merged with results from job1
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
@@ -97,44 +97,44 @@ describe "atmosphere", ->
         done()
 
     it "should handle a job->job->callback->job chain", (done) ->
-      job1 = 
+      job1 =
         type: "first" #the job type/queue name
         name: "job2" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 10 #seconds
-      job2 = 
+      job2 =
         type: "second"
         data: {param2: "initial message"} #merged with results from job1
         callback: true
-      job3 = 
+      job3 =
         type: "third"
         data: {param3: "initial message"} #merged with results from job1
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
         console.log "\n\n\n=-=-=[jjcj]", JSON.stringify(data), "\n\n\n" #xxx
         h.shouldNotHaveErrors error
-        should.exist data        
+        should.exist data
         should.exist data.input.param2
         should.exist data.input.previous[job1.type].input.param1
         done()
 
     it "should handle a job->callback->job->job chain", (done) ->
-      job1 = 
+      job1 =
         type: "first" #the job type/queue name
         name: "job3" #name for this job
         data: {param1: "initial message"} #arbitrary serializable object
         timeout: 5 #seconds
         callback: true
-      job2 = 
+      job2 =
         type: "second"
         data: {param2: "initial message"} #merged with results from job1
-      job3 = 
+      job3 =
         type: "third"
         data: {param3: "initial message"} #merged with results from job1
       atmosphere.rainMaker.submit [job1, job2, job3], (error, data) ->
         console.log "\n\n\n=-=-=[jcjj]", JSON.stringify(data), "\n\n\n" #xxx
         h.shouldNotHaveErrors error
-        should.exist data 
-        should.exist data.first       
+        should.exist data
+        should.exist data.first
         should.exist data.input.param1
         done()
 
@@ -168,9 +168,9 @@ describe "atmosphere", ->
       atmosphere.rainMaker.submit job, (err, resp) ->
         console.log "\n\n\n=-=-=[j->j]", err, resp, "\n\n\n" #xxx
         h.shouldNotHaveErrors err
-        should.exist resp   
+        should.exist resp
         should.exist resp.first
-        should.exist resp.input?.fourth     
+        should.exist resp.input?.fourth
         done()
 
   #   it "should survive extremely large message" #, (done) ->

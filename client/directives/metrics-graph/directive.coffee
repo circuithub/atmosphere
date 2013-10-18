@@ -38,7 +38,7 @@
 #  Graphite target parameters (metric expressions): 
 #    http://graphite.readthedocs.org/en/latest/render_api.html#target
 ###
-angular.module("directives")
+angular.module("atmosphere")
   .directive "metricsGraph", [ 'd3', 'cubism', (d3, cubism) ->
 
     events = ["change", "beforechange", "prepare", "focus"]

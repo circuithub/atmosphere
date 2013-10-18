@@ -1,4 +1,4 @@
-angular.module('app')
+angular.module('atmosphere', ['ui-bootstrap'])
   .controller 'cubismTest', ['$scope', 'metricsGraph', ($scope, $metricsGraph) ->
     #bare minimum options
     $scope.metricsOptions = 
