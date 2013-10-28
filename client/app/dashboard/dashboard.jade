@@ -1,30 +1,14 @@
-doctype 5
+.header
+  h1 Atmosphere
+  span.subtitle By CircuitHub
 
-html(ng-app="atmosphere")
+br
 
-head
-  title Weather Station (Atmosphere)
-  link(rel="stylesheet", href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css")
-  link(rel="StyleSheet", href="dist/app.css", type="text/css", media="screen")
-  script(type="text/javascript", src="https://cdn.firebase.com/v0/firebase.js")
-  script(type="text/javascript", src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js")
-  script(type="text/javascript", src="javascripts/vendor.js")
-  // script(type="text/javascript", src="javascripts/ui-bootstrap-tpls-0.4.0.min.js")
-  script(type="text/javascript", src="javascripts/app.js")
-
-body
-
-  .header
-    h1 Atmosphere
-    span.subtitle By CircuitHub
-
-  br
-  
-  .content(ng-controller='TabsDemoCtrl')    
-    tabset
-      tab(heading='Status') 
-        include status
-      tab(heading='Rain Drops (Jobs)') 
-        include drops
-      tab(heading='Control Panel') 
-        include controls
+.content(ng-controller='TabsDemoCtrl')    
+  tabset
+    tab(heading='Status') 
+      include status
+    tab(heading='Rain Drops (Jobs)') 
+      include drops
+    tab(heading='Control Panel') 
+      include controls
