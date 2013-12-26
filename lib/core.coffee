@@ -73,12 +73,12 @@ exports.ready = () ->
 ###
 exports.connect = (cbConnected) ->
   if not conn?
-    elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
+    elma.info "rabbitConnecting", "Connecting to RabbitMQ #{_urlLogSafe}..."
     conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
     conn.on "error", (err) ->
       elma.error "rabbitConnectedError", "RabbitMQ server at #{_urlLogSafe} reports ERROR.", err
     conn.on "ready", (err) ->
-      elma.info "rabbitConnected", "Connected to RabbitMQ!"
+      elma.info "rabbitConnected", "Connected to RabbitMQ #{_urlLogSafe}"
       if err?
         elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{_urlLogSafe} FAILED.", err
         cbConnected err
