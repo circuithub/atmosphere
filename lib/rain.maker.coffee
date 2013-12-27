@@ -80,8 +80,7 @@ module.exports = ->
         name: job.name
         id:   job.id
       returnQueue: core.rainID makerRoleID
-    core.submit job.type, payload, headers
-    cbSubmitted()
+    core.submit job.type, payload, headers, cbSubmitted
 
   ###
     Subscribe to incoming jobs in the queue (exclusively -- block others from listening)
