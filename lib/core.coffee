@@ -119,20 +119,21 @@ exports.delete = () ->
   Publish (RabbitMQ terminology) a message to the specified queue
   -- Asynchronous, but callback is ignored
 ###
-exports.publish = (queueName, messageObject, headerObject) ->
-  conn.publish queueName, JSON.stringify(messageObject), {contentType: "application/json", headers: headerObject} 
+exports.publish = (queueName, messageObject, headerObject, cb) ->
+  conn.publish queueName, JSON.stringify(messageObject), {contentType: "application/json", headers: headerObject}, (errorFlag, error, etc...) ->
+    if (errorFlag is true) and error?
+      cb error, etc... # Use normal node convention for error handling (amqp passes (true, error) to its callback when an error occurs)
+    if (errorFlag is false) and error?
+      cb undefined, arguments[1..]...
+    else
+      cb arguments...
 
 ###
   Submit a job
   -- Enforces job structure to make future refactor work safer  
 ###
-exports.submit = types.fn (-> [ 
-  @String()
-  @Object {data: @Object(), next: @Array()}
-  @Object {job: @Object({name: @String(), id: @String()}), returnQueue: @String(), callback: @Boolean()}
-  ]),
-  (type, payload, headers) => 
-    return exports.publish type, payload, headers
+exports.submit = (type, payload, headers, cb) => 
+    return exports.publish type, payload, headers, cb
 
 ###
   Create the externally visible job key 

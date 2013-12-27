@@ -1,3 +1,4 @@
+{isArray} = require "lodash"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 uuid = require "node-uuid"
@@ -53,16 +54,11 @@ module.exports = ->
       error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
       cbSubmitted error
       return
-
-    #[1.] Array Prep (job chaining)
-    #--Format
-    if types.type(jobChain) isnt "array"
+    if not isArray jobChain
       jobChain = [jobChain]
-    #--Clarify callback flow (only first callback=true remains)
-    foundCB = false
-    for job in jobChain when job.callback? and job.callback
-      foundCB = true
-    jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
+    for job in jobChain when job.callback
+      elma.warning "callback deprecated", "callback on jobs are no longer supported"
+    # jobChain[jobChain.length-1].callback = true if not foundCB #callback after last job if unspecified
     #--Look at first job
     job = jobChain.shift()
 
@@ -83,7 +79,7 @@ module.exports = ->
       job: 
         name: job.name
         id:   job.id
-      returnQueue: core.rainID(makerRoleID)
+      returnQueue: core.rainID makerRoleID
     core.submit job.type, payload, headers
     cbSubmitted()
 

@@ -2,6 +2,7 @@ _ = require "underscore"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 bsync = require "bsync"
+{assign, pick} = require "lodash"
 
 core = require "./core"
 monitor = require "./monitor"
@@ -9,7 +10,7 @@ monitor = require "./monitor"
 module.exports = -> 
   cloudRoleID = undefined
   jobWorkers = {}
-  currentJob = {}
+  currentJobs = {}
   api = {}
 
   ########################################
@@ -48,71 +49,67 @@ module.exports = ->
   ########################################
   ## API
   ########################################
-  _callbackMQ = (theJob, ticket, errors, result) ->
-    header = {job: theJob.job, type: theJob.type, rainCloudID: core.rainID(cloudRoleID)}
-    message = 
-      errors: errors
-      data: result
-    core.publish currentJob[ticket.type].returnQueue, message, header
-
   ###
     Reports completed job on a Rain Cloud
     -- ticket: {type: "", job: {name: "", id: "uuid"} }
     -- message: the job response data (message body)
   ###
-  api.doneWith = (ticket, errors, result) ->
-    #Sanity checking
-    if not core.ready() 
-      #TODO: HANDLE THIS BETTER
-      elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
-      return
-    if not currentJob[ticket.type]?
-      #TODO: HANDLE THIS BETTER
-      elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
-      return
-    #Retrieve the interal state for this job
-    theJob = currentJob[ticket.type]
-    #Console
-    numJobsNext = if theJob.next? then theJob.next.length else 0
-    elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{numJobsNext} jobs follow. Callback? #{theJob.callback}"
-    #No more jobs in the chain
-    if numJobsNext is 0  
-      _callbackMQ theJob, ticket, errors, result if theJob.callback    
-    #More jobs in the chain
-    else
-      if errors?
-        #Abort chain if errors occurred
-        _callbackMQ theJob, ticket, errors, result      
-      else
-        #Fire callback if specified
-        _callbackMQ theJob, ticket, errors, result if theJob.callback
-        #Get next job in the chain
-        nextJob = theJob.next.shift()
-        #Cascade results (merge incoming results from last job with incoming user data for new job)      
-        nextData = (nextJob.data ?= {})
-        nextData[theJob.type] = result
-        #Format and Submit next job
-        payload = 
-          data: nextData
-          next: theJob.next
-        headers = 
-          job: 
-            name: theJob.job.name
-            id: theJob.job.id
-          returnQueue: theJob.returnQueue
-          callback: nextJob.callback
-        core.submit nextJob.type, payload, headers
-    
-    #Done with this specific job in the job chain
-    delete currentJob[ticket.type] #done with current job, update state
-    process.nextTick () ->
-      core.acknowledge theJob.type, (err) ->
-        if err?
-          #TODO: HANDLE THIS BETTER
-          elma.error "cantAckError", "Could not send ACK", theJob, err 
-          return
-        monitor.jobComplete()
+  api.doneWith = (ticket, errors, result, cb) ->
 
+    publishResult = (job, errors, result, cb) ->
+      header = assign (pick job, "job", "type"), {rainCloudID: core.rainID cloudRoleID}
+      core.publish job.returnQueue, {errors, data: result}, header, cb
+
+    publishNextJob = (currentJob, cb) ->
+      # Publish result of the curent job
+      publishResult currentJob, errors, result, (error) ->
+        if error?
+          cb error
+          return
+        # Get the next job in the chain
+        if not currentJob.next?[0]?
+          cb()
+          return
+        nextData = assign {}, (currentJob.next[0].data ? {})
+        nextData[currentJob.type] = result # TODO: remove?
+        message =
+          data: nextData
+          next: currentJob.next[1..] ? null
+        headers =
+          job: pick currentJob.job, "name", "id"
+          returnQueue: currentJob.returnQueue
+        core.submit currentJob.next[0].type, message, headers, cb
+
+    if not core.ready() 
+      elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      cb noRabbitError: "Not connected to #{core.urlLogSafe} yet!"
+      return
+
+    currentJob = currentJobs[ticket.type]
+    if not currentJob?
+      elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
+      cb noTicketWaiting: "Not connected to #{core.urlLogSafe} yet!"
+      return
+
+    elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{currentJob.next?.length ? 0} jobs follow. Callback? #{currentJob.callback}"
+  
+    publishNextJob currentJob, (error) ->
+      #Done with this specific job in the job chain
+      delete currentJobs[ticket.type] # done with current job, update state
+      if error?
+        cb error
+        return
+      process.nextTick ->
+        core.acknowledge currentJob.type, (error) ->
+          if error?
+            #TODO: HANDLE THIS BETTER
+            elma.error "cantAckError", "Could not send ACK", currentJob, error
+            cb cantAckError: error
+            return
+          monitor.jobComplete()
+          cb()
+          return
+    return
   ###
     Subscribe to persistent incoming jobs in the queue (non-exclusively)
     (Queue will continue to exist even if no-one is listening)
@@ -133,8 +130,8 @@ module.exports = ->
     Object of current jobs (queue names currently being processed by this worker)
     Returns an array of queue names (job types) with active jobs in it
   ###
-  api.currentJobs = () ->
-    return Object.keys currentJob
+  api.activeJobTypes = () ->
+    return Object.keys currentJobs
 
   ########################################
   ## STOCK ROUTERS
@@ -156,8 +153,7 @@ module.exports = ->
     #Execute (invoke work function)
     rpcWorkers[ticket.type] ticket, (errors, results) ->
       # Release lower stack frames
-      process.nextTick () ->
-        api.doneWith ticket, errors, results
+      process.nextTick -> api.doneWith ticket, errors, results, ->
 
   api.routers = basic: basic
 
@@ -171,12 +167,12 @@ module.exports = ->
       function(ticket, data) ->
   ###
   lightning = (message, headers, deliveryInfo) ->
-    if currentJob[deliveryInfo.queue]?
+    if currentJobs[deliveryInfo.queue]?
       #PANIC! BAD STATE! We got a new job, but haven't completed previous job yet!
-      elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJob, deliveryInfo, headers, message
+      elma.error "duplicateJobAssigned", "Two jobs were assigned to atmosphere.rainCloud at once! SHOULD NOT HAPPEN.", currentJobs, deliveryInfo, headers, message
       return
     #Hold this information internal to atmosphere
-    currentJob[deliveryInfo.queue] = {
+    currentJobs[deliveryInfo.queue] = {
       type: deliveryInfo.queue
       job: headers.job # job = {name:, id:}    
       returnQueue: headers.returnQueue

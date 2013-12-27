@@ -32,7 +32,6 @@ module.exports = (atmosphere) ->
       return
     #[1.] Submit Task Message
     fromName = if nconf.get("PS")? then nconf.get("PS") else ""
-    core.publish type, task, {task: ticket, fromID: core.rainID(atmosphere.getRoleID()), fromName: fromName}
-    cbSubmitted()
+    core.publish type, task, {task: ticket, fromID: core.rainID(atmosphere.getRoleID()), fromName: fromName}, cbSubmitted
 
   return api
