@@ -79,7 +79,7 @@ module.exports = ->
       data: job.data ?= {}
       next: jobChain
     headers =
-      callback: job.callback
+      callback: job.callback ? false
       job: 
         name: job.name
         id:   job.id
