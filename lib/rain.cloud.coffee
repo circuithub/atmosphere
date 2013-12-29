@@ -110,6 +110,7 @@ module.exports = ->
           cb()
           return
     return
+  
   ###
     Subscribe to persistent incoming jobs in the queue (non-exclusively)
     (Queue will continue to exist even if no-one is listening)

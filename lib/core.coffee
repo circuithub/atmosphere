@@ -97,17 +97,18 @@ exports.connect = (cbConnected) ->
 ###
   Force delete of a queue (for maintainence/dev use)
 ###
-exports.delete = () ->
-  #Unsubscribe any active listener
-  if queues[typeResponse]?  
-    #Delete Queue
-    queues[typeResponse].destroy {ifEmpty: false, ifUnused: false}
-    #Update global state
-    queues[typeResponse] = undefined
-    listeners[typeResponse] = undefined
-    cbDone undefined
-  else
-    cbDone "Not currently aware of #{typeResponse}! You can't blind delete."
+# NOTE: this is broken - no cbDone callback
+# exports.delete = () ->
+#   #Unsubscribe any active listener
+#   if queues[typeResponse]?  
+#     #Delete Queue
+#     queues[typeResponse].destroy {ifEmpty: false, ifUnused: false}
+#     #Update global state
+#     queues[typeResponse] = undefined
+#     listeners[typeResponse] = undefined
+#     cbDone undefined
+#   else
+#     cbDone "Not currently aware of #{typeResponse}! You can't blind delete."
 
 
 
