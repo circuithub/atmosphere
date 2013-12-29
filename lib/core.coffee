@@ -122,12 +122,14 @@ exports.connect = (cbConnected) ->
 ###
 exports.publish = (queueName, messageObject, headerObject, cb) ->
   conn.publish queueName, JSON.stringify(messageObject), {contentType: "application/json", headers: headerObject}, (errorFlag, error, etc...) ->
-    if (errorFlag is true) and error?
-      cb error, etc... # Use normal node convention for error handling (amqp passes (true, error) to its callback when an error occurs)
-    if (errorFlag is false) and error?
-      cb undefined, arguments[1..]...
-    else
-      cb arguments...
+    # if (errorFlag is true) and error?
+    #   cb error, etc... # Use normal node convention for error handling (amqp passes (true, error) to its callback when an error occurs)
+    # if (errorFlag is false) and error?
+    #   cb undefined, arguments[1..]...
+    # else
+    #   cb arguments...
+    return
+  cb()
 
 ###
   Submit a job
