@@ -21,7 +21,7 @@ describe "atmosphere", ->
   
   before (done) ->
     #Init Rainmaker (App Server)
-    atmosphere.rainMaker.init "rainMaker", (err) ->
+    atmosphere.rainMaker.init null, "rainMaker", (err) ->
       h.shouldNotHaveErrors err
       console.log "[I] Initialized RAINMAKER", err
       done()

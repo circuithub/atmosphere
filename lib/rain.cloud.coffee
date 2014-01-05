@@ -1,6 +1,5 @@
 _ = require "underscore"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
+elma  = require("elma")(require "nconf")
 bsync = require "bsync"
 {assign, pick} = require "lodash"
 
@@ -21,13 +20,13 @@ module.exports = ->
     -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
     --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
   ###
-  api.init = (role, jobTypes, cbDone) ->
+  api.init = (amqpUrl, role, jobTypes, cbDone) ->
     #[0.] Initialize
     if cloudRoleID?
       throw "Rain cloud has already been initialized"
     cloudRoleID = core.generateRoleID role
     #[1.] Connect to message server
-    core.connect (err) ->      
+    core.connect amqpUrl, (err) ->      
       if err?
         cbDone err
         return
@@ -81,14 +80,14 @@ module.exports = ->
         core.submit currentJob.next[0].type, message, headers, cb
 
     if not core.ready() 
-      elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
-      cb noRabbitError: "Not connected to #{core.urlLogSafe} yet!"
+      elma.error "noRabbitError", "Not connected yet!" 
+      cb noRabbitError: "Not connected yet!"
       return
 
     currentJob = currentJobs[ticket.type]
     if not currentJob?
       elma.error "noTicketWaiting", "Ticket for #{ticket.type} has no current job pending!" 
-      cb noTicketWaiting: "Not connected to #{core.urlLogSafe} yet!"
+      cb noTicketWaiting: "Not connected yet!"
       return
 
     elma.info "[doneWith]", "#{ticket.type}-#{ticket.name}; #{currentJob.next?.length ? 0} jobs follow. Callback? #{currentJob.callback}"

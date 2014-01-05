@@ -28,7 +28,7 @@ module.exports = (atmosphere) ->
   ###
   api.submit = (type, ticket, task, cbSubmitted) =>
     if not core.ready() 
-      cbSubmitted [elma.error("noRabbitError", "Not connected to #{core.urlLogSafe} yet!")]
+      cbSubmitted [elma.error("noRabbitError", "Not connected yet!")]
       return
     #[1.] Submit Task Message
     fromName = if nconf.get("PS")? then nconf.get("PS") else ""

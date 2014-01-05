@@ -1,5 +1,4 @@
-nconf          = require "nconf"
-elma           = require("elma")(nconf)
+elma           = require("elma")(require "nconf")
 adt =
   typecheck:    require "adt-typecheck.js"
 

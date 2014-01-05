@@ -1,8 +1,7 @@
 amqp = require "amqp"
 _ = require "underscore"
 _s = require "underscore.string"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
+elma  = require("elma")(require "nconf")
 uuid = require "node-uuid"
 bsync = require "bsync"
 domain = require "domain"
@@ -19,10 +18,7 @@ deferUntil = (condFn, fn, args...) ->
 ## STATE MANAGEMENT
 ########################################
 
-url = nconf.get("CLOUDAMQP_URL") or "amqp://guest:guest@localhost:5672//" #default to localhost if no environment variable is set
-_urlLogSafe = url.substring url.indexOf("@") #Safe to log this value (strip password out of url)
-exports.urlLogSafe = _urlLogSafe
-
+amqpUrl = undefined
 conn = undefined
 connectionReady = false
 
@@ -71,16 +67,19 @@ exports.ready = () ->
   -- However, this method is exposed in case, you want to explicitly wait it out and confirm valid connection in app start-up sequence
   -- Connection is enforced, so if connection doesn't exist, nothing else will work.
 ###
-exports.connect = (cbConnected) ->
+exports.connect = (url, cbConnected) ->
+  amqpUrl = url ? "amqp://guest:guest@localhost:5672//" # default to localhost if no environment variable is set
+  amqpUrlSafe = amqpUrl.substring amqpUrl.indexOf "@"  # Safe to log this value (strip password out of url)
+  
   if not conn?
-    elma.info "rabbitConnecting", "Connecting to RabbitMQ #{_urlLogSafe}..."
+    elma.info "rabbitConnecting", "Connecting to RabbitMQ #{amqpUrlSafe}..."
     conn = amqp.createConnection {heartbeat: 10, url: url} # create the connection
     conn.on "error", (err) ->
-      elma.error "rabbitConnectedError", "RabbitMQ server at #{_urlLogSafe} reports ERROR.", err
+      elma.error "rabbitConnectedError", "RabbitMQ server at #{amqpUrlSafe} reports ERROR.", err
     conn.on "ready", (err) ->
-      elma.info "rabbitConnected", "Connected to RabbitMQ #{_urlLogSafe}"
+      elma.info "rabbitConnected", "Connected to RabbitMQ #{amqpUrlSafe}"
       if err?
-        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{_urlLogSafe} FAILED.", err
+        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{amqpUrlSafe} FAILED.", err
         cbConnected err
         return
       connectionReady = true
@@ -155,8 +154,9 @@ exports.jobName = (job) ->
   -- Records the consumer-tag so you can unsubscribe
 ###
 exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
+  amqpUrlSafe = amqpUrl.substring amqpUrl.indexOf "@" # Safe to log this value (strip password out of url)
   if not connectionReady 
-    cbListening elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
+    cbListening elma.error "noRabbitError", "Not connected to #{amqpUrlSafe} yet!" 
     return
   if not queues[type]?
     queue = conn.queue type, {autoDelete: not persist}, () -> # create a queue (if not exist, sanity check otherwise)
@@ -190,8 +190,9 @@ exports.listen = (type, cbExecute, exclusive, persist, useAcks, cbListening) ->
   -- cbAcknowledged: callback after ack is sent successfully
 ###
 exports.acknowledge = (type, cbAcknowledged) =>
+  amqpUrlSafe = amqpUrl.substring amqpUrl.indexOf "@"
   if not connectionReady 
-    cbAcknowledged elma.error "noRabbitError", "Not connected to #{_urlLogSafe} yet!" 
+    cbAcknowledged elma.error "noRabbitError", "Not connected to #{amqpUrlSafe} yet!" 
     return
   if not queues[type]?
     cbAcknowledged "Connection to queue for job type #{type} not available! Are you listening to this queue?"

@@ -1,6 +1,5 @@
 {isArray} = require "lodash"
-nconf = require "nconf"
-elma  = require("elma")(nconf)
+elma  = require("elma")(require "nconf")
 uuid = require "node-uuid"
 types = require "./types"
 core = require "./core"
@@ -20,12 +19,12 @@ module.exports = ->
     Jobs system initialization
     --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
   ###  
-  api.init = (role, cbDone) ->
+  api.init = (amqpUrl, role, cbDone) ->
     #core.setRole(role)
     if makerRoleID?
       throw "Rain maker has already been initialized"
     makerRoleID = core.generateRoleID role
-    core.connect (err) ->
+    core.connect amqpUrl, (err) ->
       if err?
         cbDone err
         return    
@@ -51,7 +50,7 @@ module.exports = ->
   ###
   api.submit = (jobChain, cbSubmitted) ->
     if not core.ready() 
-      error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      error = elma.error "noRabbitError", "Not connected yet!" 
       cbSubmitted error
       return
     if not isArray jobChain
