@@ -1,6 +1,6 @@
 {
   "author": "CircuitHub <developers@circuithub.com> (circuithub.com)",
-  "name": "atmosphere",
+  "name": "atmosphere-old",
   "description": "Background jobs queue (currently uses RabbitMQ)",
   "version": "0.5.5",
   "homepage": "http://circuithub.com",
