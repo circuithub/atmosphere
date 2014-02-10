@@ -19,12 +19,13 @@ module.exports = ->
     Jobs system initialization
     --role: String. 8 character (max) description of this rainMaker (example: "app", "eda", "worker", etc...)
   ###  
-  api.init = (role, cbDone) ->
+  api.init = (amqpUrl, role, cbDone) ->
+    if arguments.length < 3 then throw new Error "Too few arguments to rainMaker.init"
     #core.setRole(role)
     if makerRoleID?
       throw "Rain maker has already been initialized"
     makerRoleID = core.generateRoleID role
-    core.connect (err) ->
+    core.connect amqpUrl, (err) ->
       if err?
         cbDone err
         return    
@@ -53,7 +54,7 @@ module.exports = ->
   ###
   api.submit = (jobChain, cbJobDone) ->
     if not core.ready() 
-      error = elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      error = elma.error "noRabbitError", "Not connected yet!"
       cbJobDone error if cbJobDone?
       return
 

@@ -20,13 +20,14 @@ module.exports = ->
     -- Safe to call this function multiple times. It adds additional job types. If exists, jobType is ignored during update.
     --role: String. 8 character (max) description of this rainCloud (example: "app", "eda", "worker", etc...)
   ###
-  api.init = (role, jobTypes, cbDone) ->
+  api.init = (amqpUrl, role, jobTypes, cbDone) ->
+    if arguments.length < 4 then throw new Error "Too few arguments to rainCloud.init"
     #[0.] Initialize
     if cloudRoleID?
       throw "Rain cloud has already been initialized"
     cloudRoleID = core.generateRoleID role
     #[1.] Connect to message server
-    core.connect (err) ->      
+    core.connect amqpUrl, (err) ->
       if err?
         cbDone err
         return
@@ -64,7 +65,7 @@ module.exports = ->
     #Sanity checking
     if not core.ready() 
       #TODO: HANDLE THIS BETTER
-      elma.error "noRabbitError", "Not connected to #{core.urlLogSafe} yet!" 
+      error = elma.error "noRabbitError", "Not connected yet!" 
       return
     if not currentJob[ticket.type]?
       #TODO: HANDLE THIS BETTER
