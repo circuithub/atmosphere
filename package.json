@@ -10,7 +10,7 @@
   "private": true,
   "dependencies": {
     "adt-typecheck.js": "git+ssh://git@github.com/circuithub/adt-typecheck.js.git#master",
-    "elma": "git+ssh://git@github.com/circuithub/elma.git#master",
+    "elma": "~0.5.15",
     "nconf": "0.6.7",
     "node-uuid": "*",
     "underscore.string": "*",

@@ -1,4 +1,3 @@
-_ = require "underscore"
 nconf = require "nconf"
 elma  = require("elma")(nconf)
 bsync = require "bsync"

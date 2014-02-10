@@ -73,24 +73,20 @@ exports.connect = (url, cbConnected) ->
   amqpUrl = url ? "amqp://guest:guest@localhost:5672//" # default to localhost if no environment variable is set
   amqpUrlSafe = amqpUrl.substring amqpUrl.indexOf "@"  # Safe to log this value (strip password out of url)
   if not conn?
-    elma.info "rabbitConnecting", "Connecting to RabbitMQ..."
+    elma.info "rabbitConnecting", "Connecting to RabbitMQ #{amqpUrlSafe}..."
     conn = amqp.createConnection {heartbeat: 100, url: amqpUrl} # create the connection
-    amqpUrlSafe = amqpUrl.substring amqpUrl.indexOf "@" # Safe to log this value (strip password out of url)
-  if not connectionReady 
-    cbListening elma.error "noRabbitError", "Not connected to #{amqpUrlSafe} yet!" 
-    returnn "ready", (err) ->
-      elma.info "rabbitConnected", "Connected to RabbitMQ!"
-      amqpUrlSafe = amqpUrl.substring amqpUrl.indexOf "@" # Safe to log this value (strip password out of url)
-  if not connectionReady 
-    cbListening elma.error "noRabbitError", "Not connected to #{amqpUrlSafe} yet!" 
-    returnConnected err
+    conn.on "error", (err) ->
+      elma.error "rabbitConnectedError", "RabbitMQ server at #{amqpUrlSafe} reports ERROR.", err
+    conn.on "ready", (err) ->
+      elma.info "rabbitConnected", "Connected to RabbitMQ #{amqpUrlSafe}"
+      if err?
+        elma.error "rabbitConnectError", "Connection to RabbitMQ server at #{amqpUrlSafe} FAILED.", err
+        cbConnected err
         return
       connectionReady = true
       cbConnected undefined
   else
     deferUntil exports.ready, cbConnected, undefined
-
-
 
 ########################################
 ## DELETE
