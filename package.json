@@ -10,14 +10,14 @@
   "private": true,
   "dependencies": {
     "adt-typecheck.js": "git+ssh://git@github.com/circuithub/adt-typecheck.js.git#master",
+    "amqp": "^0.2.6",
+    "bsync": "*",
     "elma": "git+ssh://git@github.com/circuithub/elma.git#master",
+    "mocha": "*",
     "nconf": "0.6.7",
     "node-uuid": "*",
-    "underscore.string": "*",
-    "mocha": "*",
     "should": "*",
     "underscore": "*",
-    "bsync": "*",
-    "amqp": "~0.1.8"
+    "underscore.string": "*"
   }
 }
